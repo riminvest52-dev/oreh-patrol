@@ -1,0 +1,17 @@
+{
+  "name": "Ореховый патруль — математика 5 класс",
+  "short_name": "Орех-патруль",
+  "description": "Математика 5 класса по Петерсон в игре с бурундуками Фундуком и Миндалинкой",
+  "lang": "ru",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#FFF3DE",
+  "theme_color": "#F3A23F",
+  "icons": [
+    { "src": "icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}

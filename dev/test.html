@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang="ru"><head><meta charset="utf-8"><title>Тест генераторов</title>
+<style>body{font:14px system-ui;margin:16px}pre{white-space:pre-wrap}.bad{color:#b00}.task{border-bottom:1px solid #ddd;padding:6px 0}</style></head>
+<body><h1>Тест генераторов</h1><div id="out"></div>
+<script src="../js/core.js"></script><script src="../js/t-fund.js"></script><script src="../js/t-lang.js"></script>
+<script src="../js/t-models.js"></script><script src="../js/t-logic.js"></script><script src="../js/t-div.js"></script><script src="../js/topics.js"></script>
+<script>
+const strip = s => String(s).replace(/<[^>]+>/g, '');
+function check(t) {
+  const errs = [];
+  if (!t) return ['null task'];
+  const all = [t.q, t.hint].concat(t.explain || [], t.options || [], t.items || []).map(String).join(' | ');
+  if (/undefined|NaN|null|\[object/.test(all)) errs.push('bad text: ' + all.slice(0, 200));
+  if (!t.q) errs.push('no q');
+  if (!t.hint) errs.push('no hint');
+  if (!t.explain || !t.explain.length) errs.push('no explain');
+  if (t.type === 'num') { if (!Number.isInteger(t.answer) || t.answer < 0) errs.push('bad num answer ' + t.answer); }
+  else if (t.type === 'choice') {
+    if (!t.options || t.options.length < 2) errs.push('few options');
+    if (new Set(t.options).size !== t.options.length) errs.push('dup options');
+    if (!t.options.includes(t.answer)) errs.push('answer not in options: ' + t.answer + ' / ' + t.options.join(' ; '));
+  } else if (t.type === 'multi') {
+    if (!t.answer.length) errs.push('empty multi answer');
+    if (t.answer.length === t.items.length) errs.push('all items correct');
+    if (new Set(t.items).size !== t.items.length) errs.push('dup items');
+    if (!t.answer.every(a => t.items.includes(a))) errs.push('answer not subset');
+  } else errs.push('bad type ' + t.type);
+  return errs;
+}
+const out = document.getElementById('out');
+const summary = {}; let total = 0, fails = 0; const samples = [];
+for (const top of TOPICS) for (const g of top.gens) {
+  if (!GEN[g]) { summary[g] = 'MISSING'; fails++; continue; }
+  for (let d = 1; d <= 3; d++) {
+    let f = 0, ex = null;
+    for (let i = 0; i < 400; i++) {
+      total++;
+      let t, e;
+      try { t = makeTask(g, d); e = check(t); } catch (err) { e = ['throw ' + err.message]; }
+      if (e.length) { f++; fails++; if (!ex) ex = e.join('; '); }
+      if (i < 2 && t) samples.push(`[${g} d${d}] ${strip(t.q)}\n  → ${t.type === 'multi' ? t.answer.join(', ') : t.answer}${t.options ? '   {' + t.options.join(' | ') + '}' : ''}${t.items ? '   items: ' + t.items.join(', ') : ''}\n  Разбор: ${t.explain.map(strip).join(' / ')}`);
+    }
+    summary[g + ' d' + d] = f ? `FAIL ${f}/400: ${ex}` : 'ok';
+  }
+}
+window.TEST = { total, fails, summary };
+out.innerHTML = `<p><b>${total}</b> заданий, ошибок: <b class="${fails ? 'bad' : ''}">${fails}</b></p><pre>${Object.entries(summary).map(([k, v]) => k + ': ' + v).join('\n')}</pre><h2>Примеры</h2>` +
+  samples.map(s => `<div class="task"><pre>${s.replace(/</g, '&lt;')}</pre></div>`).join('');
+</script></body></html>

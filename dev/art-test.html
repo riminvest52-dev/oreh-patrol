@@ -1,0 +1,10 @@
+<!doctype html><html lang="ru"><head><meta charset="utf-8"><title>Арт</title>
+<style>body{background:#FFF3DF;margin:10px;font:14px system-ui}.row{display:flex;flex-wrap:wrap;gap:8px}.row svg.chip{width:150px;height:160px;background:#fff8ec;border-radius:12px}</style></head>
+<body><div class="row" id="r"></div><svg width="420" height="120" id="t"></svg>
+<script src="../js/art.js"></script>
+<script>
+const r = document.getElementById('r');
+for (const w of ['funduk', 'mindal']) for (const m of ['happy', 'cheer', 'think', 'sad']) r.insertAdjacentHTML('beforeend', ART.chip(w, m));
+r.insertAdjacentHTML('beforeend', ART.acorn(60));
+document.getElementById('t').innerHTML = [0,1,2,3].map(i => ART.tree(50 + i * 100, 70, 1, i)).join('');
+</script></body></html>
