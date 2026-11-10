@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang="ru"><head><meta charset="utf-8"><title>Тест Лесной полянки</title>
+<style>body{font:14px system-ui;margin:16px}pre{white-space:pre-wrap}.bad{color:#b00}#app,#modal,#toast{display:none}</style></head>
+<body><h1>Тест генераторов Лесной полянки</h1><div id="out"></div>
+<div id="app"></div><div id="modal" class="hidden"></div><div id="toast" class="hidden"></div>
+<script src="../js/core.js"></script><script src="../js/t-fund.js"></script><script src="../js/t-lang.js"></script><script src="../js/t-models.js"></script>
+<script src="../js/t-logic.js"></script><script src="../js/t-div.js"></script><script src="../js/topics.js"></script><script src="../js/art.js"></script>
+<script src="../js/state.js"></script><script src="../js/cloud.js"></script><script src="../js/ui.js"></script><script src="../js/play.js"></script>
+<script src="../js/screens.js"></script><script src="../js/kid.js"></script>
+<script>
+const RUNS = 300, KINDS = ['pick', 'count', 'put', 'frame', 'flash'];
+const BAD = /undefined|NaN|null|\[object/;
+function checkKid(t) {
+  const e = [];
+  for (const f of ['text', 'say', 'hint', 'why']) if (!t[f] || BAD.test(String(t[f]))) e.push('bad ' + f + ': ' + t[f]);
+  for (const f of ['scene', 'whySay']) if (t[f] && BAD.test(String(t[f]))) e.push('bad ' + f);
+  if (!KINDS.includes(t.kind)) e.push('kind ' + t.kind);
+  if (t.opts) {
+    const vs = t.opts.map(o => o.v);
+    if (vs.length < 3) e.push('opts ≤ 2');
+    if (new Set(vs).size !== vs.length) e.push('dup opts');
+    if (vs.filter(v => v === t.ans).length !== 1) e.push('ans not once in opts: ' + t.ans + ' / ' + vs.join(','));
+    if (t.opts.some(o => !o.h || BAD.test(o.h))) e.push('bad opt html');
+  } else if (t.kind === 'pick') e.push('pick without opts');
+  if (t.kind === 'put' && !(t.pile >= t.n && t.n === t.ans)) e.push('put pile');
+  if (t.kind === 'frame' && !(t.a < t.t && t.t <= 10 && t.ans === t.t)) e.push('frame');
+  if (t.gen === 'k_sub' && t.d < 3) {
+    const n = (t.scene.match(/<span/g) || []).length, gone = (t.scene.match(/class="gone"/g) || []).length;
+    if (n - gone !== t.ans) e.push('k_sub picture ≠ answer');
+    if (!/зачёрк/.test(t.hint) || !/зачёрк/.test(t.say)) e.push('k_sub hint/say do not mention crossing out');
+  }
+  return e;
+}
+const sum = {}, share = {}; let total = 0, fails = 0;
+for (const T of KID_TOPICS) {
+  let two = 0, n = 0;
+  for (const g of T.gens) for (let d = 1; d <= 3; d++) {
+    let f = 0, ex = '';
+    for (let i = 0; i < RUNS; i++) {
+      total++; n++;
+      let t, e;
+      try { t = makeKid(g, d); e = checkKid(t); } catch (err) { e = ['throw ' + err.message]; }
+      if (t && t.opts && t.opts.length <= 2) two++;
+      if (e.length) { f++; fails++; if (!ex) ex = e.join('; '); }
+    }
+    sum[g + ' d' + d] = f ? `FAIL ${f}/${RUNS}: ${ex}` : 'ok';
+  }
+  share[T.name] = Math.round(two / n * 1000) / 10;
+}
+/* Жёлудик: уникальные id в каждом выводе и все четыре позы */
+const ids = new Set(); let dupIds = 0;
+for (const m of ['happy', 'cheer', 'think', 'show', 'happy']) for (const id of ART.zhel(m).matchAll(/id="([^"]+)"/g)) { if (ids.has(id[1])) dupIds++; ids.add(id[1]); }
+window.TEST = { total, fails, share, dupIds, sum };
+document.getElementById('out').innerHTML = `<p><b>${total}</b> заданий, ошибок: <b class="${fails ? 'bad' : ''}">${fails}</b>. Повторов id у Жёлудика: ${dupIds}.</p>
+<p>Заданий «из двух» (50/50): ${Object.entries(share).map(([k, v]) => k + ' ' + v + '%').join(', ')}</p><pre>${Object.entries(sum).map(([k, v]) => k + ': ' + v).join('\n')}</pre>`;
+</script></body></html>

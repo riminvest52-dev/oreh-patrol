@@ -55,11 +55,24 @@ for (const top of TOPICS) for (const g of top.gens) {
     summary[g + ' d' + d] = f ? `FAIL ${f}/400: ${ex}` : 'ok';
   }
 }
-/* Доля заданий «из двух» на Острове правды */
-let two = 0, all = 0;
-for (const g of TOPIC.logic.gens) for (let d = 1; d <= 3; d++) for (let i = 0; i < 300; i++) { const t = makeTask(g, d); all++; if (t.type === 'choice' && t.options.length <= 2) two++; }
-const share5050 = Math.round(two / all * 100);
-window.TEST = { total, fails, summary, share5050, plural: PLURAL.slice(0, 20), pluralN: PLURAL.length, trapMiss: TRAPMISS };
-out.innerHTML = `<p><b>${total}</b> заданий, ошибок: <b class="${fails ? 'bad' : ''}">${fails}</b>. Остров правды, выбор из двух: ${share5050}%. Подозрительных склонений: ${PLURAL.length}</p><pre>${PLURAL.slice(0, 20).join(String.fromCharCode(10))}</pre><pre>${Object.entries(summary).map(([k, v]) => k + ': ' + v).join('\n')}</pre><h2>Примеры</h2>` +
+/* Доля заданий «из двух» (50/50) по каждой локации */
+const share = {}; let two = 0, all = 0;
+for (const top of TOPICS) {
+  let t2 = 0, n = 0;
+  for (const g of top.gens) for (let d = 1; d <= 3; d++) for (let i = 0; i < 300; i++) { const t = makeTask(g, d); n++; if (t.type === 'choice' && t.options.length <= 2) t2++; }
+  share[top.id] = Math.round(t2 / n * 1000) / 10; two += t2; all += n;
+}
+const share5050 = Math.round(two / all * 1000) / 10;
+/* Остров правды: в одном задании нет строк одного шаблона (числа и x, y не считаем) */
+const sig = s => strip(s).replace(/\b[xy]\b|\d+/g, '#').slice(0, 14);
+const NEAR = [];
+for (let d = 1; d <= 3; d++) for (let i = 0; i < 2000; i++) {
+  const t = makeTask('log_tf', d);
+  const lines = t.items || [...t.q.matchAll(/<li>(.*?)<\/li>/g)].map(m => m[1]);
+  const sg = lines.map(sig);
+  if (new Set(sg).size !== sg.length) NEAR.push(`d${d}: ` + lines.join(' | '));
+}
+window.TEST = { total, fails, summary, share5050, share, near: NEAR.length, nearEx: NEAR.slice(0, 5), plural: PLURAL.slice(0, 20), pluralN: PLURAL.length, trapMiss: TRAPMISS };
+out.innerHTML = `<p><b>${total}</b> заданий, ошибок: <b class="${fails ? 'bad' : ''}">${fails}</b>. Заданий «из двух» (50/50): ${share5050}% (${Object.entries(share).map(([k, v]) => TOPIC[k].name + ' ' + v + '%').join(', ')}). Остров правды, строк одного шаблона в задании: ${NEAR.length}. Подозрительных склонений: ${PLURAL.length}</p><pre>${PLURAL.slice(0, 20).join(String.fromCharCode(10))}</pre><pre>${Object.entries(summary).map(([k, v]) => k + ': ' + v).join('\n')}</pre><h2>Примеры</h2>` +
   samples.map(s => `<div class="task"><pre>${s.replace(/</g, '&lt;')}</pre></div>`).join('');
 </script></body></html>

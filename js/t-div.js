@@ -5,7 +5,6 @@ function multiTask(q, items, isRight, hint, explain) {
   const answer = items.filter(isRight).map(String);
   return { q, type: 'multi', items: items.map(String), answer, hint, explain };
 }
-const YN = ['Да', 'Нет'];
 
 reg('div', 'div_divisors', d => {
   if (d === 1) {
@@ -97,32 +96,81 @@ reg('div', 'div_prime', d => {
 
 reg('div', 'div_sum', d => {
   const rule = 'Если каждое слагаемое делится на число, то и сумма делится. Если одно слагаемое не делится, а остальные делятся — сумма не делится.';
+  /* Без «Да / Нет»: выбор из четырёх, отметка нескольких или ввод числа */
   if (d === 1 || (d === 2 && R.chance(0.4))) {
-    const k = R.pick([3, 4, 5, 6, 7, 8, 9, 11, 12]);
-    const a = k * R.int(5, 40), both = R.chance(0.5);
-    let b; if (both) b = k * R.int(2, 12); else { do { b = R.int(10, 99); } while (b % k === 0); }
-    const sub = R.chance(0.3) && a > b, s = sub ? '−' : '+';
-    return { q: `Не вычисляя, определи: делится ли <span class="ex">${a} ${s} ${b}</span> на ${k}?`, type: 'choice', options: YN, answer: both ? 'Да' : 'Нет', hint: rule,
-      explain: [`${a} делится на ${k} (${a} = ${k} · ${a / k}).`, both ? `${b} делится на ${k} (${b} = ${k} · ${b / k}) — значит, и ${sub ? 'разность' : 'сумма'} делится.` : `${b} не делится на ${k} — значит, ${sub ? 'разность' : 'сумма'} не делится.`] };
+    const k = R.pick([3, 4, 5, 6, 7, 8, 9, 11, 12]), a = k * R.int(12, 60), v = R.int(0, 2);
+    const notK = (lo, hi) => { let x; do { x = R.int(lo, hi); } while (x % k === 0); return x; };
+    if (v === 0) {
+      const sub = R.chance(0.3), w = sub ? 'разность' : 'сумма';
+      const good = k * R.int(2, sub ? Math.min(12, a / k - 1) : 12);
+      const bad = new Set(); while (bad.size < 3) { const x = notK(10, sub ? Math.min(99, a - 1) : 99); if (x !== good) bad.add(x); }
+      return { q: sub ? `Какое из чисел можно <b>вычесть</b> из ${a}, чтобы разность делилась на ${k}?` : `Какое из чисел можно <b>прибавить</b> к ${a}, чтобы сумма делилась на ${k}?`,
+        type: 'choice', options: R.shuffle([good, ...bad]).map(String), answer: String(good), hint: rule,
+        traps: [...bad].map(x => [String(x), `${x} не делится на ${k}, а ${a} делится — значит, ${w} не разделится на ${k}.`]),
+        explain: [`${a} = ${k} · ${a / k} — делится на ${k}.`, `Значит, ${sub ? 'вычитать' : 'прибавлять'} нужно число, которое тоже делится на ${k}: ${good} = ${k} · ${good / k}.`,
+          `Остальные числа на ${k} не делятся, и ${w} с ними не разделится.`] };
+    }
+    if (v === 1) {
+      const ny = R.int(2, 3), rows = [], seen = new Set();
+      while (rows.length < 5) {
+        const ok = rows.filter(r => r.ok).length < ny, x = k * R.int(5, 40), y = ok ? k * R.int(2, 15) : notK(10, 99);
+        const s = R.chance(0.5) ? `${x} + ${y}` : `${y} + ${x}`;
+        if (seen.has(s)) continue; seen.add(s); rows.push({ s, ok, x, y });
+      }
+      const list = R.shuffle(rows);
+      return multiTask(`Не вычисляя, отметь все суммы, которые <b>делятся на ${k}</b>:`, list.map(r => r.s), s => rows.find(r => r.s === s).ok, rule,
+        list.map(r => r.ok ? `${r.s}: ${r.x} и ${r.y} делятся на ${k} → сумма делится ✓` : `${r.s}: ${r.x} делится на ${k}, а ${r.y} — нет → сумма не делится`));
+    }
+    const ans = Math.ceil(10 / k) * k;
+    return { q: `Число ${a} делится на ${k}. Какое <b>наименьшее двузначное</b> число можно прибавить к ${a}, чтобы сумма тоже делилась на ${k}?`, type: 'num', answer: ans,
+      hint: `Раз ${a} делится на ${k}, второе слагаемое тоже должно делиться на ${k}.`,
+      traps: [[10, `10 не делится на ${k} — тогда и сумма не разделится.`], [k, `${k} — однозначное число, а нужно двузначное.`], [ans + k, `Есть двузначное число, кратное ${k}, и поменьше.`]],
+      explain: [`${a} делится на ${k}, поэтому сумма делится, только если второе слагаемое тоже делится на ${k}.`, `Двузначные числа, кратные ${k}: ${ans}, ${ans + k}, ${ans + 2 * k}, … Наименьшее — ${ans}.`] };
   }
   if (d === 2) {
     const k = R.pick([3, 5, 7, 11]);
-    const a = k * R.int(2, 9), yes = R.chance(0.6);
-    let b; if (yes) b = R.int(11, 40); else { do { b = R.int(11, 40); } while (b % k === 0); }
-    if (!yes) { let x; do { x = R.int(4, 30); } while (x % k === 0); return { q: `Делится ли произведение <span class="ex">${x} · ${b}</span> на ${k}?`, type: 'choice', options: YN, answer: 'Нет',
-      hint: `${k} — простое. Произведение делится на простое число, только если хотя бы один множитель делится на него.`, explain: [`Ни ${x}, ни ${b} не делятся на ${k}, а ${k} — простое число. Значит, произведение не делится.`, `Проверка: ${x} · ${b} = ${x * b}, ${x * b} : ${k} = ${Math.floor(x * b / k)} (ост. ${x * b % k}).`] }; }
-    return { q: `Делится ли произведение <span class="ex">${a} · ${b}</span> на ${k}?`, type: 'choice', options: YN, answer: 'Да',
-      hint: 'Если хотя бы один множитель делится на число, то и произведение делится.', explain: [`${a} = ${k} · ${a / k} — делится на ${k}.`, 'Значит, и всё произведение делится на ' + k + '.'] };
+    const notK = (lo, hi) => { let x; do { x = R.int(lo, hi); } while (x % k === 0); return x; };
+    const prod = ok => { const f = ok ? k * R.int(2, 9) : notK(4, 40), g = notK(11, 40); return R.chance(0.5) ? { s: `${f} · ${g}`, f, g, x: f, y: g, ok } : { s: `${g} · ${f}`, f, g, x: g, y: f, ok }; };
+    const why = r => r.ok ? `${r.s}: ${r.f} = ${k} · ${r.f / k} → произведение делится ✓` : `${r.s}: ни ${r.x}, ни ${r.y} не делятся на ${k} → не делится`;
+    const pHint = `${k} — простое число. Произведение делится на ${k}, только если хотя бы один множитель делится на ${k}.`;
+    const pick = n => { const rows = [], seen = new Set(); while (rows.length < n.length) { const r = prod(n[rows.length]); if (!seen.has(r.s)) { seen.add(r.s); rows.push(r); } } return rows; };
+    if (R.chance(0.5)) {
+      const rows = pick([true, false, false, false]), right = rows[0];
+      return { q: `Какое произведение <b>делится на ${k}</b>?`, type: 'choice', options: R.shuffle(rows.map(r => r.s)), answer: right.s, hint: pHint,
+        traps: rows.slice(1).map(r => [r.s, `Ни ${r.x}, ни ${r.y} не делятся на ${k}, а ${k} — простое число. Значит, это произведение не делится.`]),
+        explain: [pHint, why(right)] };
+    }
+    const ny = R.int(2, 3), rows = R.shuffle(pick(Array.from({ length: 5 }, (_, i) => i < ny)));
+    return multiTask(`Не вычисляя, отметь все произведения, которые <b>делятся на ${k}</b>:`, rows.map(r => r.s), s => rows.find(r => r.s === s).ok, pHint, [pHint].concat(rows.map(why)));
   }
   const k = R.pick([3, 5, 7, 9]);
-  let a, b; do { a = R.int(11, 60); b = R.int(11, 60); } while (a % k === 0 || b % k === 0);
-  const yes = (a + b) % k === 0;
-  if (R.chance(0.5)) return { q: `Оба числа ${a} и ${b} не делятся на ${k}. Делится ли их сумма на ${k}?`, type: 'choice', options: ['Да', 'Нет', 'Без вычисления не узнать'],
-    answer: yes ? 'Да' : 'Нет', hint: 'Правило о делимости суммы здесь не помогает — придётся посчитать!',
-    explain: ['Если оба слагаемых не делятся, правило ничего не говорит — нужно вычислить.', `${a} + ${b} = ${a + b}; ${a + b} : ${k} = ${Math.floor((a + b) / k)}${yes ? ' — делится!' : ` (ост. ${(a + b) % k}) — не делится.`}`] };
-  let x, y; do { x = R.int(11, 40); y = k * R.int(2, 8) - x; } while (x % k === 0 || y <= 0 || y % k === 0);
-  return { q: `Истинно или ложно?<br><b>«Если оба слагаемых не делятся на ${k}, то и сумма не делится на ${k}»</b>`, type: 'choice', options: TF, answer: TF[1],
-    hint: 'Попробуй найти контрпример.', explain: [`Контрпример: ${x} + ${y} = ${x + y}. Ни ${x}, ни ${y} не делятся на ${k}, а ${x + y} делится!`, 'Значит, утверждение ложно.'] };
+  const nd = () => { let x; do { x = R.int(11, 60); } while (x % k === 0); return x; }, dv = () => k * R.int(2, Math.floor(60 / k));
+  if (R.chance(0.6)) {
+    /* «Без вычисления не узнать» — верный ответ, когда оба слагаемых не делятся */
+    const O = ['Да, делится', 'Нет, не делится', 'Без вычисления не узнать'], c = R.pick([0, 0, 1, 2, 2]);
+    const a = c === 2 ? nd() : dv(), b = c === 0 ? nd() : c === 1 ? dv() : nd(), s = a + b;
+    const calc = `Проверка: ${a} + ${b} = ${s}; ${s % k ? `${s} на ${k} не делится (ост. ${s % k})` : `${s} = ${k} · ${s / k}`}.`;
+    if (c === 2) return { q: `Не вычисляя, определи: делится ли сумма <span class="ex">${a} + ${b}</span> на ${k}?`, type: 'choice', options: O, answer: O[2], hint: rule,
+      traps: [[O[0], `Оба слагаемых не делятся на ${k} — правило тут ничего не говорит. Сумма может делиться, а может и не делиться.`],
+        [O[1], `Оба слагаемых не делятся на ${k} — правило тут ничего не говорит. Например, ${k + 1} + ${2 * k - 1} = ${3 * k} делится на ${k}.`]],
+      explain: ['Правило работает, только когда хотя бы одно слагаемое делится на число.', `Здесь ни ${a}, ни ${b} не делятся на ${k}, поэтому без вычисления не узнать.`, calc] };
+    const ok = c === 1;
+    return { q: `Не вычисляя, определи: делится ли сумма <span class="ex">${a} + ${b}</span> на ${k}?`, type: 'choice', options: O, answer: ok ? O[0] : O[1], hint: rule,
+      traps: [[O[2], ok ? `Оба слагаемых делятся на ${k} — правило отвечает сразу.` : `${a} делится на ${k}, а ${b} — нет. Правило отвечает сразу.`],
+        [ok ? O[1] : O[0], ok ? `${a} и ${b} делятся на ${k} — значит, и сумма делится.` : `${b} не делится на ${k}, а ${a} делится — значит, сумма не делится.`]],
+      explain: [`${a} = ${k} · ${a / k} — делится на ${k}.`, ok ? `${b} = ${k} · ${b / k} — тоже делится, значит, и сумма делится.` : `${b} не делится на ${k}, значит, сумма не делится.`, calc] };
+  }
+  /* Контрпример к ложному утверждению */
+  let x, y; do { x = nd(); y = k * R.int(2, 10) - x; } while (y <= 10 || y % k === 0);
+  let p, q; do { p = nd(); q = nd(); } while ((p + q) % k === 0);
+  const m = dv(), n = nd(), u = dv(), w = dv();
+  const right = `${x} и ${y}`, opts = [right, `${p} и ${q}`, `${m} и ${n}`, `${u} и ${w}`];
+  if (new Set(opts).size < 4) return null;
+  return { q: `Утверждение: <b>«Если оба слагаемых не делятся на ${k}, то и сумма не делится на ${k}»</b>.<br>Какая пара чисел показывает, что оно <b>ложно</b>?`,
+    type: 'choice', options: R.shuffle(opts), answer: right, hint: 'Нужен контрпример: оба числа не делятся на ' + k + ', а сумма делится.',
+    traps: [[opts[1], `${p} + ${q} = ${p + q} — тоже не делится на ${k}. Этот пример с утверждением согласен, а не опровергает его.`],
+      [opts[2], `${m} делится на ${k}, а в утверждении оба слагаемых не делятся.`], [opts[3], `Оба числа делятся на ${k} — утверждение говорит о других числах.`]],
+    explain: [`${x} и ${y} не делятся на ${k}, а ${x} + ${y} = ${x + y} = ${k} · ${(x + y) / k} — делится!`, 'Один такой пример — контрпример — показывает, что утверждение ложно.'] };
 });
 
 /* ---------- Сито: признаки делимости ---------- */
@@ -148,9 +196,29 @@ reg('sieve', 'sv_check', d => {
 
 reg('sieve', 'sv_digit', d => {
   if (d === 1) {
-    const k = R.pick([2, 5, 10, 3, 9]), S = SIGN[k], yes = R.chance(0.5);
-    let n; do { n = R.int(1000, 99999); } while (S.t(n) !== yes);
-    return { q: `Делится ли число <b>${fmt(n)}</b> на ${k}?`, type: 'choice', options: YN, answer: yes ? 'Да' : 'Нет', hint: S.rule, explain: [S.rule, `${fmt(n)}: ${S.why(n)} → ${yes ? 'делится' : 'не делится'}.`] };
+    /* Без «Да / Нет»: отметить все подходящие числа или найти остаток по признаку */
+    if (R.chance(0.5)) {
+      const k = R.pick([3, 9]), S = SIGN[k], ny = R.int(2, 3), total = R.int(5, 6), yes = [], no = [];
+      while (yes.length < ny) { const n = k * R.int(Math.ceil(100 / k), Math.floor(9999 / k)); if (!yes.includes(n)) yes.push(n); }
+      /* Для 9 среди «нет» есть числа, которые делятся на 3, но не на 9 */
+      while (no.length < total - ny) {
+        const n = R.int(100, 9999), trick = k === 9 && no.length < 2;
+        if (!S.t(n) && (!trick || n % 3 === 0) && !no.includes(n)) no.push(n);
+      }
+      const items = R.shuffle(yes.concat(no));
+      return { q: `Отметь все числа, которые <b>делятся на ${k}</b>:`, type: 'multi', items: items.map(fmt), answer: items.filter(S.t).map(fmt), hint: S.rule,
+        explain: [S.rule].concat(items.map(n => `${fmt(n)}: ${S.why(n)} → ${S.t(n) ? 'делится ✓' : 'не делится'}`)) };
+    }
+    const k = R.pick([3, 3, 9, 9, 5, 2]);
+    let n; do { n = R.int(100, 9999); } while (n % k === 0 && R.chance(0.75));
+    const r = n % k, last = n % 10, ds = digitSum(n), digs = String(n).split('');
+    if (k === 2 || k === 5) return { q: `Какой <b>остаток</b> получится при делении числа ${fmt(n)} на ${k}? Найди по последней цифре.`, type: 'num', answer: r,
+      hint: `Остаток при делении на ${k} зависит только от последней цифры.`, traps: [[last, `${last} — это последняя цифра. А нужен остаток от её деления на ${k}.`]],
+      explain: [`Последняя цифра — ${last}.`, `${last} : ${k} = ${Math.floor(last / k)} (ост. ${r}) → у числа ${fmt(n)} тот же остаток: ${r}.`] };
+    return { q: `Какой <b>остаток</b> получится при делении числа ${fmt(n)} на ${k}? Найди по сумме цифр, не деля столбиком.`, type: 'num', answer: r,
+      hint: `Число и сумма его цифр дают одинаковый остаток при делении на ${k}.`,
+      traps: [[ds, `${ds} — это сумма цифр. Теперь найди остаток от деления ${ds} на ${k}.`], [(k - r) % k, `Это сколько не хватает до делимости, а нужен остаток.`]],
+      explain: [`Сумма цифр: ${digs.join(' + ')} = ${ds}.`, `${ds} : ${k} = ${Math.floor(ds / k)} (ост. ${ds % k}).`, `Значит, ${fmt(n)} при делении на ${k} даёт остаток ${r}.`] };
   }
   for (let t = 0; t < 100; t++) {
     const len = R.int(3, 4), pos = R.int(1, len - 1);

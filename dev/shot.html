@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Лесная полянка — скриншоты</title>
+<link rel="stylesheet" href="../css/style.css">
+</head>
+<body>
+<!-- Только для проверки раскладки: ?i=0..8 — тема, ?err=1|2 — ошибка, ?scr=map|welcome. Озвучка и звуки выключены. -->
+<div id="app"></div>
+<div id="modal" class="modal hidden"></div>
+<div id="toast" class="toast hidden"></div>
+<script src="../js/core.js"></script>
+<script src="../js/t-fund.js"></script>
+<script src="../js/t-lang.js"></script>
+<script src="../js/t-models.js"></script>
+<script src="../js/t-logic.js"></script>
+<script src="../js/t-div.js"></script>
+<script src="../js/topics.js"></script>
+<script src="../js/art.js"></script>
+<script src="../js/state.js"></script>
+<script src="../js/cloud.js"></script>
+<script src="../js/ui.js"></script>
+<script src="../js/play.js"></script>
+<script src="../js/screens.js"></script>
+<script src="../js/kid.js"></script>
+<script src="shots.js"></script>
+<script>
+  try { localStorage.setItem('oreh_voice', '0'); } catch (e) { }
+  const kp = F.profiles.find(p => p.world === 'kid');
+  if (kp) useProfile(kp.id); else addProfile('kid');
+  S.name = 'Лиза'; S.sound = false; save();
+  const q = new URLSearchParams(location.search);
+  if (q.get('scr') === 'map') showKidMap();
+  else if (q.get('scr') === 'welcome') showKidWelcome();
+  else {
+    kShot(+q.get('i') || 0);
+    for (let e = 0; e < (+q.get('err') || 0); e++) {
+      const t = K.t, i = t.opts ? t.opts.findIndex(o => o.v !== t.ans && !document.querySelectorAll('.kopt')[t.opts.indexOf(o)].classList.contains('off')) : -1;
+      if (i >= 0) kAnswer(t.opts[i].v, document.querySelectorAll('.kopt')[i]); else kAnswer(-1);
+    }
+  }
+</script>
+</body>
+</html>

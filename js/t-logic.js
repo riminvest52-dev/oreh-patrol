@@ -16,85 +16,92 @@ const PROPS = [
 ];
 const dash = P => P.verb ? '' : '— ';
 
-/* Одно высказывание о числах: {s, v, why}. want — нужная истинность (или undefined — любая) */
-function fact(want) {
-  for (let t = 0; t < 200; t++) {
-    const f = factOnce();
-    if (f && (want === undefined || f.v === want)) return f;
+/* Одно высказывание о числах: {s, v, why, k}. want — нужная истинность (или undefined — любая).
+   used — шаблоны, уже взятые в это задание: в одном задании все строки собраны по разным шаблонам */
+const FACT_KINDS = ['div', 'par', 'prime', 'sum', 'all', 'some', 'none'];
+function fact(want, used) {
+  for (let t = 0; t < 300; t++) {
+    const f = factOnce(used);
+    if (f && (want === undefined || f.v === want)) { if (used) used.add(f.k); return f; }
   }
   return null;
 }
-function factOnce() {
-  const kind = R.int(0, 5);
-  if (kind === 0) {
+function factOnce(used) {
+  const free = FACT_KINDS.filter(x => !used || !used.has(x));
+  const kind = R.pick(free.length ? free : FACT_KINDS);
+  if (kind === 'div') {
     const k = R.pick([2, 3, 4, 5, 6, 7, 9, 10]), n = R.chance(0.5) ? k * R.int(3, 20) : R.int(12, 120);
     const v = n % k === 0;
-    return { s: `${n} делится на ${k}.`, v, why: v ? `${n} = ${k} · ${n / k} — делится, истинно.` : `${n} : ${k} = ${Math.floor(n / k)} (ост. ${n % k}) — не делится, значит, ложно.` };
+    return { k: kind, s: `${n} делится на ${k}.`, v, why: v ? `${n} = ${k} · ${n / k} — делится, истинно.` : `${n} : ${k} = ${Math.floor(n / k)} (ост. ${n % k}) — не делится, значит, ложно.` };
   }
-  if (kind === 1) {
+  if (kind === 'par') {
     const n = R.int(11, 199), ev = R.chance(0.5);
     const v = (n % 2 === 0) === ev;
-    return { s: `Число ${n} ${ev ? 'чётное' : 'нечётное'}.`, v, why: `${n} оканчивается на ${n % 10} — оно ${n % 2 ? 'нечётное' : 'чётное'}. ${v ? 'Истинно' : 'Ложно'}.` };
+    return { k: kind, s: `Число ${n} ${ev ? 'чётное' : 'нечётное'}.`, v, why: `${n} оканчивается на ${n % 10} — оно ${n % 2 ? 'нечётное' : 'чётное'}. ${v ? 'Истинно' : 'Ложно'}.` };
   }
-  if (kind === 2) {
+  if (kind === 'prime') {
     const n = R.pick(TRICKY.filter(x => x > 1)), v = isPrime(n);
-    return { s: `Число ${n} простое.`, v, why: primeWhy(n) + (v ? ' Истинно.' : ' Ложно.') };
+    return { k: kind, s: `Число ${n} простое.`, v, why: primeWhy(n) + (v ? ' Истинно.' : ' Ложно.') };
   }
-  if (kind === 3) {
+  if (kind === 'sum') {
     const a = R.int(11, 60), b = R.int(11, 60), ev = R.chance(0.5), v = ((a + b) % 2 === 0) === ev;
-    return { s: `Сумма ${a} + ${b} — ${ev ? 'чётное' : 'нечётное'} число.`, v, why: `${a} + ${b} = ${a + b} — ${(a + b) % 2 ? 'нечётное' : 'чётное'}. ${v ? 'Истинно' : 'Ложно'}.` };
+    return { k: kind, s: `Сумма ${a} + ${b} — ${ev ? 'чётное' : 'нечётное'} число.`, v, why: `${a} + ${b} = ${a + b} — ${(a + b) % 2 ? 'нечётное' : 'чётное'}. ${v ? 'Истинно' : 'Ложно'}.` };
   }
-  const P = R.pick(PROPS), nums = R.sample(Array.from({ length: 90 }, (_, i) => i + 10), 3).sort((a, b) => a - b);
+  /* «Ни одно … не …» звучит только со свойством-глаголом */
+  const P = R.pick(kind === 'none' ? PROPS.filter(p => p.verb) : PROPS), nums = R.sample(Array.from({ length: 90 }, (_, i) => i + 10), 3).sort((a, b) => a - b);
   const hold = nums.filter(P.t), list = nums.join(', ');
-  const q = kind === 4 ? 'all' : (P.verb && R.chance(0.5) ? 'none' : 'some');
-  if (q === 'all') {
+  if (kind === 'all') {
     const v = hold.length === 3, bad = nums.find(n => !P.t(n));
-    return { s: `Все числа ${list} ${dash(P)}${P.s}.`, v, why: v ? `Проверяем каждое: ${nums.map(P.why).join('; ')}. Истинно.` : `Контрпример: ${P.why(bad)}. Значит, ложно.` };
+    return { k: kind, s: `Все числа ${list} ${dash(P)}${P.s}.`, v, why: v ? `Проверяем каждое: ${nums.map(P.why).join('; ')}. Истинно.` : `Контрпример: ${P.why(bad)}. Значит, ложно.` };
   }
-  if (q === 'some') {
+  if (kind === 'some') {
     const v = hold.length > 0;
-    return { s: `Хотя бы одно из чисел ${list} ${dash(P)}${P.one}.`, v, why: v ? `Пример: ${P.why(hold[0])}. Одного примера достаточно — истинно.` : `Проверяем каждое: ${nums.map(P.why).join('; ')}. Ни одно не подходит — ложно.` };
+    return { k: kind, s: `Хотя бы одно из чисел ${list} ${dash(P)}${P.one}.`, v, why: v ? `Пример: ${P.why(hold[0])}. Одного примера достаточно — истинно.` : `Проверяем каждое: ${nums.map(P.why).join('; ')}. Ни одно не подходит — ложно.` };
   }
   const v = hold.length === 0;
-  return { s: `Ни одно из чисел ${list} не ${P.one}.`, v, why: v ? `Проверяем каждое: ${nums.map(P.why).join('; ')}. Ни одно не подходит — истинно.` : `Но ${P.why(hold[0])}. Значит, ложно.` };
+  return { k: kind, s: `Ни одно из чисел ${list} не ${P.one}.`, v, why: v ? `Проверяем каждое: ${nums.map(P.why).join('; ')}. Ни одно не подходит — истинно.` : `Но ${P.why(hold[0])}. Значит, ложно.` };
 }
 
-/* Предложения, которые НЕ являются высказываниями */
-function nonStatement() {
+/* Предложения, которые НЕ являются высказываниями. near — с каким высказыванием строка была бы почти одинаковой */
+function nonStatement(used) {
   const a = R.int(12, 90), b = R.int(3, 9), n = b * R.int(3, 15);
-  return R.pick([
-    () => ({ s: `Сколько будет ${a} + ${b}?`, why: 'вопрос' }),
-    () => ({ s: `Делится ли ${n} на ${b}?`, why: 'вопрос' }),
-    () => ({ s: `Какое число больше: ${a} или ${a + b}?`, why: 'вопрос' }),
-    () => ({ s: `Найди сумму чисел ${a} и ${b}.`, why: 'просьба' }),
-    () => ({ s: `Раздели ${n} на ${b}!`, why: 'просьба' }),
-    () => ({ s: `Запиши число ${a} цифрами.`, why: 'просьба' }),
-    () => ({ s: `x + ${b} = ${a}`, why: 'предложение с переменной: пока x неизвестен, нельзя сказать, истинно или ложно' }),
-    () => ({ s: `${n} делится на y.`, why: 'предложение с переменной: неизвестно, чему равно y' }),
-    () => ({ s: 'Какая интересная задача!', why: 'восклицание' }),
-    () => ({ s: 'Ура, у нас каникулы!', why: 'восклицание' })
-  ])();
+  const L = [
+    { id: 'n-howmuch', near: 'sum', f: () => ({ s: `Сколько будет ${a} + ${b}?`, why: 'вопрос' }) },
+    { id: 'n-divq', near: 'div', f: () => ({ s: `Делится ли ${n} на ${b}?`, why: 'вопрос' }) },
+    { id: 'n-cmp', near: 'cmp', f: () => ({ s: `Какое число больше: ${a} или ${a + b}?`, why: 'вопрос' }) },
+    { id: 'n-findsum', near: 'sum', f: () => ({ s: `Найди сумму чисел ${a} и ${b}.`, why: 'просьба' }) },
+    { id: 'n-divide', near: 'div', f: () => ({ s: `Раздели ${n} на ${b}!`, why: 'просьба' }) },
+    { id: 'n-write', near: 'write', f: () => ({ s: `Запиши число ${a} цифрами.`, why: 'просьба' }) },
+    { id: 'n-eq', near: 'eq', f: () => ({ s: `x + ${b} = ${a}`, why: 'предложение с переменной: пока x неизвестен, нельзя сказать, истинно или ложно' }) },
+    { id: 'n-divy', near: 'div', f: () => ({ s: `${n} делится на y.`, why: 'предложение с переменной: неизвестно, чему равно y' }) },
+    { id: 'n-wow', near: 'excl', f: () => ({ s: 'Какая интересная задача!', why: 'восклицание' }) },
+    { id: 'n-hooray', near: 'excl', f: () => ({ s: 'Ура, у нас каникулы!', why: 'восклицание' }) }
+  ];
+  const free = L.filter(x => !used || (!used.has(x.id) && !used.has(x.near)));
+  const x = R.pick(free.length ? free : L);
+  if (used) { used.add(x.id); used.add(x.near); }
+  return Object.assign(x.f(), { k: x.id });
 }
 const NOTE_STMT = 'Высказывание — утверждение, про которое можно сказать: истинно оно или ложно. Ложное утверждение — тоже высказывание!';
 
 reg('logic', 'log_tf', d => {
   if (d === 1) {
-    const ns = R.int(2, 3), st = [], non = [], seen = new Set();
-    while (st.length < ns) { const f = fact(); if (f && !seen.has(f.s)) { seen.add(f.s); st.push(f); } }
-    while (non.length < 5 - ns) { const x = nonStatement(); if (!seen.has(x.s)) { seen.add(x.s); non.push(x); } }
+    const ns = R.int(2, 3), st = [], non = [], used = new Set();
+    while (st.length < ns) { const f = fact(undefined, used); if (!f) return null; st.push(f); }
+    while (non.length < 5 - ns) non.push(nonStatement(used));
     const all = R.shuffle(st.map(x => ({ s: x.s, ok: true, why: 'утверждение, оно ' + (x.v ? 'истинно' : 'ложно') + ' — высказывание' })).concat(non.map(x => ({ s: x.s, ok: false, why: x.why + ' — не высказывание' }))));
     return { q: 'Отметь все <b>высказывания</b>:', type: 'multi', wide: true, items: all.map(x => x.s), answer: all.filter(x => x.ok).map(x => x.s),
       hint: NOTE_STMT, explain: [NOTE_STMT].concat(all.map(x => `«${x.s}» — ${x.why}.`)) };
   }
   if (d === 2) {
-    const fs = [], seen = new Set();
+    const fs = [], used = new Set();
     const want = R.shuffle([true, false, R.chance(0.5), R.chance(0.5)]);
-    for (const w of want) { let f; do { f = fact(w); } while (f && seen.has(f.s)); if (!f) return null; seen.add(f.s); fs.push(f); }
+    for (const w of want) { const f = fact(w, used); if (!f) return null; fs.push(f); }
     return { q: 'Отметь все <b>истинные</b> высказывания:', type: 'multi', wide: true, items: fs.map(x => x.s), answer: fs.filter(x => x.v).map(x => x.s),
       hint: '«Все» — проверь каждое число. «Хотя бы одно» — хватит одного примера. «Ни одно» — проверь каждое.', explain: fs.map(x => `«${x.s}» ${x.why}`) };
   }
-  const n = R.int(4, 5), fs = [], seen = new Set();
-  while (fs.length < n) { const f = fact(); if (f && !seen.has(f.s)) { seen.add(f.s); fs.push(f); } }
+  const n = R.int(4, 5), fs = [], used = new Set();
+  while (fs.length < n) { const f = fact(undefined, used); if (!f) return null; fs.push(f); }
   const k = fs.filter(x => x.v).length;
   return { q: `Сколько из этих высказываний <b>истинны</b>?<ol class="facts">${fs.map(x => `<li>${x.s}</li>`).join('')}</ol>`, type: 'num', answer: k, draft: true,
     traps: [[n - k, 'Похоже, посчитаны ложные высказывания, а нужно истинные.']],

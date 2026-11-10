@@ -1,6 +1,6 @@
 /* Офлайн-режим: все файлы игры кэшируются при первом открытии.
    При обновлении игры поменяйте VERSION — телефоны подтянут новую версию. */
-const VERSION = 'oreh-v3';
+const VERSION = 'oreh-v3.1';
 const FILES = [
   './', './index.html', './manifest.webmanifest', './css/style.css',
   './js/core.js', './js/t-fund.js', './js/t-lang.js', './js/t-models.js', './js/t-logic.js', './js/t-div.js',

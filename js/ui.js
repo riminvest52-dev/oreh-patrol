@@ -5,6 +5,7 @@ const $app = document.getElementById('app');
 const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 
 function mount(html, onMount) {
+  document.body.classList.remove('kidw');
   $app.innerHTML = `<div class="screen">${html}</div>`;
   const root = $app.firstElementChild;
   root.scrollTop = 0;

@@ -2,27 +2,90 @@
    Только нажатия, задание читается вслух, без таймеров и штрафов. Герой — Жёлудик. */
 'use strict';
 
-/* ---------- Герой ---------- */
+/* ---------- Герой: Жёлудик (концепт утверждён, см. zheludik-brief.md) ----------
+   Собран по zheludik-gen.py. У каждого вывода свои id градиентов и clipPath, чтобы два Жёлудика на экране не путались. */
+const ZH = { INK: '#5B3418', B1: '#F7C46C', B2: '#E39A3B', B3: '#C0702A', C1: '#A8693A', C2: '#7E4A24', LEAF: '#7FB04A', LEAFD: '#4E7F2A', SHOE: '#8A3F1E', CHEEK: '#F28C70', IRIS: '#6B3A16' };
+const ZH_CAP = 'M36 108 C30 70 66 44 104 44 C144 44 172 66 166 100 C142 116 62 120 36 108 Z';
+const ZH_SCALES = (() => {
+  let s = '';
+  for (let r = 0, y = 54; y < 112; y += 11, r++) for (let x = 20 + (r % 2 ? 7 : 0); x < 190; x += 14) s += `<path d="M${x - 7} ${y} q7 9 14 0"/>`;
+  return s;
+})();
+let zhelN = 0;
+function zhGlove(x, y, rot, point) {
+  const I = ZH.INK;
+  const tip = point ? `<path d="M4 -7 C12 -9 20 -9 24 -7 C26 -5 25 -2 22 -2 L6 -1 Z" fill="#fff" stroke="${I}" stroke-width="2.4" stroke-linejoin="round"/>`
+    : `<path d="M3 -6 q5 2 6 7 M-1 -8 q5 2 6 8" stroke="${I}" stroke-width="1.6" fill="none" opacity=".55"/>`;
+  return `<g transform="translate(${x} ${y}) rotate(${rot})"><rect x="-14" y="-5" width="9" height="12" rx="3" fill="#fff" stroke="${I}" stroke-width="2.4"/>
+<path d="M-6 -9 C2 -14 13 -10 13 0 C13 9 2 12 -6 8 Z" fill="#fff" stroke="${I}" stroke-width="2.6" stroke-linejoin="round"/>
+<ellipse cx="-1" cy="-11" rx="4" ry="5.5" transform="rotate(-25 -1 -11)" fill="#fff" stroke="${I}" stroke-width="2.4"/>${tip}</g>`;
+}
+const zhLimb = d => `<path d="${d}" stroke="${ZH.INK}" stroke-width="8.5" fill="none" stroke-linecap="round"/><path d="${d}" stroke="${ZH.B3}" stroke-width="4" fill="none" stroke-linecap="round"/>`;
+function zhArm([s, c, e, rot, pt]) { return zhLimb(`M${s[0]} ${s[1]} Q${c[0]} ${c[1]} ${e[0]} ${e[1]}`) + zhGlove(e[0], e[1], rot, pt); }
+const ZH_POSES = {
+  happy: [[[52, 150], [34, 170], [36, 188], 0, false], [[150, 148], [172, 132], [176, 108], -70, false]],
+  cheer: [[[52, 144], [30, 120], [30, 96], -110, false], [[150, 142], [172, 118], [172, 94], -70, false]],
+  think: [[[52, 152], [34, 172], [40, 190], 20, false], [[148, 156], [140, 182], [116, 180], 200, false]],
+  show: [[[52, 152], [36, 172], [40, 190], 20, false], [[150, 150], [174, 150], [192, 142], -15, true]]
+};
+function zhEyes(mood) {
+  const I = ZH.INK;
+  if (mood === 'cheer') return `<path d="M70 138 q12 -14 24 0 M108 136 q12 -14 24 0" stroke="${I}" stroke-width="5" fill="none" stroke-linecap="round"/>`;
+  const [lx, ly] = { happy: [1, 0], think: [-3, -4], show: [4, 0] }[mood];
+  return `<g class="zh-eyes">` + [[82, 140], [121, 139]].map(([cx, cy]) => {
+    const ix = cx + lx, iy = cy - 1 + ly;
+    return `<ellipse cx="${cx}" cy="${cy}" rx="14.5" ry="18.5" fill="#FFFDF6" stroke="${I}" stroke-width="3"/>
+<ellipse cx="${ix}" cy="${iy}" rx="10" ry="12.5" fill="${ZH.IRIS}"/><ellipse cx="${ix}" cy="${iy + 1}" rx="5.4" ry="7" fill="#1E0F05"/>
+<ellipse cx="${ix + 3.5}" cy="${iy - 5}" rx="4" ry="4.6" fill="#fff"/><circle cx="${ix - 3}" cy="${iy + 4}" r="1.6" fill="#fff"/>
+<path d="M${cx - 13} ${cy - 10} Q${cx - 2} ${cy - 20} ${cx + 11} ${cy - 14}" stroke="${I}" stroke-width="2.2" fill="none" stroke-linecap="round" opacity=".7"/>`;
+  }).join('') + '</g>';
+}
+function zhBrows(mood) {
+  const I = ZH.INK;
+  if (mood === 'think') return `<path d="M70 113 q10 -9 22 -3" stroke="${I}" stroke-width="4.5" fill="none" stroke-linecap="round"/><path d="M110 114 q10 1 20 4" stroke="${I}" stroke-width="4.5" fill="none" stroke-linecap="round"/>`;
+  if (mood === 'cheer') return `<path d="M70 116 q11 -8 22 -2 M108 114 q11 -6 22 2" stroke="${I}" stroke-width="4.5" fill="none" stroke-linecap="round"/>`;
+  return `<path d="M70 117 q12 -9 23 -3 M110 115 q12 -6 22 3" stroke="${I}" stroke-width="4" fill="none" stroke-linecap="round"/>`;
+}
+function zhMouth(mood) {
+  const I = ZH.INK;
+  if (mood === 'think') return `<path d="M96 168 q8 -4 16 2" stroke="${I}" stroke-width="4" fill="none" stroke-linecap="round"/>`;
+  if (mood === 'cheer') return `<path d="M78 158 Q101 196 126 156 Q102 166 78 158 Z" fill="#8E2A1E" stroke="${I}" stroke-width="3.5" stroke-linejoin="round"/>
+<path d="M90 176 Q102 168 114 176 Q102 186 90 176 Z" fill="#F07A6A"/><path d="M84 161 Q102 166 120 160 L119 164 Q102 170 85 165 Z" fill="#fff"/>`;
+  return `<path d="M84 160 Q102 186 122 158 Q103 167 84 160 Z" fill="#8E2A1E" stroke="${I}" stroke-width="3.5" stroke-linejoin="round"/>
+<path d="M93 172 Q103 166 113 172 Q103 180 93 172 Z" fill="#F07A6A"/>`;
+}
 ART.zhel = function (mood = 'happy', cls = '') {
-  const arms = mood === 'cheer'
-    ? '<path d="M50 118 L24 82"/><path d="M150 118 L176 82"/>'
-    : '<path d="M48 142 L26 160"/><path d="M152 142 L174 160"/>';
-  const mouth = mood === 'think'
-    ? '<path d="M88 140 q12 -6 24 0" stroke="#5A2E12" stroke-width="5" fill="none" stroke-linecap="round"/>'
-    : '<path d="M82 134 q18 20 36 0 z" fill="#E8604A" stroke="#5A2E12" stroke-width="4" stroke-linejoin="round"/>';
-  const brow = mood === 'think' ? '<path d="M70 100 l16 4M130 100 l-16 4" stroke="#5A2E12" stroke-width="4" stroke-linecap="round"/>' : '';
-  return `<svg class="chip ${cls}" viewBox="0 0 200 215" xmlns="http://www.w3.org/2000/svg" aria-label="Жёлудик">
-    <g stroke="#7A4A22" stroke-width="8" stroke-linecap="round" fill="none">${arms}<path d="M86 194 l-6 16"/><path d="M114 194 l6 16"/></g>
-    <ellipse cx="100" cy="132" rx="56" ry="66" fill="#E9A44C"/>
-    <ellipse cx="80" cy="120" rx="14" ry="26" fill="#F6C77E" opacity=".55"/>
-    <path d="M36 94 Q100 22 164 94 Q100 112 36 94 Z" fill="#8A5A2E"/>
-    <path d="M52 84 L70 70 M70 92 L92 64 M92 96 L114 64 M114 96 L134 68 M134 92 L150 78" stroke="#6A4020" stroke-width="3" opacity=".6"/>
-    <path d="M100 44 q2 -18 18 -24" stroke="#6A4020" stroke-width="7" fill="none" stroke-linecap="round"/>
-    ${brow}
-    <circle cx="80" cy="116" r="9" fill="#3A1E0C"/><circle cx="120" cy="116" r="9" fill="#3A1E0C"/>
-    <circle cx="83" cy="113" r="3" fill="#fff"/><circle cx="123" cy="113" r="3" fill="#fff"/>
-    <circle cx="66" cy="134" r="8" fill="#F08C6A" opacity=".55"/><circle cx="134" cy="134" r="8" fill="#F08C6A" opacity=".55"/>
-    ${mouth}</svg>`;
+  if (!ZH_POSES[mood]) mood = 'happy';
+  const u = 'zh' + (++zhelN), I = ZH.INK;
+  const [left, right] = ZH_POSES[mood];
+  const legs = zhLimb('M88 206 Q86 216 84 224') + zhLimb('M114 206 Q116 216 118 224') +
+    `<path d="M68 230 C68 220 78 218 88 222 C94 224 94 232 88 233 L72 233 C69 233 68 232 68 230 Z" fill="${ZH.SHOE}" stroke="${I}" stroke-width="3" stroke-linejoin="round"/>
+<path d="M134 230 C134 220 124 218 114 222 C108 224 108 232 114 233 L130 233 C133 233 134 232 134 230 Z" fill="${ZH.SHOE}" stroke="${I}" stroke-width="3" stroke-linejoin="round"/>
+<ellipse cx="76" cy="224" rx="4" ry="2" fill="#fff" opacity=".45"/><ellipse cx="126" cy="224" rx="4" ry="2" fill="#fff" opacity=".45"/>`;
+  const body = `<path d="M100 82 C142 82 160 112 158 144 C156 180 128 204 101 212 C74 204 46 180 44 144 C42 112 58 82 100 82 Z" fill="url(#b${u})" stroke="${I}" stroke-width="4" stroke-linejoin="round"/>
+<path d="M101 212 C100 216 99 220 101 223" stroke="${I}" stroke-width="3.5" fill="none" stroke-linecap="round"/>
+<path d="M62 120 C58 140 62 160 72 176" stroke="#FFF2CF" stroke-width="7" fill="none" stroke-linecap="round" opacity=".55"/>
+<ellipse cx="66" cy="158" rx="10" ry="6.5" fill="${ZH.CHEEK}" opacity=".55"/><ellipse cx="136" cy="156" rx="10" ry="6.5" fill="${ZH.CHEEK}" opacity=".55"/>
+<g transform="rotate(-7 100 90) translate(0 -3)"><path d="${ZH_CAP}" fill="url(#c${u})"/>
+<g clip-path="url(#k${u})" stroke="${ZH.C2}" stroke-width="2.4" fill="none" opacity=".75">${ZH_SCALES}</g>
+<path d="${ZH_CAP}" fill="none" stroke="${I}" stroke-width="4" stroke-linejoin="round"/>
+<path d="M38 106 C70 118 138 114 165 99" stroke="${ZH.C2}" stroke-width="7" fill="none" stroke-linecap="round"/>
+<path d="M38 106 C70 118 138 114 165 99" stroke="${I}" stroke-width="2" fill="none" stroke-linecap="round" opacity=".6" transform="translate(0 4)"/>
+<path d="M60 64 C72 54 88 50 98 50" stroke="#E2B07E" stroke-width="5" fill="none" stroke-linecap="round" opacity=".6"/>
+<path d="M106 46 C106 34 112 24 124 20" stroke="${I}" stroke-width="8" fill="none" stroke-linecap="round"/><path d="M106 46 C106 34 112 24 124 20" stroke="${ZH.C2}" stroke-width="4" fill="none" stroke-linecap="round"/>
+<path d="M124 20 C128 10 138 8 142 12 C150 8 156 14 152 20 C160 22 160 30 152 32 C154 40 144 42 140 36 C134 40 126 34 130 28 C122 28 120 22 124 20 Z" fill="${ZH.LEAF}" stroke="${I}" stroke-width="3" stroke-linejoin="round"/>
+<path d="M126 22 C134 24 142 26 150 26" stroke="${ZH.LEAFD}" stroke-width="2" fill="none" stroke-linecap="round"/></g>
+${zhBrows(mood)}${zhEyes(mood)}
+<ellipse cx="102" cy="152" rx="5" ry="3.6" fill="${ZH.B3}" opacity=".8"/><ellipse cx="100.5" cy="151" rx="1.6" ry="1.1" fill="#fff" opacity=".8"/>${zhMouth(mood)}`;
+  const squash = mood === 'cheer' ? ' transform="translate(100 232) scale(1.05 .95) translate(-100 -232)"' : '';
+  /* Моргание раз в 3–5 с: у каждого экземпляра свой период */
+  const blink = (3 + Math.random() * 2).toFixed(1);
+  return `<svg class="chip zh zh-${mood} ${cls}" style="--blink:${blink}s" viewBox="-10 0 230 242" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Жёлудик"><defs>
+<radialGradient id="b${u}" cx="38%" cy="32%" r="75%"><stop offset="0" stop-color="#FFE3A6"/><stop offset=".35" stop-color="${ZH.B1}"/><stop offset=".8" stop-color="${ZH.B2}"/><stop offset="1" stop-color="${ZH.B3}"/></radialGradient>
+<radialGradient id="c${u}" cx="40%" cy="25%" r="80%"><stop offset="0" stop-color="#C98A52"/><stop offset=".6" stop-color="${ZH.C1}"/><stop offset="1" stop-color="${ZH.C2}"/></radialGradient>
+<clipPath id="k${u}"><path d="${ZH_CAP}"/></clipPath></defs>
+<ellipse cx="101" cy="236" rx="46" ry="6" fill="${I}" opacity=".15"/>
+<g class="zh-jump"><g${squash}>${legs}${body}${zhArm(left)}<g class="zh-arm-r">${zhArm(right)}</g></g></g></svg>`;
 };
 (() => { const base = ART.chip; ART.chip = (who, mood, cls) => who === 'zhel' ? ART.zhel(mood, cls) : base(who, mood, cls); })();
 
@@ -129,16 +192,16 @@ KG.k_put = d => {
 KG.k_more = d => {
   const it = R.pick(KI), hi = d === 1 ? 5 : d === 2 ? 8 : 10;
   let a = R.int(1, hi), b = R.int(1, hi);
-  if (d === 1) while (Math.abs(a - b) < 2) { a = R.int(1, hi); b = R.int(1, hi); }
-  else if (R.chance(0.25)) b = a;
+  if (R.chance(d === 1 ? 0.2 : 0.25)) b = a;
+  else if (d === 1) while (Math.abs(a - b) < 2) { a = R.int(1, hi); b = R.int(1, hi); }
   else while (a === b) b = R.int(1, hi);
   const more = R.chance(0.5), word = more ? 'больше' : 'меньше';
   /* На третьей ступени меньшая группа нарисована крупнее: не путаем размер с количеством */
   const big = d === 3 && a !== b ? (a < b ? 'L' : 'R') : '';
   const opts = [{ h: grp(it.e, a, big === 'L' ? 'big' : 'small'), v: 'L' }, { h: grp(it.e, b, big === 'R' ? 'big' : 'small'), v: 'R' }];
-  if (d > 1) opts.push({ h: kword('Поровну'), v: 'E' });
+  opts.push({ h: kword('Поровну'), v: 'E' });   /* третий вариант всегда: не «50 на 50» */
   const ans = a === b ? 'E' : (a > b) === more ? 'L' : 'R';
-  return { kind: 'pick', layout: 'pair', opts, ans, text: `Где ${word} ${it.f[2]}?`, say: `Где ${word} ${it.f[2]}?${d > 1 ? ' Если одинаково — нажми «Поровну».' : ''}`,
+  return { kind: 'pick', layout: 'pair', opts, ans, text: `Где ${word} ${it.f[2]}?`, say: `Где ${word} ${it.f[2]}? Если одинаково — нажми «Поровну».`,
     hint: 'Посчитай слева и справа. Большие картинки — не значит, что их больше!',
     why: a === b ? `Слева ${a} и справа ${b} — поровну.` : `Слева ${a}, справа ${b}. ${ans === 'L' ? 'Слева' : 'Справа'} ${word}.` };
 };
@@ -146,7 +209,7 @@ KG.k_sign = d => {
   const hi = d === 1 ? 5 : d === 2 ? 10 : 20;
   const a = R.int(1, hi), b = R.chance(0.2) ? a : R.int(1, hi);
   const ans = a > b ? '>' : a < b ? '<' : '=';
-  const pic = n => d < 3 ? grp('🌰', n, 'tiny') : '';
+  const pic = n => d === 1 ? grp('🌰', n, 'tiny') : '';
   const word = { '>': 'больше', '<': 'меньше', '=': 'равно' };
   return { kind: 'pick', layout: 'three', ans,
     scene: `<div class="kcmp"><div><div class="kbig">${a}</div>${pic(a)}</div><div class="kbig q">?</div><div><div class="kbig">${b}</div>${pic(b)}</div></div>`,
@@ -205,9 +268,9 @@ KG.k_add = d => {
 KG.k_sub = d => {
   const it = R.pick(KI), n = d === 1 ? R.int(2, 5) : R.int(4, 10), k = R.int(1, d === 1 ? n - 1 : Math.min(n - 1, 5)), r = n - k;
   return { kind: 'pick', ans: r, opts: numOpts(r, 0, 10),
-    scene: d < 3 ? `<div class="kgrp small">${Array.from({ length: n }, (_, i) => `<span class="${i >= r ? 'gone' : ''}">${it.e}</span>`).join('')}</div>` : `<div class="kex">${n} − ${k} = ?</div>`,
-    text: d < 3 ? 'Сколько осталось?' : `Сколько будет ${n} − ${k}?`, say: d < 3 ? `Было ${n} ${kf(it, n)}. ${k} убрали. Сколько осталось?` : `Сколько будет ${n} минус ${k}?`,
-    hint: d < 3 ? 'Посчитай тех, кто не зачёркнут.' : `Начни с ${n} и отсчитай назад ${k}.`, why: `${n} − ${k} = ${r}`, whySay: `Было ${n}, убрали ${k}, осталось ${r}.` };
+    scene: d < 3 ? `<div class="kgrp small">${Array.from({ length: n }, (_, i) => (i >= r ? `<span class="gone"><i>${it.e}</i></span>` : `<span>${it.e}</span>`)).join('')}</div>` : `<div class="kex">${n} − ${k} = ?</div>`,
+    text: d < 3 ? 'Сколько осталось?' : `Сколько будет ${n} − ${k}?`, say: d < 3 ? `Было ${n} ${kf(it, n)}. ${k} убрали — они зачёркнуты. Сколько осталось?` : `Сколько будет ${n} минус ${k}?`,
+    hint: d < 3 ? 'Зачёркнутые убрали. Посчитай только тех, кто не зачёркнут.' : `Начни с ${n} и отсчитай назад ${k}.`, why: d < 3 ? `Было ${n}, зачёркнуто ${k}. Не зачёркнуто ${r}: ${n} − ${k} = ${r}.` : `${n} − ${k} = ${r}`, whySay: `Было ${n}, убрали ${k}, осталось ${r}.` };
 };
 /* 7. Фигуры и размеры */
 const SHAPES = {
@@ -239,10 +302,10 @@ const ADJN = { big: { m: 'самый большой', n: 'самое больш�
 KG.k_size = d => {
   const big = R.chance(0.5);
   if (d === 1) {
-    const it = R.pick(KI), sizes = R.sample([26, 38, 52, 68], 3), ans = big ? Math.max(...sizes) : Math.min(...sizes);
+    const it = R.pick(KI), sizes = R.sample([26, 34, 44, 56], 3), ans = big ? Math.max(...sizes) : Math.min(...sizes);
     const w = ADJ[big ? 'big' : 'small'][it.g];
     return { kind: 'pick', layout: 'three', text: `Найди ${w} ${it.s}`, say: `Найди ${w} ${it.s}.`, hint: 'Сравни картинки между собой.',
-      opts: sizes.map(s => ({ h: `<span style="font-size:${s}px;line-height:1">${it.e}</span>`, v: s })), ans, why: `Вот ${ADJN[big ? 'big' : 'small'][it.g]} ${it.f[0]}. Сравни с остальными.` };
+      opts: sizes.map(s => ({ h: `<span style="font-size:calc(var(--ki) * ${(s / 26).toFixed(2)});line-height:1">${it.e}</span>`, v: s })), ans, why: `Вот ${ADJN[big ? 'big' : 'small'][it.g]} ${it.f[0]}. Сравни с остальными.` };
   }
   if (d === 2) {
     const lens = R.sample([30, 45, 60, 75, 90, 105], 4), ans = big ? Math.max(...lens) : Math.min(...lens);
@@ -325,7 +388,7 @@ KG.k_pattern = d => {
   const units = d === 1 ? [[0, 1]] : d === 2 ? [[0, 1, 2], [0, 0, 1], [0, 1, 1]] : [[0, 0, 1, 1], [0, 1, 2, 1], [0, 0, 1, 2]];
   const u = R.pick(units).map(i => syms[i]), len = u.length * 2 + R.int(0, u.length - 1);
   const seq = Array.from({ length: len }, (_, i) => u[i % u.length]), x = u[len % u.length];
-  const opts = R.shuffle([...new Set(u)].concat(d > 1 ? [R.pick(PAT.filter(p => !u.includes(p)))] : []));
+  const opts = R.shuffle([...new Set(u)].concat([R.pick(PAT.filter(p => !u.includes(p)))]));
   return { kind: 'pick', layout: opts.length === 3 ? 'three' : '', scene: `<div class="kpat">${seq.map(e => `<span>${e}</span>`).join('')}<span class="q">?</span></div>`,
     text: 'Что будет дальше?', say: 'Посмотри на узор. Что будет дальше?', hint: 'Найди кусочек, который повторяется.',
     opts: opts.map(e => ({ h: kemo(e), v: e })), ans: x, why: `Узор повторяется: ${u.join(' ')}.`, whySay: 'Узор повторяется. Смотри, вот что дальше.' };
@@ -338,9 +401,11 @@ function makeKid(gen, d) {
 
 /* ---------- Экраны ---------- */
 let K = null;
+/* Экраны Лизы шире (планшет): класс kidw снимается при любом другом экране */
+const mountKid = (html, f) => { const r = mount(html, f); document.body.classList.add('kidw'); return r; };
 const kidLevel = tid => Math.min(3, 1 + (S.stars[tid] || 0));
 function showKidWelcome() {
-  mount(`<div class="hero">${ART.zhel('cheer')}</div>
+  mountKid(`<div class="hero">${ART.zhel('happy')}</div>
     <h1 class="center">Лесная полянка</h1>
     <div class="bubble" style="margin:10px 0 16px;font-size:20px">Привет! Я <b>Жёлудик</b>. Будем считать, искать и играть с числами. Я буду читать задания вслух!</div>
     <label class="muted small" for="nm">Как зовут нового игрока? (взрослый может помочь)</label>
@@ -361,7 +426,7 @@ function showKidMap() {
     return `<button class="ktile ${T.id === next && st < 3 ? 'next' : ''}" data-act="kTopic" data-id="${T.id}"><span class="ki">${T.icon}</span><b>${T.name}</b>
       <span class="kst">${'★'.repeat(st)}<i>${'★'.repeat(3 - st)}</i></span></button>`;
   }).join('');
-  mount(`<div class="topbar"><div class="avatar" data-act="who" role="button" aria-label="Сменить игрока">${ART.zhel('happy')}<span class="swap">⇄</span></div>
+  mountKid(`<div class="topbar"><div class="avatar" data-act="who" role="button" aria-label="Сменить игрока">${ART.zhel('happy')}<span class="swap">⇄</span></div>
       <div class="grow"><div class="hello">Привет, ${esc(S.name || 'друг')}!</div><div class="small muted">Лесная полянка</div></div>
       <span class="pill">${ART.acorn(22)}${S.acorns}</span><button class="iconbtn" data-act="parent" aria-label="Для взрослых">⚙️</button></div>
     <div class="ktiles">${tiles}</div>
@@ -393,11 +458,11 @@ function renderKid() {
   if (t.kind === 'flash') scene = `<div class="kflash" id="kfl">${t.scene}</div><button class="btn ghost" data-act="kShow">👀 Покажи ещё раз</button>`;
   if (t.opts) opts = `<div class="kopts ${t.layout || ''}">${t.opts.map((o, i) => `<button class="kopt" data-act="kPick" data-i="${i}">${o.h}</button>`).join('')}</div>`;
   if (t.kind === 'put' || t.kind === 'frame') opts += '<button class="btn green block big kdone" data-act="kDone">Готово ✓</button>';
-  mount(`<div class="kplay">
+  mountKid(`<div class="kplay">
     <div class="playtop"><button class="iconbtn" data-act="kQuit" aria-label="Выйти">✕</button><div class="kdots">${dots}</div><span class="pill">${ART.acorn(20)}<span>${K.acorns}</span></span></div>
-    <div class="kq"><button class="ksay" data-act="kSay" aria-label="Прочитать ещё раз">🔊</button><div class="kt">${t.text}</div></div>
-    <div class="kscene">${scene}</div>${opts}
-    <div class="helper" id="khelp">${ART.zhel('happy')}<div class="bubble" id="kbub">${K.i === 0 ? 'Я читаю задание вслух. Нажми 🔊, чтобы послушать ещё раз.' : R.pick(['Ты справишься!', 'Подумай, не спеши.', 'Я рядом!', 'Интересно, что получится?'])}</div></div></div>`);
+    <div class="kbody"><div class="kq"><button class="ksay" data-act="kSay" aria-label="Прочитать ещё раз">🔊</button><div class="kt">${t.text}</div></div>
+    <div class="kright"><div class="kscene">${scene}</div>${opts}</div>
+    <div class="helper" id="khelp">${ART.zhel('happy')}<div class="bubble" id="kbub">${K.i === 0 ? 'Я читаю задание вслух. Нажми 🔊, чтобы послушать ещё раз.' : R.pick(['Ты справишься!', 'Подумай, не спеши.', 'Я рядом!', 'Интересно, что получится?'])}</div></div></div></div>`);
   Voice.say(t.say);
   if (t.kind === 'flash') kFlash();
 }
@@ -476,10 +541,10 @@ function kResolve(ok) {
   if (!ok) kSolve();
   const praise = R.pick(['Молодец!', 'Верно!', 'Умница!', 'Здорово!', 'Отлично!']);
   if (ok) Sound.ok();
-  kBub(ok ? (first ? `${praise} +1 ${ART.acorn(18)}` : `${praise} Получилось!`) : `Смотри! ${esc(t.why)}`, ok ? 'cheer' : 'happy');
+  kBub(ok ? (first ? `${praise} +1 ${ART.acorn(18)}` : `${praise} Получилось!`) : `Смотри! ${esc(t.why)}`, ok ? 'cheer' : 'show');
   Voice.say(ok ? praise : 'Смотри. ' + (t.whySay || t.why));
   const last = K.i + 1 >= K.queue.length;
-  document.getElementById('khelp').insertAdjacentHTML('beforebegin', `<button class="btn green block big knext" data-act="kNext">${last ? 'Готово 🏁' : 'Дальше ➜'}</button>`);
+  document.querySelector('.kright').insertAdjacentHTML('beforeend', `<button class="btn green block big knext" data-act="kNext">${last ? 'Готово 🏁' : 'Дальше ➜'}</button>`);
   setTimeout(() => { const b = document.querySelector('.knext'); if (b) b.scrollIntoView({ behavior: 'smooth', block: 'center' }); }, 60);
 }
 ACT.kNext = () => { if (!K) return; K.i++; kidNext(); };
@@ -500,7 +565,7 @@ function kidFinish() {
   if (earn) S.stars[k.tid] = prev + 1;
   giveAcorns(2); save(); Sound.win(); confetti(earn ? 26 : 12);
   const st = S.stars[k.tid] || 0;
-  mount(`<div class="result">${ART.zhel('cheer')}<h1>Молодец${S.name ? ', ' + esc(S.name) : ''}!</h1>
+  mountKid(`<div class="result">${ART.zhel('cheer')}<h1>Молодец${S.name ? ', ' + esc(S.name) : ''}!</h1>
     <div class="bigstars kst">${'★'.repeat(st)}<i>${'★'.repeat(3 - st)}</i></div>
     ${earn ? '<p style="font-size:20px"><b>Новая звёздочка!</b></p>' : ''}
     <p style="font-size:20px">Сразу верно: <b>${k.first}</b> из ${k.queue.length}</p>
