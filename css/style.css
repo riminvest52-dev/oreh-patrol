@@ -48,7 +48,8 @@ p { margin: 6px 0; line-height: 1.4; }
 /* ---------- Онбординг ---------- */
 .hero { display: flex; justify-content: center; gap: 0; margin: 4px 0 6px; }
 .hero svg.chip { width: 44%; max-width: 190px; height: auto; }
-.hero svg.chip:last-child:not(:first-child) { transform: scaleX(-1); }
+/* Двое героев смотрят друг на друга, хвосты наружу */
+.hero svg.chip:first-child:not(:last-child) { transform: scaleX(-1); }
 .bubble { position: relative; background: #fff; border: 2px solid var(--line); border-radius: 18px; padding: 12px 14px; line-height: 1.4; box-shadow: 0 3px 0 var(--line); }
 .input { width: 100%; font: 700 20px var(--font); color: var(--ink); padding: 14px 16px; border-radius: 16px; border: 3px solid var(--line); background: #fff; outline: none; -webkit-user-select: text; user-select: text; }
 .input:focus { border-color: var(--gold); }
@@ -351,7 +352,16 @@ svg.zh-cheer .zh-jump { transform-box: fill-box; transform-origin: 50% 100%; ani
 }
 svg.zh-show .zh-arm-r { transform-origin: 150px 150px; animation: zhwave .45s ease-in-out .25s 2; }
 @keyframes zhwave { 0%, 100% { transform: rotate(0); } 50% { transform: rotate(-22deg); } }
+/* ---------- Фундук и Миндалинка: те же движения + хвост покачивается от основания ---------- */
+svg.ch { overflow: visible; }
+svg.ch.bust { overflow: hidden; }
+svg.ch .ch-bob { animation: zhbob 2.5s ease-in-out infinite; }
+svg.ch .ch-tail { transform-origin: 136px 214px; animation: chtail 3.2s ease-in-out infinite; }
+@keyframes chtail { 0%, 100% { transform: rotate(-3deg); } 50% { transform: rotate(3deg); } }
+svg.ch .ch-eyes { transform-box: fill-box; transform-origin: center; animation: zhblink var(--blink, 4s) linear infinite; }
+svg.ch-cheer .ch-jump { transform-box: fill-box; transform-origin: 50% 100%; animation: zhjump .8s cubic-bezier(.3, .7, .4, 1) 2; }
+svg.ch-show .ch-arm-r { transform-origin: 138px 158px; animation: zhwave .45s ease-in-out .25s 2; }
 @media (prefers-reduced-motion: reduce) {
-  svg.zh, svg.zh * { animation: none !important; }
+  svg.zh, svg.zh *, svg.ch, svg.ch * { animation: none !important; }
   .kopt.right { animation: none; }
 }

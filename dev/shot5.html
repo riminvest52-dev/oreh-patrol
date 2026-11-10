@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>5 класс — скриншоты</title>
+<link rel="stylesheet" href="../css/style.css">
+</head>
+<body>
+<!-- Только для проверки: ?scr=who|welcome|map|ok|err1|err2|result. Звук выключен, прогресс тестовый. -->
+<div id="app"></div>
+<div id="modal" class="modal hidden"></div>
+<div id="toast" class="toast hidden"></div>
+<script src="../js/core.js"></script>
+<script src="../js/t-fund.js"></script>
+<script src="../js/t-lang.js"></script>
+<script src="../js/t-models.js"></script>
+<script src="../js/t-logic.js"></script>
+<script src="../js/t-div.js"></script>
+<script src="../js/topics.js"></script>
+<script src="../js/art.js"></script>
+<script src="../js/state.js"></script>
+<script src="../js/cloud.js"></script>
+<script src="../js/ui.js"></script>
+<script src="../js/play.js"></script>
+<script src="../js/screens.js"></script>
+<script src="../js/kid.js"></script>
+<script>
+  try { localStorage.clear(); } catch (e) { }
+  F.profiles = []; F.current = null;
+  const mk = (world, name, hero) => { addProfile(world); S.name = name; S.sound = false; save(); if (hero) { curProfile().hero = hero; saveFamily(); } return F.current; };
+  const five = mk('five', 'Настя', 'mindal'); mk('kid', 'Лиза'); mk('five', 'Папа', 'funduk');
+  useProfile(five);
+  const scr = new URLSearchParams(location.search).get('scr') || 'who';
+  const topic = TOPICS.find(T => T.id === 'div') || TOPICS[0];
+  const lvl = () => { startLevel(topic.id, 1); };
+  if (scr === 'who') showWho();
+  else if (scr === 'welcome') { S.name = ''; showWelcome(); }
+  else if (scr === 'map') showMap();
+  else if (scr === 'ok') { lvl(); answered(true, answerText(SES.task)); }
+  else if (scr === 'err1') { lvl(); retry('0'); }
+  else if (scr === 'err2') { lvl(); retry('0'); answered(false, '0'); }
+  else if (scr === 'result') {
+    lvl();
+    while (SES) { if (SES.i === 3) { retry('0'); answered(true, answerText(SES.task)); } else answered(true, answerText(SES.task)); SES.i++; nextTask(); }
+  }
+  /* Для кадра: герой-помощник должен попасть в экран */
+  setTimeout(() => { const h = document.getElementById('helper'); if (h) h.scrollIntoView({ block: 'end' }); else scrollTo(0, 0); }, 300);
+</script>
+</body>
+</html>

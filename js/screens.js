@@ -4,7 +4,7 @@
 /* ---------- Кто играет ---------- */
 function showWho() {
   SES = null;
-  const tiles = F.profiles.map(p => `<button class="who-tile" data-act="pickWho" data-id="${p.id}">${ART.chip(p.hero, 'happy')}<b>${esc(playerName(p) || 'Новый игрок')}</b><span class="small muted">${(WORLDS[p.world] || {}).title || ''}</span></button>`).join('');
+  const tiles = F.profiles.map(p => `<button class="who-tile" data-act="pickWho" data-id="${p.id}">${ART.chip(p.hero, 'happy', '', true)}<b>${esc(playerName(p) || 'Новый игрок')}</b><span class="small muted">${(WORLDS[p.world] || {}).title || ''}</span></button>`).join('');
   mount(`<h1 class="center" style="margin-top:14px">Кто играет?</h1>
     <div class="who">${tiles}<button class="who-tile" data-act="addWho"><span class="plus">＋</span><b>Добавить</b><span class="small muted">нового игрока</span></button></div>
     ${CLOUD_URL && !F.code ? '<button class="btn ghost block" data-act="enterCode">У нас уже есть код семьи</button>' : ''}`);
@@ -21,7 +21,7 @@ ACT.addGo = el => { closeModal(); addProfile(el.dataset.w); Cloud.soon(); enterW
 
 /* ---------- Знакомство ---------- */
 function showWelcome() {
-  mount(`<div class="hero">${ART.chip('funduk', 'cheer')}${ART.chip('mindal', 'happy')}</div>
+  mount(`<div class="hero">${ART.chip('funduk', 'happy')}${ART.chip('mindal', 'happy')}</div>
     <h1 class="center">Ореховый патруль</h1>
     <div class="bubble" style="margin:10px 0 16px">Привет! Мы — <b>Фундук</b> и <b>Миндалинка</b>, лесные спасатели. В лесу беда: у Бобра перепутались чертежи, у Совы разбежались высказывания, а на Ореховом складе никто не может разделить орехи поровну! Без математики не справиться. Поможешь нам?</div>
     <label class="muted small" for="nm">Как тебя зовут?</label>
@@ -32,7 +32,7 @@ ACT.join = () => {
   const v = document.getElementById('nm').value.trim();
   if (!v) { toast('Напиши своё имя 🙂'); return; }
   S.name = v.slice(0, 20); save();
-  mount(`<div class="hero">${ART.chip('mindal', 'cheer')}</div>
+  mount(`<div class="hero">${ART.chip('mindal', 'happy')}</div>
     <h2 class="center">Рады знакомству, ${esc(S.name)}!</h2>
     <div class="bubble" style="margin:10px 0 16px">Давай сначала пройдём <b>Проверку сил</b>: 16 заданий из всех уголков леса, примерно 10–15 минут. Так мы поймём, кому помочь в первую очередь. Ошибаться можно — это не контрольная!</div>
     <div class="stack"><button class="btn block green" data-act="diag">Начать Проверку сил</button><button class="btn block ghost" data-act="map">Позже — сразу на карту</button></div>`);
@@ -66,7 +66,7 @@ function showMap() {
       <div class="nm">${t.name}</div><div class="st">★ ${st}/9</div></div>`;
   }).join('');
   const sn = streakNow();
-  mount(`<div class="topbar"><div class="avatar" data-act="who" role="button" aria-label="Сменить игрока">${ART.chip((curProfile() || {}).hero || 'funduk', 'happy')}<span class="swap">⇄</span></div>
+  mount(`<div class="topbar"><div class="avatar" data-act="who" role="button" aria-label="Сменить игрока">${ART.chip((curProfile() || {}).hero || 'funduk', 'happy', '', true)}<span class="swap">⇄</span></div>
       <div class="grow"><div class="hello">Привет, ${esc(S.name || 'друг')}!</div><div class="small muted">${sn ? `🔥 ${sn} ${pl(sn, 'день', 'дня', 'дней')} подряд` : 'Ореховый патруль на связи'}</div></div>
       <span class="pill">${ART.acorn(22)}${S.acorns}</span><button class="iconbtn" data-act="parent" aria-label="Для взрослых">⚙️</button></div>
     <div class="quick">

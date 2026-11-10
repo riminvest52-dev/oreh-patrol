@@ -3,11 +3,11 @@
 <head><meta charset="utf-8"><title>Рамка телефона</title>
 <style>html, body { margin: 0; background: #fff; } iframe { border: 0; display: block; }</style></head>
 <body>
-<!-- Узкий экран для скриншотов: окно браузера в фоновом режиме не бывает уже ~500 px. ?w=390&h=844&… — остальное уходит в shot.html -->
+<!-- Узкий экран для скриншотов: окно браузера в фоновом режиме не бывает уже ~500 px. ?w=390&h=844&… — &p=shot5 — другая страница, остальное уходит в неё -->
 <script>
   const q = new URLSearchParams(location.search), w = q.get('w') || 390, h = q.get('h') || 844;
-  q.delete('w'); q.delete('h');
-  document.write(`<iframe width="${w}" height="${h}" src="shot.html?${q}"></iframe>`);
+  const pg = q.get("p") || "shot"; q.delete("w"); q.delete("h"); q.delete("p");
+  document.write(`<iframe width="${w}" height="${h}" src="${pg}.html?${q}"></iframe>`);
 </script>
 </body>
 </html>

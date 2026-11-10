@@ -87,7 +87,7 @@ ${zhBrows(mood)}${zhEyes(mood)}
 <ellipse cx="101" cy="236" rx="46" ry="6" fill="${I}" opacity=".15"/>
 <g class="zh-jump"><g${squash}>${legs}${body}${zhArm(left)}<g class="zh-arm-r">${zhArm(right)}</g></g></g></svg>`;
 };
-(() => { const base = ART.chip; ART.chip = (who, mood, cls) => who === 'zhel' ? ART.zhel(mood, cls) : base(who, mood, cls); })();
+(() => { const base = ART.chip; ART.chip = (who, mood, cls, bust) => who === 'zhel' ? ART.zhel(mood, cls) : base(who, mood, cls, bust); })();
 
 /* ---------- Озвучка: встроенный синтез речи браузера. Настройка хранится на устройстве ---------- */
 const Voice = (() => {

@@ -199,7 +199,7 @@ function answered(ok, given) {
     : `<div class="feedback bad"><div class="fh">🤔 ${phrase(PH_BAD)}</div>${trap ? `<div class="trapline">🔎 ${nb(trap.msg)}</div>` : ''}<div>Правильный ответ: <b>${esc(answerText(t))}</b></div>${steps}</div>`;
   document.getElementById('fb').insertAdjacentHTML('beforeend', `<button class="btn ${ok ? 'green' : ''} block" style="margin-top:14px" data-act="next">${last ? 'Готово 🏁' : ok ? 'Дальше →' : 'Понятно, дальше →'}</button>`);
   const hl = document.getElementById('helper');
-  hl.innerHTML = `${ART.chip(ok ? 'funduk' : 'mindal', ok ? 'cheer' : 'think')}<div class="bubble">${ok ? R.pick(['Ура! 🎉', 'Молодец!', 'Так держать!', 'Орешек наш! 🌰']) : R.pick(['Прочитай разбор — в следующий раз точно получится!', 'Я положу эту задачку в корзинку, повторим позже 🧺', 'Ошибаться — нормально. Главное — понять!'])}</div>`;
+  hl.innerHTML = `${ART.chip(ok ? 'funduk' : 'mindal', ok ? 'cheer' : 'show')}<div class="bubble">${ok ? R.pick(['Ура! 🎉', 'Молодец!', 'Так держать!', 'Орешек наш! 🌰']) : R.pick(['Прочитай разбор — в следующий раз точно получится!', 'Я положу эту задачку в корзинку, повторим позже 🧺', 'Ошибаться — нормально. Главное — понять!'])}</div>`;
   setTimeout(() => { const fb = document.getElementById('fb'); if (fb) fb.scrollIntoView({ behavior: 'smooth', block: 'start' }); }, 60);
 }
 ACT.next = () => { SES.i++; nextTask(); };

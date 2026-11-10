@@ -1,10 +1,17 @@
 <!doctype html><html lang="ru"><head><meta charset="utf-8"><title>Арт</title>
-<style>body{background:#FFF3DF;margin:10px;font:14px system-ui}.row{display:flex;flex-wrap:wrap;gap:8px}.row svg.chip{width:150px;height:160px;background:#fff8ec;border-radius:12px}</style></head>
-<body><div class="row" id="r"></div><svg width="420" height="120" id="t"></svg>
+<link rel="stylesheet" href="../css/style.css">
+<style>body{background:#FFF3DF;margin:10px;font:14px system-ui}.row{display:flex;flex-wrap:wrap;gap:8px;align-items:end;margin-bottom:10px}
+.row svg.chip{width:150px;height:164px;background:#fff8ec;border-radius:12px}
+.row.b svg.chip{width:110px;height:110px}.row.s svg.chip{width:44px;height:44px;border-radius:8px}</style></head>
+<body><div class="row" id="r"></div><div class="row b" id="b"></div><div class="row s" id="s"></div><svg width="420" height="120" id="t"></svg>
 <script src="../js/art.js"></script>
 <script>
-const r = document.getElementById('r');
-for (const w of ['funduk', 'mindal']) for (const m of ['happy', 'cheer', 'think', 'sad']) r.insertAdjacentHTML('beforeend', ART.chip(w, m));
-r.insertAdjacentHTML('beforeend', ART.acorn(60));
+/* Все позы обоих героев, обрезка по грудь в 110 и 44 px; проверка уникальности id */
+const P = ['happy', 'cheer', 'think', 'show'], ids = new Set(); let dup = 0;
+const put = (el, svg) => { for (const m of svg.matchAll(/id="([^"]+)"/g)) { if (ids.has(m[1])) dup++; ids.add(m[1]); } document.getElementById(el).insertAdjacentHTML('beforeend', svg); };
+for (const w of ['funduk', 'mindal']) for (const m of P) put('r', ART.chip(w, m));
+for (const w of ['funduk', 'mindal']) { put('b', ART.chip(w, 'happy', '', true)); for (let i = 0; i < 3; i++) put('s', ART.chip(w, 'happy', '', true)); }
+put('r', ART.chip('mindal', 'sad'));
+window.ART_DUP = dup;
 document.getElementById('t').innerHTML = [0,1,2,3].map(i => ART.tree(50 + i * 100, 70, 1, i)).join('');
 </script></body></html>
