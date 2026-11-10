@@ -14,9 +14,10 @@ reg('fund', 'f_div0', d => {
   const a = q * b;
   const lost = +String(q).replace(/0/g, '');
   return {
-    q: `Вычисли: <span class="ex">${fmt(a)} : ${b}</span>`, type: 'num', answer: q,
+    q: `Вычисли: <span class="ex">${fmt(a)} : ${b}</span>`, type: 'num', answer: q, draft: d >= 2,
     hint: 'Дели уголком. Если очередное число меньше делителя — в частном пишем 0, и только потом сносим следующую цифру.',
-    explain: longDivSteps(a, b).concat([`Частая ошибка — потерять ноль и получить ${fmt(lost)}. Проверка: ${fmt(q)} · ${b} = ${fmt(a)} ✓`])
+    explain: longDivSteps(a, b).concat([`Частая ошибка — потерять ноль и получить ${fmt(lost)}. Проверка: ${fmt(q)} · ${b} = ${fmt(a)} ✓`]),
+    traps: [[lost, 'Похоже, в частном потерялся ноль: если число меньше делителя, в частное пишем 0.']]
   };
 });
 
@@ -26,7 +27,12 @@ reg('fund', 'f_mul', d => {
   else if (d === 2) { a = R.int(25, 380); b = R.int(12, 48); }
   else { a = R.pick([R.int(1, 9) * 100 + R.int(1, 9), R.int(1, 9) * 1000 + R.int(1, 9) * 10 + R.int(1, 9)]); b = R.int(2, 9) * 10 + R.pick([0, 0, R.int(1, 9)]); }
   const p = a * b;
-  const explain = [];
+  const explain = [], traps = [];
+  if (b >= 10) {
+    const t = Math.floor(b / 10) * 10, u = b % 10;
+    traps.push([a * (t / 10) + a * u, `Похоже, при умножении на ${t} не дописан ноль: ${fmt(a)} · ${t} = ${fmt(a * t)}.`]);
+    if (u) traps.push([a * t + u, `На ${u} нужно умножить всё число ${fmt(a)}, а не просто прибавить ${u}.`]);
+  }
   if (b < 10) {
     const parts = String(a).split('').map((c, i, arr) => +c * Math.pow(10, arr.length - 1 - i)).filter(x => x);
     explain.push(`Разложим ${fmt(a)} по разрядам: ${parts.map(fmt).join(' + ')}.`);
@@ -43,7 +49,7 @@ reg('fund', 'f_mul', d => {
       explain.push(`Ноль на конце множителя приписываем к ответу: ${fmt(a)} · ${t} = ${fmt(p)}.`);
     }
   }
-  return { q: `Вычисли: <span class="ex">${fmt(a)} · ${b}</span>`, type: 'num', answer: p,
+  return { q: `Вычисли: <span class="ex">${fmt(a)} · ${b}</span>`, type: 'num', answer: p, draft: d >= 2, traps,
     hint: b < 10 ? 'Умножай по разрядам: сотни, десятки, единицы.' : `Представь ${b} как сумму десятков и единиц.`, explain };
 });
 
@@ -56,14 +62,23 @@ const UNITS = [
   { big: 'ч', small: 'мин', k: 60, kind: 'время' }, { big: 'мин', small: 'с', k: 60, kind: 'время' },
   { big: 'сут', small: 'ч', k: 24, kind: 'время' }
 ];
+/* «Вырази в часах»: название единицы в предложном падеже */
+const UNIT_IN = { 'км': 'километрах', 'м': 'метрах', 'дм': 'дециметрах', 'см': 'сантиметрах', 'мм': 'миллиметрах', 'т': 'тоннах', 'ц': 'центнерах',
+  'кг': 'килограммах', 'г': 'граммах', 'ч': 'часах', 'мин': 'минутах', 'с': 'секундах' };
+function unitTraps(u, x, rem) {
+  const tr = [[+(String(x) + String(rem)), 'Числа нельзя просто «приписать» друг к другу. Сначала переведи крупные единицы в мелкие.'],
+    [x * u.k, `Не забудь прибавить ещё ${rem} ${u.small}.`]];
+  if (u.k !== 100) tr.push([x * 100 + rem, `В 1 ${u.big} — ${u.k} ${u.small}, а не 100.`]);
+  return tr;
+}
 reg('fund', 'f_units', d => {
   if (d === 1) {
     const u = R.pick(UNITS); const x = R.int(2, 9);
     const rem = u.k >= 100 ? R.int(Math.ceil(u.k / 10), u.k - 1) : R.int(1, u.k - 1);
     const withRem = R.chance(0.6);
     const ans = x * u.k + (withRem ? rem : 0);
-    return { q: `Сколько это в «${u.small}»?<br><span class="ex">${x} ${u.big}${withRem ? ' ' + rem + ' ' + u.small : ''} = ? ${u.small}</span>`,
-      type: 'num', answer: ans, hint: `Вспомни: 1 ${u.big} = ${u.k} ${u.small}.`,
+    return { q: `Вырази в ${UNIT_IN[u.small]}:<br><span class="ex">${x} ${u.big}${withRem ? ' ' + rem + ' ' + u.small : ''} = ? ${u.small}</span>`,
+      type: 'num', answer: ans, hint: `Вспомни: 1 ${u.big} = ${u.k} ${u.small}.`, traps: withRem ? unitTraps(u, x, rem) : [[x * 100, `В 1 ${u.big} — ${u.k} ${u.small}, а не 100.`]],
       explain: [`1 ${u.big} = ${u.k} ${u.small}`, `${x} ${u.big} = ${x} · ${u.k} = ${fmt(x * u.k)} ${u.small}`].concat(withRem ? [`${fmt(x * u.k)} + ${rem} = ${fmt(ans)} ${u.small}`] : []) };
   }
   if (d === 2) {
@@ -72,8 +87,8 @@ reg('fund', 'f_units', d => {
     const rem = u.k === 60 || u.k === 24 ? R.int(1, u.k - 1) : (u.k === 1000 ? R.pick([R.int(1, 9), R.int(10, 99)]) : R.int(1, 9));
     const ans = x * u.k + rem;
     const naive = +(String(x) + String(rem));
-    return { q: `Сколько это в «${u.small}»?<br><span class="ex">${x} ${u.big} ${rem} ${u.small} = ? ${u.small}</span>`,
-      type: 'num', answer: ans, hint: `1 ${u.big} = ${u.k} ${u.small}. Сначала переведи ${x} ${u.big}, потом прибавь ${rem} ${u.small}.`,
+    return { q: `Вырази в ${UNIT_IN[u.small]}:<br><span class="ex">${x} ${u.big} ${rem} ${u.small} = ? ${u.small}</span>`,
+      type: 'num', answer: ans, hint: `1 ${u.big} = ${u.k} ${u.small}. Сначала переведи ${x} ${u.big}, потом прибавь ${rem} ${u.small}.`, traps: unitTraps(u, x, rem),
       explain: [`1 ${u.big} = ${u.k} ${u.small}, значит ${x} ${u.big} = ${fmt(x * u.k)} ${u.small}.`, `${fmt(x * u.k)} + ${rem} = ${fmt(ans)} ${u.small}.`,
         `Ловушка: нельзя просто «приписать» числа — ${x} и ${rem} не дают ${fmt(naive)}.`] };
   }
@@ -84,8 +99,11 @@ reg('fund', 'f_units', d => {
   const s = (a, b) => `${a} ${u.big} ${b} ${u.small}`;
   const right = s(x, rem);
   const dis = [s(Math.floor(total / 100), total % 100), s(x * 10, rem), s(x, rem * 10), s(x + 1, rem), s(Math.floor(total / 10), total % 10), s(x, rem + 1)];
+  /* Варианты с типичной ошибкой (делили на 100 или на 10) ставим первыми, чтобы они попали в выбор */
+  const ord = [dis[0], dis[4], dis[1], dis[2], dis[3], dis[5]];
   return { q: `Выбери верную запись:<br><span class="ex">${fmt(total)} ${u.small} = ?</span>`, type: 'choice',
-    options: choices(right, dis), answer: right, hint: `В 1 ${u.big} — ${u.k} ${u.small}. Сколько целых ${u.big} помещается в ${fmt(total)} ${u.small}?`,
+    options: choices(right, ord), answer: right,
+    traps: [[dis[0], `В 1 ${u.big} — ${u.k} ${u.small}, а не 100.`], [dis[4], `В 1 ${u.big} — ${u.k} ${u.small}, а не 10.`]].filter(x => u.k !== 100 || x[0] !== dis[0]), hint: `В 1 ${u.big} — ${u.k} ${u.small}. Сколько целых ${u.big} помещается в ${fmt(total)} ${u.small}?`,
     explain: [`1 ${u.big} = ${u.k} ${u.small}.`, `${fmt(total)} : ${u.k} = ${x} (ост. ${rem}).`, `Значит, ${fmt(total)} ${u.small} = ${right}.`] };
 });
 
@@ -101,19 +119,24 @@ reg('fund', 'f_geom', d => {
   if (d === 1) {
     const a = R.int(3, 14), b = R.int(2, a - 1);
     if (R.chance(0.5)) return { q: `Найди <b>периметр</b> прямоугольника со сторонами ${a} см и ${b} см (в см).`, fig: rectSvg(a, b, a + ' см', b + ' см'),
+      traps: [[a * b, 'Это площадь, а нужен периметр — длина всех четырёх сторон.'], [a + b, 'Это только две стороны, а у прямоугольника их четыре.']],
       type: 'num', answer: 2 * (a + b), hint: 'Периметр — сумма длин всех четырёх сторон.', explain: [pr, `P = (${a} + ${b}) · 2 = ${2 * (a + b)} см.`, `Не путай с площадью: ${a} · ${b} = ${a * b} — это площадь.`] };
     return { q: `Найди <b>площадь</b> прямоугольника со сторонами ${a} см и ${b} см (в см²).`, fig: rectSvg(a, b, a + ' см', b + ' см'),
+      traps: [[2 * (a + b), 'Это периметр, а нужна площадь: длина · ширина.'], [a + b, 'Площадь — это произведение сторон, а не сумма.']],
       type: 'num', answer: a * b, hint: 'Площадь прямоугольника = длина · ширина.', explain: [pr, `S = ${a} · ${b} = ${a * b} см².`] };
   }
   if (d === 2) {
     const a = R.int(4, 15), b = R.int(2, 12);
     if (R.chance(0.5)) return { q: `Площадь прямоугольника ${a * b} см², одна сторона ${a} см. Найди другую сторону (в см).`, fig: rectSvg(a, b, a + ' см', '?'),
+      traps: [[a * b - a, 'Площадь — это произведение сторон, поэтому сторону находим делением, а не вычитанием.']],
       type: 'num', answer: b, hint: 'S = a · b, значит b = S : a.', explain: [pr, `b = S : a = ${a * b} : ${a} = ${b} см.`] };
     return { q: `Периметр прямоугольника ${2 * (a + b)} см, одна сторона ${a} см. Найди другую сторону (в см).`, fig: rectSvg(a, b, a + ' см', '?'),
+      traps: [[2 * (a + b) - a, 'Сначала раздели периметр на 2: так получится сумма двух соседних сторон.'], [a + b, 'Это сумма двух соседних сторон. Осталось вычесть известную сторону.']],
       type: 'num', answer: b, hint: 'Сначала найди сумму двух соседних сторон: P : 2.', explain: [pr, `a + b = P : 2 = ${2 * (a + b)} : 2 = ${a + b} см.`, `b = ${a + b} − ${a} = ${b} см.`] };
   }
   const v = R.int(1, 3);
   if (v === 1) { const s = R.int(3, 12); return { q: `Площадь квадрата ${s * s} см². Найди его периметр (в см).`, type: 'num', answer: 4 * s,
+    traps: [[s, 'Это сторона квадрата, а нужен периметр: сложи все четыре стороны.'], [s * s * 4, 'Умножать на 4 нужно сторону, а не площадь.']],
     hint: 'Какое число, умноженное само на себя, даёт площадь?', explain: [`${s} · ${s} = ${s * s}, значит сторона квадрата ${s} см.`, `P = ${s} · 4 = ${4 * s} см.`] }; }
   if (v === 2) { const b = R.int(2, 9), k = R.int(2, 5), a = b * k; return { q: `Длина прямоугольника ${a} см, а ширина в ${k} раза меньше. Найди площадь (в см²).`, fig: rectSvg(a, b, a + ' см', '?'),
     type: 'num', answer: a * b, hint: `Сначала найди ширину: ${a} : ${k}.`, explain: [`Ширина: ${a} : ${k} = ${b} см.`, `S = ${a} · ${b} = ${a * b} см².`] }; }
@@ -126,8 +149,10 @@ reg('fund', 'f_more', d => {
   if (d === 1) {
     const b = R.int(3, 12), k = R.int(2, 9), a = b * k;
     if (R.chance(0.5)) return { q: `На сколько ${a} больше ${b}?`, type: 'num', answer: a - b, hint: '«На сколько больше» — узнаём вычитанием.',
+      traps: [[k, '«Во сколько раз» — это деление, а здесь спрашивают «на сколько»: нужно вычитание.']],
       explain: ['«На сколько больше/меньше» → вычитание.', `${a} − ${b} = ${a - b}.`, `(А «во сколько раз» было бы делением: ${a} : ${b} = ${k}.)`] };
     return { q: `Во сколько раз ${a} больше ${b}?`, type: 'num', answer: k, hint: '«Во сколько раз больше» — узнаём делением.',
+      traps: [[a - b, '«На сколько» — это вычитание, а здесь спрашивают «во сколько раз»: нужно деление.']],
       explain: ['«Во сколько раз больше/меньше» → деление.', `${a} : ${b} = ${k}.`, `(А «на сколько» было бы вычитанием: ${a} − ${b} = ${a - b}.)`] };
   }
   if (d === 2) {
@@ -149,5 +174,6 @@ reg('fund', 'f_more', d => {
   }
   const q = R.int(4, 16), b = R.int(2, 6), a = q * b, k = R.int(2, 6), big = q * k;
   return { q: `Во сколько раз частное чисел ${a} и ${b} меньше числа ${big}?`, type: 'num', answer: k,
+    traps: [[q, `Это частное. Теперь узнай, во сколько раз оно меньше ${big}.`]],
     hint: 'Найди частное, а потом узнай делением, во сколько раз оно меньше.', explain: [`Частное: ${a} : ${b} = ${q}.`, `${big} : ${q} = ${k}.`] };
 });

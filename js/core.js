@@ -28,6 +28,7 @@ function pl(n, one, few, many) {
   return many;
 }
 const NUTS = n => `${n} ${pl(n, 'орех', 'ореха', 'орехов')}`;
+const LEFT_RIGHT_TRAP = 'Похоже, вычисления шли просто слева направо. Сначала умножение и деление, потом сложение и вычитание.';
 function divisors(n) { const r = []; for (let i = 1; i <= n; i++) if (n % i === 0) r.push(i); return r; }
 function isPrime(n) { if (n < 2) return false; for (let i = 2; i * i <= n; i++) if (n % i === 0) return false; return true; }
 function digitSum(n) { return String(n).split('').reduce((s, c) => s + +c, 0); }
@@ -61,6 +62,7 @@ function val(e) {
   switch (e.op) { case '+': return a + b; case '-': return a - b; case '*': return a * b; case ':': return a / b; }
 }
 function opCount(e) { return e.n !== undefined ? 0 : 1 + opCount(e.l) + opCount(e.r); }
+function depth(e) { return e.n !== undefined ? 0 : 1 + Math.max(depth(e.l), depth(e.r)); }
 /* strict = скобки у правого операнда того же приоритета всегда (для «перевода» дерево = запись) */
 function toStr(e, strict) {
   if (e.n !== undefined) return fmt(e.n);
@@ -94,7 +96,7 @@ function schoolSteps(s) {
   let t = tokenize(s);
   const steps = [];
   const apply = (a, op, b) => op === '+' ? a + b : op === '-' ? a - b : op === '*' ? a * b : a / b;
-  let guard = 0, ok = true;
+  let guard = 0, ok = true, max = Math.max(0, ...t.filter(x => typeof x === 'number'));
   while (t.length > 1 && guard++ < 50) {
     let lo = 0, hi = t.length;
     const close = t.indexOf(')');
@@ -107,11 +109,12 @@ function schoolSteps(s) {
     }
     const a = t[idx - 1], op = t[idx], b = t[idx + 1], c = apply(a, op, b);
     if (!Number.isInteger(c) || c < 0) ok = false;
+    max = Math.max(max, c);
     steps.push(`${fmt(a)} ${SYM[op]} ${fmt(b)} = ${fmt(c)}`);
     t.splice(idx - 1, 3, c);
     if (lo > 0 && t[lo - 1] === '(' && t[lo + 1] === ')') { t.splice(lo + 1, 1); t.splice(lo - 1, 1); }
   }
-  return { value: t[0], steps, ok };
+  return { value: t[0], steps, ok, max };
 }
 /* Вычисление «слева направо» без учёта приоритета — типичная ошибка, используем как ловушку */
 function leftToRight(s) {
@@ -191,6 +194,9 @@ function makeTask(id, d) {
       const t = GEN[id].f(d);
       if (!t) continue;
       t.gen = id; t.topic = GEN[id].topic; t.d = d;
+      /* Ловушки — типичные неверные ответы с объяснением. Ответ совпасть с ловушкой не может */
+      t.traps = (t.traps || []).map(x => Array.isArray(x) ? { v: x[0], msg: x[1] } : x)
+        .filter(x => x && x.v !== undefined && x.v !== null && (typeof x.v !== 'number' || (Number.isInteger(x.v) && x.v >= 0)) && String(x.v) !== String(t.answer));
       return t;
     } catch (err) { if (tries === 29) throw err; }
   }

@@ -5,13 +5,13 @@
 const STORE_KEY = 'orehpatrol_v1';          /* формат первой версии (один игрок); не удаляем, это страховка */
 const FAMILY_KEY = 'orehpatrol_family_v2';
 const profKey = id => 'orehpatrol_p2_' + id;
-const WORLDS = { five: { title: '5 класс' } };
+const WORLDS = { five: { title: '5 класс' }, kid: { title: 'Подготовка к 1 классу' } };
 const dstr = d => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 const today = () => dstr(new Date());
 function addDays(s, n) { const d = new Date(s + 'T12:00:00'); d.setDate(d.getDate() + n); return dstr(d); }
 
 const fresh = () => ({ v: 2, name: '', created: today(), acorns: 0, earned: 0, sound: true, stars: {}, medals: {},
-  mastery: {}, mistakes: [], history: {}, streak: { last: null, count: 0, best: 0 }, daily: { date: null, done: false },
+  mastery: {}, skill: {}, mistakes: [], history: {}, streak: { last: null, count: 0, best: 0 }, daily: { date: null, done: false },
   stickers: [], diag: null, recent: [], solved: 0, right: 0, _epoch: 0, _ts: 0, _tally: {}, gone: {} });
 const newId = p => p + Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
 const readJson = k => { try { const v = localStorage.getItem(k); return v ? JSON.parse(v) : null; } catch (e) { return null; } };
@@ -55,7 +55,7 @@ const curProfile = () => F.profiles.find(p => p.id === F.current) || null;
 function useProfile(id) { F.current = id; saveFamily(); S = readProfile(id) || fresh(); }
 function addProfile(world) {
   const id = newId('p');
-  F.profiles.push({ id, world, hero: ['mindal', 'funduk'][F.profiles.length % 2], created: today() });
+  F.profiles.push({ id, world, hero: world === 'kid' ? 'zhel' : ['mindal', 'funduk'][F.profiles.length % 2], created: today() });
   writeJson(profKey(id), fresh());
   useProfile(id);
 }
@@ -68,15 +68,32 @@ function save() {
 /* Сброс новой «эпохой»: иначе при слиянии старый прогресс вернулся бы с другого устройства */
 function resetAll() { S = Object.assign(fresh(), { name: S.name, sound: S.sound, _epoch: (S._epoch || 0) + 1 }); save(); }
 
-/* Освоенность темы: 0..1, сглаженная по последним ответам */
-function mast(topic) { return S.mastery[topic] || { m: null, n: 0, ok: 0 }; }
-function updMastery(topic, d, ok) {
-  const M = S.mastery[topic] || { m: 0.5, n: 0, ok: 0 };
+/* Освоенность: 0..1, сглаженная по последним ответам. Ведётся и по теме, и по каждому навыку (генератору).
+   Тема считается по самому слабому навыку, иначе сильный навык прячет слабый. */
+function mast(topic) {
+  const base = S.mastery[topic] || { m: null, n: 0, ok: 0 };
+  const T = typeof TOPIC !== 'undefined' && TOPIC[topic];
+  if (!T) return base;
+  const measured = T.gens.filter(g => S.skill[g] && S.skill[g].n >= 2);
+  if (!measured.length) return base;
+  const weak = measured.reduce((w, g) => S.skill[g].m < S.skill[w].m ? g : w);
+  let m = S.skill[weak].m;
+  if (measured.length < T.gens.length && base.m !== null && base.m !== undefined) m = Math.min(m, base.m);
+  return Object.assign({}, base, { m, weak });
+}
+function smooth(M, d, ok) {
   const target = ok ? (d === 1 ? 0.8 : 1) : (d === 3 ? 0.2 : 0);
   M.m = M.n === 0 && M.m === 0.5 ? (ok ? 0.7 : 0.3) : M.m * 0.85 + target * 0.15;
   M.n++; if (ok) M.ok++;
   M.ts = Date.now();
-  S.mastery[topic] = M;
+  return M;
+}
+function updMastery(topic, d, ok) { S.mastery[topic] = smooth(S.mastery[topic] || { m: 0.5, n: 0, ok: 0 }, d, ok); }
+function updSkill(gen, d, ok) { S.skill[gen] = smooth(S.skill[gen] || { m: 0.5, n: 0, ok: 0 }, d, ok); }
+/* Навык для тренировки: чаще самый слабый, иногда случайный */
+function weakGen(topic) {
+  const T = TOPIC[topic], w = mast(topic).weak;
+  return w && R.chance(0.6) ? w : R.pick(T.gens);
 }
 function masteryLabel(m) {
   if (m === null || m === undefined) return ['нет данных', '#D8C4A8'];
@@ -89,12 +106,14 @@ const plain = s => String(s).replace(/<br\s*\/?>/g, ' ').replace(/<div[^>]*>/g, 
 
 function recordAnswer(task, ok, given, opts = {}) {
   S.solved++; if (ok) S.right++;
-  updMastery(task.topic, task.d, ok);
+  /* Верно, но с подсказкой: освоенность не растёт, коробка повторения не сдвигается */
+  const helped = ok && opts.hint;
+  if (!helped) { updMastery(task.topic, task.d, ok); updSkill(task.gen, task.d, ok); }
   const t = today();
   const H = S.history[t] || { n: 0, ok: 0 }; H.n++; if (ok) H.ok++; S.history[t] = H;
   S.recent.unshift({ ts: Date.now(), topic: task.topic, q: plain(task.q).slice(0, 220), given: String(given), right: answerText(task), ok });
   S.recent = S.recent.slice(0, 40);
-  if (opts.mistakeId) reviewMistake(opts.mistakeId, ok);
+  if (opts.mistakeId) { if (!helped) reviewMistake(opts.mistakeId, ok); }
   else if (!ok) addMistake(task, given);
   save();
 }
@@ -184,10 +203,9 @@ function mergeStates(a, b) {
   for (const k of COUNTERS) R[k] = Object.values(R._tally).reduce((s, t) => s + (t[k] || 0), 0);
   R.acorns = Math.max(0, R.earned - R.stickers.reduce((s, i) => s + (STICKERS[i] ? STICKERS[i][2] : 0), 0));
 
-  for (const t of keysOf(A.mastery, B.mastery)) {
-    const x = A.mastery[t], y = B.mastery[t];
-    R.mastery[t] = !x ? y : !y ? x : ((y.ts || 0) > (x.ts || 0) || ((y.ts || 0) === (x.ts || 0) && y.n > x.n)) ? y : x;
-  }
+  const later = (x, y) => !x ? y : !y ? x : ((y.ts || 0) > (x.ts || 0) || ((y.ts || 0) === (x.ts || 0) && y.n > x.n)) ? y : x;
+  for (const t of keysOf(A.mastery, B.mastery)) R.mastery[t] = later(A.mastery[t], B.mastery[t]);
+  for (const g of keysOf(A.skill, B.skill)) R.skill[g] = later(A.skill[g], B.skill[g]);
   for (const d of keysOf(A.history, B.history)) {
     const x = A.history[d], y = B.history[d];
     R.history[d] = !x ? y : !y ? x : y.n > x.n ? y : x;

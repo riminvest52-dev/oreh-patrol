@@ -10,7 +10,7 @@ const CLOUD_URL = (() => {
   return '';   /* адрес облачной функции; пока пусто, облако выключено и игра работает как раньше */
 })();
 
-const CODE_ABC = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789';
+const CODE_ABC = 'ABCDEFGHJKMNPQRSTUVWXYZ2345679';   /* без 0, O, 1, I, L и 8 (похожа на B) */
 function newFamilyCode() {
   const a = new Uint32Array(8); crypto.getRandomValues(a);
   return Array.from(a, n => CODE_ABC[n % CODE_ABC.length]).join('');
@@ -18,8 +18,8 @@ function newFamilyCode() {
 const showCode = c => c.slice(0, 4) + '-' + c.slice(4);
 /* Код могут набрать русскими буквами: похожие заменяем на латинские */
 function cleanCode(s) {
-  const ru = { 'А': 'A', 'В': 'B', 'Е': 'E', 'К': 'K', 'М': 'M', 'Н': 'H', 'Р': 'P', 'С': 'C', 'Т': 'T', 'У': 'Y', 'Х': 'X' };
-  return String(s).toUpperCase().replace(/[АВЕКМНРСТУХ]/g, c => ru[c]).replace(/[^A-Z0-9]/g, '');
+  const ru = { 'А': 'A', 'В': 'B', 'Е': 'E', 'К': 'K', 'М': 'M', 'Н': 'H', 'Р': 'P', 'С': 'C', 'Т': 'T', 'У': 'Y', 'Х': 'X', 'З': '3' };
+  return String(s).toUpperCase().replace(/[АВЕКМНРСТУХЗ]/g, c => ru[c]).replace(/[^A-Z0-9]/g, '');
 }
 const validCode = c => c.length === 8 && [...c].every(ch => CODE_ABC.includes(ch));
 

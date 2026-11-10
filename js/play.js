@@ -24,7 +24,7 @@ function startDaily() {
   const weak = weakTopics(3), rest = [];
   for (let i = 0; due.length + rest.length < 10; i++) {
     const tid = i < 5 ? weak[i % weak.length] : R.pick(TOPICS).id;
-    rest.push({ gen: R.pick(TOPIC[tid].gens), d: topicDifficulty(tid) });
+    rest.push({ gen: weakGen(tid), d: topicDifficulty(tid) });
   }
   begin({ mode: 'daily', title: 'Задание дня', queue: R.shuffle(due.concat(rest)) });
 }
@@ -34,14 +34,29 @@ function startReview() {
   if (!list.length) { toast('Корзинка пуста — ошибок нет! 🎉'); return; }
   begin({ mode: 'review', early, title: 'Корзинка ошибок', queue: R.shuffle(list).slice(0, 10).map(m => ({ gen: m.gen, d: m.d, mistakeId: m.id })) });
 }
-function begin(cfg) { SES = Object.assign({ i: 0, ok: 0, acorns: 0, wrongStreak: 0, results: [] }, cfg); nextTask(); }
+function begin(cfg) {
+  SES = Object.assign({ i: 0, ok: 0, score: 0, acorns: 0, wrongStreak: 0, cleanRun: 0, pend: null, cheapN: 0, results: [] }, cfg);
+  /* Повтор «Ростка» после 3★: орешки только за каждый второй чистый ответ */
+  SES.cheap = SES.mode === 'level' && SES.level === 1 && starsOf(SES.topic, 1) === 3;
+  nextTask();
+}
+/* Вторая попытка: везде, кроме проверки сил и выбора из двух */
+const is5050 = t => t.type === 'choice' && t.options.length <= 2;
+const canRetry = t => SES.mode !== 'diag' && !is5050(t);
+function findTrap(t, given) {
+  if (!t.traps || !t.traps.length || given === null || given === undefined) return null;
+  return t.traps.find(x => t.type === 'num' ? +x.v === +String(given).replace(/\s/g, '') : String(x.v) === String(given)) || null;
+}
 
 function nextTask() {
   if (SES.i >= SES.queue.length) return finish();
   const item = SES.queue[SES.i];
   let d = item.d, easier = false;
+  let star = false;
   if (SES.mode === 'level' && SES.wrongStreak >= 2 && d > 1) { d--; easier = true; }
-  Object.assign(SES, { task: makeTask(item.gen, d), item, easier, answered: false, hint: false, input: '', sel: new Set() });
+  /* После 4 чистых ответов подряд — задача на ступень выше */
+  else if (SES.mode === 'level' && !SES.boss && SES.cleanRun >= 4 && d < 3) { d++; star = true; SES.cleanRun = 0; }
+  Object.assign(SES, { task: makeTask(item.gen, d), item, easier, star, answered: false, hint: false, tries: 0, firstGiven: null, firstTrap: null, input: '', sel: new Set() });
   renderTask();
 }
 
@@ -54,12 +69,13 @@ function answerUI(t) {
     const two = t.options.length === 2 || (t.options.length === 3 && t.options.every(o => o.length < 12)) ? (t.options.length === 2 ? ' two' : '') : '';
     return `<div class="opts${two}">${t.options.map((o, i) => `<button class="opt${t.mono ? ' mono' : ''}" data-act="pick" data-i="${i}">${o}</button>`).join('')}</div>`;
   }
-  return `<div class="chips">${t.items.map((o, i) => `<button class="chipb" data-act="tog" data-i="${i}">${o}</button>`).join('')}</div>
+  return `<div class="chips${t.wide ? ' wide' : ''}">${t.items.map((o, i) => `<button class="chipb" data-act="tog" data-i="${i}">${o}</button>`).join('')}</div>
     <button class="btn green block" style="margin-top:14px" data-act="check" id="mcheck" disabled>Проверить</button>`;
 }
 function renderTask() {
   const t = SES.task, pct = (SES.i / SES.queue.length) * 100;
-  const tags = (SES.easier ? '<div class="easier">полегче — разминка 🌱</div> ' : '') + (SES.item.mistakeId ? '<div class="easier">🧺 из корзинки ошибок</div>' : '');
+  const tags = (SES.easier ? '<div class="easier">полегче — разминка 🌱</div> ' : '') + (SES.star ? '<div class="easier star">⭐ задача со звёздочкой · +1 орешек</div> ' : '')
+    + (SES.item.mistakeId ? '<div class="easier">🧺 из корзинки ошибок</div> ' : '') + (t.draft ? '<div class="easier draft">✏️ реши на черновике</div>' : '');
   mount(`<div class="play">
     <div class="playtop"><button class="iconbtn" data-act="quit" aria-label="Выйти">✕</button><div class="progress"><i style="width:${pct}%"></i></div>
       <span class="pill">${ART.acorn(20)}<span>${SES.acorns}</span></span></div>
@@ -92,6 +108,7 @@ document.addEventListener('keydown', e => {
 ACT.pick = el => {
   if (SES.answered) return;
   const t = SES.task, i = +el.dataset.i, given = t.options[i], ok = given === t.answer;
+  if (!ok && SES.tries === 0 && canRetry(t)) { el.disabled = true; el.classList.add('wrong'); return retry(given); }
   document.querySelectorAll('.opt').forEach((b, j) => {
     b.disabled = true;
     if (t.options[j] === t.answer) b.classList.add('right'); else if (j === i) b.classList.add('wrong'); else b.classList.add('dim');
@@ -112,42 +129,74 @@ ACT.check = () => {
     if (!SES.input) { toast('Сначала введи ответ 🙂'); return; }
     const given = +SES.input, ok = given === t.answer;
     const d = document.getElementById('disp');
+    if (!ok && SES.tries === 0 && canRetry(t)) {
+      SES.input = ''; d.textContent = fmt(given); d.style.borderColor = 'var(--red)'; d.style.background = '#FBE0D8';
+      setTimeout(() => { if (!SES || SES.answered || SES.input) return; d.textContent = '?'; d.classList.add('empty'); d.style.borderColor = ''; d.style.background = ''; }, 900);
+      return retry(fmt(given));
+    }
     d.style.borderColor = ok ? 'var(--green)' : 'var(--red)'; d.style.background = ok ? '#E3F4D2' : '#FBE0D8';
     document.querySelector('.keypad').classList.add('hidden');
     return answered(ok, fmt(given));
   }
   const chosen = [...SES.sel].map(i => t.items[i]);
   const ok = chosen.length === t.answer.length && chosen.every(c => t.answer.includes(c));
+  if (!ok && SES.tries === 0 && canRetry(t)) return retry(chosen.join('; ') || '—');
   document.querySelectorAll('.chipb').forEach((b, i) => {
     b.disabled = true; const inA = t.answer.includes(t.items[i]), on = SES.sel.has(i);
     b.classList.remove('on');
     if (on && inA) b.classList.add('right'); else if (on && !inA) b.classList.add('wrong'); else if (!on && inA) b.classList.add('missed');
   });
   document.getElementById('mcheck').classList.add('hidden');
-  answered(ok, chosen.join(', ') || '—');
+  answered(ok, chosen.join('; ') || '—');
 };
 ACT.hint = () => {
   if (SES.answered) return;
   SES.hint = true;
   const hb = document.querySelector('#helper .bubble');
-  hb.innerHTML = `💡 ${SES.task.hint}<div class="small muted" style="margin-top:4px">(с подсказкой орешек не начисляется)</div>`;
+  hb.innerHTML = `💡 ${SES.task.hint}<div class="small muted" style="margin-top:4px">(с подсказкой орешек не начисляется, а для звёзд ответ считается за половинку)</div>`;
   document.querySelector('#helper svg').outerHTML = ART.chip('mindal', 'think');
 };
 
-function answered(ok, given) {
+/* Первая ошибка: не показываем ответ, даём подсказку и ещё одну попытку */
+function retry(given) {
   const t = SES.task;
+  SES.tries = 1; SES.firstGiven = given; SES.firstTrap = findTrap(t, given);
+  Sound.bad();
+  document.getElementById('fb').innerHTML = `<div class="feedback try"><div class="fh">🤔 Не совсем. Попробуй ещё раз!</div></div>`;
+  const hl = document.getElementById('helper');
+  hl.innerHTML = `${ART.chip('mindal', 'think')}<div class="bubble">${SES.firstTrap ? `🔎 ${SES.firstTrap.msg}<br>` : ''}💡 ${t.hint}</div>`;
+}
+
+function answered(ok, given) {
+  const t = SES.task, second = SES.tries > 0;
   SES.answered = true;
-  recordAnswer(t, ok, given, { mistakeId: SES.item.mistakeId });
+  const first = ok && !second;                         /* верно с первой попытки */
+  const credit = first ? (SES.hint ? 0.5 : 1) : 0;     /* вклад в звёзды */
+  /* Выбор из двух засчитывается, только если следующая задача тоже решена */
+  if (SES.pend !== null) { if (!credit) SES.score -= SES.pend; SES.pend = null; }
+  SES.score += credit;
+  if (credit && is5050(t) && SES.mode === 'level') SES.pend = credit;
+  recordAnswer(t, first, second ? SES.firstGiven : given, { mistakeId: SES.item.mistakeId, hint: SES.hint });
   let ac = 0;
-  if (ok) { SES.ok++; SES.wrongStreak = 0; ac = SES.hint ? 0 : (t.d >= 3 ? 2 : 1); SES.acorns += ac; giveAcorns(ac); save(); Sound.ok(); }
-  else { SES.wrongStreak++; Sound.bad(); }
-  SES.results.push({ ok, topic: t.topic, gen: t.gen });
+  if (credit === 1) {
+    ac = (t.d >= 3 ? 2 : 1) + (SES.star ? 1 : 0);
+    if (SES.cheap && (++SES.cheapN) % 2) ac = 0;
+  }
+  if (first) SES.ok++;
+  SES.cleanRun = credit === 1 ? SES.cleanRun + 1 : 0;
+  SES.wrongStreak = first ? 0 : ok ? SES.wrongStreak : SES.wrongStreak + 1;
+  if (ac) { SES.acorns += ac; giveAcorns(ac); save(); }
+  if (ok) Sound.ok(); else Sound.bad();
+  SES.results.push({ ok: first, topic: t.topic, gen: t.gen });
   const last = SES.i + 1 >= SES.queue.length;
   const steps = `<ol>${t.explain.map(s => `<li>${nb(s)}</li>`).join('')}</ol>`;
+  const trap = ok ? null : (findTrap(t, given) || SES.firstTrap);
+  const okHead = second ? '👍 Получилось со второй попытки!' : `✅ ${phrase(PH_OK)} ${ac ? `+${ac} ${ART.acorn(20)}` : ''}`;
+  const okNote = second ? 'В следующий раз постарайся с первой — тогда будет орешек.' : SES.hint ? 'С подсказкой ответ идёт в счёт звёзд половинкой.' : (credit === 1 && !ac && SES.cheap ? 'Этот уровень уже пройден на 3★ — здесь орешек за каждый второй ответ.' : '');
   document.getElementById('fb').innerHTML = ok
-    ? `<div class="feedback ok"><div class="fh">✅ ${phrase(PH_OK)} ${ac ? `+${ac} ${ART.acorn(20)}` : ''}</div>
-       <details><summary class="small muted">Как решать?</summary>${steps}</details></div>`
-    : `<div class="feedback bad"><div class="fh">🤔 ${phrase(PH_BAD)}</div><div>Правильный ответ: <b>${esc(answerText(t))}</b></div>${steps}</div>`;
+    ? `<div class="feedback ok"><div class="fh">${okHead}</div>${okNote ? `<div class="small muted">${okNote}</div>` : ''}
+       <details${second ? ' open' : ''}><summary class="small muted">Как решать?</summary>${steps}</details></div>`
+    : `<div class="feedback bad"><div class="fh">🤔 ${phrase(PH_BAD)}</div>${trap ? `<div class="trapline">🔎 ${nb(trap.msg)}</div>` : ''}<div>Правильный ответ: <b>${esc(answerText(t))}</b></div>${steps}</div>`;
   document.getElementById('fb').insertAdjacentHTML('beforeend', `<button class="btn ${ok ? 'green' : ''} block" style="margin-top:14px" data-act="next">${last ? 'Готово 🏁' : ok ? 'Дальше →' : 'Понятно, дальше →'}</button>`);
   const hl = document.getElementById('helper');
   hl.innerHTML = `${ART.chip(ok ? 'funduk' : 'mindal', ok ? 'cheer' : 'think')}<div class="bubble">${ok ? R.pick(['Ура! 🎉', 'Молодец!', 'Так держать!', 'Орешек наш! 🌰']) : R.pick(['Прочитай разбор — в следующий раз точно получится!', 'Я положу эту задачку в корзинку, повторим позже 🧺', 'Ошибаться — нормально. Главное — понять!'])}</div>`;
@@ -163,25 +212,25 @@ ACT.quitYes = () => { closeModal(); SES = null; showMap(); };
 function finish() {
   const s = SES; SES = null;
   markActive();
-  const n = s.queue.length, ok = s.ok;
+  const n = s.queue.length, ok = s.ok, sc = Math.max(0, s.score), scTxt = String(sc).replace('.', ',');
   if (s.mode === 'level') {
     const T = TOPIC[s.topic];
     if (s.boss) {
-      const win = ok >= n - 1;
+      const win = sc >= n - 1;
       if (win) { const first = !S.medals[s.topic]; S.medals[s.topic] = true; S.stars[lvKey(s.topic, 4)] = 3; if (first) giveAcorns(15); }
       save();
       if (win) { Sound.win(); confetti(); }
       return showResult({
         mood: win ? 'cheer' : 'think', title: win ? `Испытание пройдено! 🏅` : 'Почти получилось!',
-        text: win ? `${T.who} говорит спасибо! Ты получаешь медаль «${T.name}».` : `Нужно ${n - 1} верных из ${n}, а у тебя ${ok}. Попробуй ещё раз — ты сможешь!`,
-        stars: null, ok, n, acorns: s.acorns + (win ? 15 : 0),
+        text: win ? `${T.who} говорит спасибо! Ты получаешь медаль «${T.name}».` : `Нужно ${n - 1} верных из ${n} с первой попытки, а у тебя ${scTxt}. Попробуй ещё раз — ты сможешь!`,
+        stars: null, ok: scTxt, n, acorns: s.acorns + (win ? 15 : 0),
         buttons: [[win ? 'На карту' : 'Попробовать ещё', win ? 'map' : 'again', 'green'], [win ? 'Ещё раз' : 'На карту', win ? 'again' : 'map', 'ghost']], again: [s.topic, s.level]
       });
     }
-    const stars = ok >= 9 ? 3 : ok >= 8 ? 2 : ok >= 6 ? 1 : 0;
+    const stars = sc >= 9 ? 3 : sc >= 8 ? 2 : sc >= 6 ? 1 : 0;
     const prev = starsOf(s.topic, s.level);
     S.stars[lvKey(s.topic, s.level)] = Math.max(prev, stars);
-    const bonus = stars * 2; giveAcorns(bonus); save();
+    const bonus = Math.max(0, stars - prev) * 2; giveAcorns(bonus); save();
     if (stars >= 2) { Sound.win(); if (stars === 3) confetti(); }
     const nextOpen = s.level < 4 && isOpen(s.topic, s.level + 1);
     const btns = [];
@@ -190,15 +239,16 @@ function finish() {
     return showResult({
       mood: stars >= 2 ? 'cheer' : stars === 1 ? 'happy' : 'think',
       title: stars === 3 ? 'Великолепно!' : stars === 2 ? 'Отличная работа!' : stars === 1 ? 'Неплохо!' : 'Надо ещё потренироваться',
-      text: stars >= 2 ? (nextOpen && s.level < 3 ? 'Следующий уровень открыт!' : s.level === 3 ? 'Теперь тебе по силам Испытание!' : '') : `Чтобы открыть следующий уровень, нужно 8 верных из 10.`,
-      stars, ok, n, acorns: s.acorns + bonus, buttons: btns, again: [s.topic, s.level]
+      text: (stars >= 2 ? (nextOpen && s.level < 3 ? (prev < 2 ? 'Следующий уровень открыт!' : '') : s.level === 3 ? 'Теперь тебе по силам Испытание!' : '') : `Чтобы открыть следующий уровень, нужно 8 верных из 10.`)
+        + ' Считаются ответы с первой попытки; с подсказкой — половинка.',
+      stars, ok: scTxt, n, acorns: s.acorns + bonus, buttons: btns, again: [s.topic, s.level]
     });
   }
   if (s.mode === 'diag') {
     const scores = {};
     TOPICS.forEach(T => { scores[T.id] = 0; });
     s.results.forEach(r => { if (r.ok) scores[r.topic]++; });
-    TOPICS.forEach(T => { const sc = scores[T.id]; S.mastery[T.id] = { m: [0.3, 0.6, 0.85][sc], n: 2, ok: sc }; });
+    TOPICS.forEach(T => { const sc = scores[T.id]; S.mastery[T.id] = { m: [0.3, 0.6, 0.85][sc], n: 2, ok: sc, ts: Date.now() }; });
     S.diag = { date: today(), scores }; giveAcorns(5); save(); Sound.win();
     return showDiagResult(scores, ok, n);
   }

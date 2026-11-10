@@ -9,14 +9,15 @@ function showWho() {
     <div class="who">${tiles}<button class="who-tile" data-act="addWho"><span class="plus">＋</span><b>Добавить</b><span class="small muted">нового игрока</span></button></div>
     ${CLOUD_URL && !F.code ? '<button class="btn ghost block" data-act="enterCode">У нас уже есть код семьи</button>' : ''}`);
 }
-function enterWorld() { if (!S.name) showWelcome(); else showMap(); }
+const isKid = () => (curProfile() || {}).world === 'kid';
+function enterWorld() { if (isKid()) return S.name ? showKidMap() : showKidWelcome(); if (!S.name) showWelcome(); else showMap(); }
 ACT.who = () => showWho();
 ACT.pickWho = el => { useProfile(el.dataset.id); enterWorld(); };
 ACT.addWho = () => modal(`<h2>Новый игрок</h2><p class="muted">Что будем проходить?</p><div class="stack">
   <button class="btn green block" data-act="addGo" data-w="five">Математику 5 класса</button>
-  <button class="btn ghost block" disabled>Подготовку к 1 классу (скоро)</button>
+  <button class="btn gold block" data-act="addGo" data-w="kid">Подготовку к 1 классу 🌱</button>
   <button class="btn ghost block" data-act="close">Отмена</button></div>`);
-ACT.addGo = el => { closeModal(); addProfile(el.dataset.w); Cloud.soon(); showWelcome(); };
+ACT.addGo = el => { closeModal(); addProfile(el.dataset.w); Cloud.soon(); enterWorld(); };
 
 /* ---------- Знакомство ---------- */
 function showWelcome() {
@@ -42,6 +43,7 @@ ACT.map = () => showMap();
 /* ---------- Карта леса ---------- */
 function showMap() {
   SES = null;
+  if (isKid()) return showKidMap();
   const due = dueMistakes().length, dailyDone = S.daily.date === today() && S.daily.done;
   const weak = S.diag || Object.values(S.mastery).some(m => m.n >= 5) ? weakTopics(2) : [];
   const W = Math.min(window.innerWidth, 560), stepY = 156, top = 70;
@@ -68,9 +70,9 @@ function showMap() {
       <div class="grow"><div class="hello">Привет, ${esc(S.name || 'друг')}!</div><div class="small muted">${sn ? `🔥 ${sn} ${pl(sn, 'день', 'дня', 'дней')} подряд` : 'Ореховый патруль на связи'}</div></div>
       <span class="pill">${ART.acorn(22)}${S.acorns}</span><button class="iconbtn" data-act="parent" aria-label="Для взрослых">⚙️</button></div>
     <div class="quick">
-      <div class="qcard ${dailyDone ? '' : 'hot'}" data-act="daily">${dailyDone ? '<span class="done">✅</span>' : ''}<div class="qi">☀️</div><div><div class="qt">Задание дня</div><div class="qs">${dailyDone ? 'Выполнено! Можно ещё' : '10 задач · +10 орешков'}</div></div></div>
+      <div class="qcard ${dailyDone || !S.diag ? '' : 'hot'}" data-act="daily">${dailyDone ? '<span class="done">✅</span>' : ''}<div class="qi">☀️</div><div><div class="qt">Задание дня</div><div class="qs">${dailyDone ? 'Выполнено! Можно ещё' : '10 задач · +10 орешков'}</div></div></div>
       <div class="qcard" data-act="review">${due ? `<span class="badge">${due}</span>` : ''}<div class="qi">🧺</div><div><div class="qt">Корзинка ошибок</div><div class="qs">${due ? 'Пора повторить!' : S.mistakes.length ? `${S.mistakes.length} ждут своего дня` : 'Пока пусто'}</div></div></div>
-      <div class="qcard" data-act="${S.diag ? 'diagAsk' : 'diag'}"><div class="qi">🧭</div><div><div class="qt">Проверка сил</div><div class="qs">${S.diag ? 'Пройдена ' + S.diag.date.split('-').reverse().slice(0, 2).join('.') : '16 задач — с чего начать'}</div></div></div>
+      <div class="qcard ${S.diag ? '' : 'hot first'}" data-act="${S.diag ? 'diagAsk' : 'diag'}">${S.diag ? '' : '<div class="tip">Начни отсюда!</div>'}<div class="qi">🧭</div><div><div class="qt">Проверка сил</div><div class="qs">${S.diag ? 'Пройдена ' + S.diag.date.split('-').reverse().slice(0, 2).join('.') : '16 задач — с чего начать'}</div></div></div>
       <div class="qcard" data-act="album"><div class="qi">📒</div><div><div class="qt">Альбом наклеек</div><div class="qs">${S.stickers.length} из ${STICKERS.length}</div></div></div>
     </div>
     <h3 style="margin:4px 0 0">Карта леса</h3>
@@ -161,12 +163,14 @@ function setupHold() {
   ['pointerup', 'pointerleave', 'pointercancel'].forEach(ev => b.addEventListener(ev, stop));
 }
 function showParent() {
+  if (isKid()) return showKidParent();
   const days = Array.from({ length: 14 }, (_, i) => addDays(today(), i - 13));
   const maxN = Math.max(1, ...days.map(d => (S.history[d] || {}).n || 0));
   const acc = S.solved ? Math.round(S.right / S.solved * 100) : 0;
   const topics = TOPICS.map(T => {
     const M = mast(T.id), [lbl, col] = masteryLabel(M.m), pct = M.m === null || M.m === undefined ? 0 : Math.round(M.m * 100);
-    return `<div class="trow"><div style="font-size:22px">${T.icon}</div><div><div class="tn">${T.name} <span class="small" style="color:${col}">· ${lbl}</span></div>
+    const weak = M.weak && S.skill[M.weak] && S.skill[M.weak].m < 0.8 && SKILL[M.weak] ? `<div class="small muted">слабее всего: ${SKILL[M.weak]}</div>` : '';
+    return `<div class="trow"><div style="font-size:22px">${T.icon}</div><div><div class="tn">${T.name} <span class="small" style="color:${col}">· ${lbl}</span></div>${weak}
       <div class="bar"><i style="width:${pct}%;background:${col}"></i></div></div><div class="small muted">${M.n ? M.ok + '/' + M.n : '—'}</div></div>`;
   }).join('');
   const recentBad = S.recent.filter(r => !r.ok).slice(0, 15).map(r => `<div class="mist"><div class="q">${TOPIC[r.topic] ? TOPIC[r.topic].icon : ''} ${esc(r.q)}</div>
@@ -179,7 +183,7 @@ function showParent() {
       <div><div style="font-size:26px;font-weight:800">${S.mistakes.length}</div><div class="small muted">в корзинке</div></div></div>
       <div class="days">${days.map(d => { const n = (S.history[d] || {}).n || 0; return `<div class="${n ? '' : 'zero'}" style="height:${Math.max(4, n / maxN * 100)}%" title="${d}: ${n}"></div>`; }).join('')}</div>
       <div class="small muted center" style="margin-top:4px">Задач в день за последние 2 недели</div></div>
-    <h3 style="margin-top:18px">Темы</h3><div class="card">${topics}<p class="small muted">«Уверенно» — 80%+ по последним ответам с учётом сложности, «почти» — 55–80%, «подтянуть» — ниже.</p></div>
+    <h3 style="margin-top:18px">Темы</h3><div class="card">${topics}<p class="small muted">Тема оценивается по самому слабому навыку внутри неё. «Уверенно» — 80%+ по последним ответам с учётом сложности, «почти» — 55–80%, «подтянуть» — ниже. Ответ с подсказкой освоенность не повышает, со второй попытки — считается ошибкой.</p></div>
     <h3 style="margin-top:18px">Последние ошибки</h3><div class="card">${recentBad}</div>
     ${cloudCard()}
     <h3 style="margin-top:18px">Настройки</h3><div class="card">

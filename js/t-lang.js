@@ -17,8 +17,9 @@ function mutants(e) {
 }
 const cap = s => s.charAt(0).toUpperCase() + s.slice(1);
 const LANG_CFG = { ops: ['+', '-', '*', ':'], max: 300, subMax: 25, mulMax: 9, divMax: 9 };
+/* Не глубже двух уровней: «частное суммы чисел 5 и 6 и разности чисел 9 и 2» читается, а тройная вложенность — нет */
 function langExpr(k) {
-  for (let t = 0; t < 60; t++) { const e = buildExpr(R.int(8, 60), k, LANG_CFG); if (opCount(e) === k) return e; }
+  for (let t = 0; t < 120; t++) { const e = buildExpr(R.int(8, 60), k, LANG_CFG); if (opCount(e) === k && depth(e) <= 2) return e; }
   return null;
 }
 const OPWORD = { '+': 'сложение', '-': 'вычитание', '*': 'умножение', ':': 'деление' };
@@ -67,7 +68,13 @@ reg('lang', 'lang_phrase', d => {
     const ans = { 'на+': a + n, 'на-': a - n, 'в+': a * n, 'в-': a / n }[kind];
     const word = { 'на+': `на ${n} больше`, 'на-': `на ${n} меньше`, 'в+': `в ${n} раз${n >= 2 && n <= 4 ? 'а' : ''} больше`, 'в-': `в ${n} раз${n >= 2 && n <= 4 ? 'а' : ''} меньше` }[kind];
     const sign = { 'на+': '+', 'на-': '−', 'в+': '·', 'в-': ':' }[kind];
-    return { q: `Найди число, которое <b>${word}</b>, чем ${a}.`, type: 'num', answer: ans, hint: REL_RULE,
+    const traps = {
+      'на+': [[a - n, '«Больше» — значит прибавляем.'], [a * n, '«На … больше» — это сложение, а не умножение.']],
+      'на-': [[a + n, '«Меньше» — значит вычитаем.']],
+      'в+': [[a + n, '«В … раз больше» — это умножение, а не сложение.']],
+      'в-': [[a * n, '«В … раз меньше» — это деление.'], [a - n, '«В … раз» — это деление, а не вычитание.']]
+    }[kind];
+    return { q: `Найди число, которое <b>${word}</b>, чем ${a}.`, type: 'num', answer: ans, hint: REL_RULE, traps,
       explain: [REL_RULE, `${a} ${sign} ${n} = ${fmt(ans)}.`] };
   }
   const [x, y] = R.pick([['a', 'b'], ['x', 'y'], ['m', 'k'], ['c', 'd']]);
@@ -103,7 +110,7 @@ reg('order', 'ord_value', d => {
     const r = schoolSteps(s);
     if (!r.ok || r.value !== val(e)) continue;
     const ltr = leftToRight(s);
-    return { q: `Найди значение выражения:<br><span class="ex">${s}</span>`, type: 'num', answer: r.value,
+    return { q: `Найди значение выражения:<br><span class="ex">${s}</span>`, type: 'num', answer: r.value, draft: d === 3, traps: [[ltr, LEFT_RIGHT_TRAP]],
       hint: 'Порядок: 1) скобки; 2) умножение и деление слева направо; 3) сложение и вычитание слева направо.',
       explain: ['Порядок действий:'].concat(r.steps.map((x, i) => `${i + 1}) ${x}`),
         Number.isInteger(ltr) && ltr >= 0 && ltr !== r.value ? [`Если считать просто слева направо, выйдет ${fmt(ltr)} — это ошибка.`] : []) };
@@ -158,12 +165,13 @@ function placements(nums, ops) {
     '(' + a + p + b + q + c + ')' + r + e, a + p + '(' + b + q + c + r + e + ')', '(' + a + p + b + ')' + q + '(' + c + r + e + ')'];
 }
 reg('order', 'ord_brackets', d => {
-  const cnt = d === 1 ? 3 : 4, hi = d === 3 ? 40 : 20;
-  for (let t = 0; t < 80; t++) {
+  /* Все варианты считаются в уме: ни одно промежуточное значение не больше 1000 */
+  const cnt = d === 1 ? 3 : 4, hi = d === 3 ? 30 : 20;
+  for (let t = 0; t < 200; t++) {
     const nums = Array.from({ length: cnt }, () => R.int(2, hi));
     const ops = Array.from({ length: cnt - 1 }, () => R.pick(['+', '-', '*', ':']));
     if (!ops.some(o => o === '*' || o === ':') || !ops.some(o => o === '+' || o === '-')) continue;
-    const pl = placements(nums, ops).map(s => ({ s, r: schoolSteps(s) })).filter(x => x.r.ok);
+    const pl = placements(nums, ops).map(s => ({ s, r: schoolSteps(s) })).filter(x => x.r.ok && x.r.max <= 1000);
     if (!pl.length || pl[0].s !== placements(nums, ops)[0]) continue;
     const plain = pl[0].r.value;
     const cand = pl.slice(1).filter(x => x.r.value !== plain && pl.filter(y => y.r.value === x.r.value).length === 1);
@@ -191,7 +199,7 @@ reg('order', 'ord_letters', d => {
     const ns = num.replace(/A/g, A).replace(/B/g, B).replace(/C/g, C).replace(/K/g, K).replace(/M/g, M);
     const r = schoolSteps(ns); if (!r.ok) continue;
     const vars = [`a = ${A}`, `b = ${B}`].concat(/c/.test(disp) ? [`c = ${C}`] : []).join(', ');
-    return { q: `Найди значение выражения<br><span class="ex">${ds}</span><br>при ${vars}.`, type: 'num', answer: r.value,
+    return { q: `Найди значение выражения<br><span class="ex">${ds}</span><br>при ${vars}.`, type: 'num', answer: r.value, traps: [[leftToRight(ns), LEFT_RIGHT_TRAP]],
       hint: /\d[ab]/.test(ds) ? `Запись вида ${K}a означает ${K} · a. Подставь числа вместо букв.` : 'Подставь числа вместо букв и считай по порядку действий.',
       explain: (/\d[ab]/.test(ds) ? [`${K}a — это ${K} · a (знак умножения перед буквой не пишут).`] : []).concat([`Подставляем: ${ns}`], r.steps.map((x, i) => `${i + 1}) ${x}`)) };
   }

@@ -25,8 +25,20 @@ function check(t) {
     if (new Set(t.items).size !== t.items.length) errs.push('dup items');
     if (!t.answer.every(a => t.items.includes(a))) errs.push('answer not subset');
   } else errs.push('bad type ' + t.type);
+  for (const x of t.traps || []) {
+    if (String(x.v) === String(t.answer) || (t.type === 'num' && +x.v === t.answer)) errs.push('trap equals answer: ' + x.v);
+    if (!x.msg || /undefined|NaN|null/.test(x.msg)) errs.push('bad trap msg: ' + x.msg);
+    if (t.type === 'choice' && !t.options.includes(String(x.v))) TRAPMISS[t.gen] = (TRAPMISS[t.gen] || 0) + 1;
+  }
+  const txt = strip([t.q].concat(t.explain || [], (t.traps || []).map(x => x.msg)).join(' '));
+  for (const m of txt.matchAll(/(\d+) (мешок|мешка|мешков|орех|ореха|орехов|гриб|гриба|грибов)(?![а-я])/g)) {
+    const n = +m[1], w = m[2];
+    const forms = w.startsWith('меш') ? ['мешок', 'мешка', 'мешков'] : w.startsWith('ор') ? ['орех', 'ореха', 'орехов'] : ['гриб', 'гриба', 'грибов'];
+    if (pl(n, ...forms) !== w) PLURAL.push(t.gen + ': «' + m[0] + '» — ' + txt.slice(Math.max(0, m.index - 30), m.index + 30));
+  }
   return errs;
 }
+const TRAPMISS = {}, PLURAL = [];
 const out = document.getElementById('out');
 const summary = {}; let total = 0, fails = 0; const samples = [];
 for (const top of TOPICS) for (const g of top.gens) {
@@ -43,7 +55,11 @@ for (const top of TOPICS) for (const g of top.gens) {
     summary[g + ' d' + d] = f ? `FAIL ${f}/400: ${ex}` : 'ok';
   }
 }
-window.TEST = { total, fails, summary };
-out.innerHTML = `<p><b>${total}</b> заданий, ошибок: <b class="${fails ? 'bad' : ''}">${fails}</b></p><pre>${Object.entries(summary).map(([k, v]) => k + ': ' + v).join('\n')}</pre><h2>Примеры</h2>` +
+/* Доля заданий «из двух» на Острове правды */
+let two = 0, all = 0;
+for (const g of TOPIC.logic.gens) for (let d = 1; d <= 3; d++) for (let i = 0; i < 300; i++) { const t = makeTask(g, d); all++; if (t.type === 'choice' && t.options.length <= 2) two++; }
+const share5050 = Math.round(two / all * 100);
+window.TEST = { total, fails, summary, share5050, plural: PLURAL.slice(0, 20), pluralN: PLURAL.length, trapMiss: TRAPMISS };
+out.innerHTML = `<p><b>${total}</b> заданий, ошибок: <b class="${fails ? 'bad' : ''}">${fails}</b>. Остров правды, выбор из двух: ${share5050}%. Подозрительных склонений: ${PLURAL.length}</p><pre>${PLURAL.slice(0, 20).join(String.fromCharCode(10))}</pre><pre>${Object.entries(summary).map(([k, v]) => k + ': ' + v).join('\n')}</pre><h2>Примеры</h2>` +
   samples.map(s => `<div class="task"><pre>${s.replace(/</g, '&lt;')}</pre></div>`).join('');
 </script></body></html>
