@@ -57,6 +57,14 @@ p { margin: 6px 0; line-height: 1.4; }
 .topbar { display: flex; align-items: center; gap: 8px; margin-bottom: 12px; }
 .avatar { width: 50px; height: 54px; flex: none; }
 .avatar svg { width: 100%; height: 100%; }
+.avatar[data-act] { position: relative; cursor: pointer; }
+.avatar .swap { position: absolute; right: -5px; bottom: -3px; width: 22px; height: 22px; border-radius: 50%; background: var(--card); border: 2px solid var(--line); font-size: 12px; font-weight: 800; display: flex; align-items: center; justify-content: center; }
+.who { display: grid; grid-template-columns: repeat(2, 1fr); gap: 14px; margin: 18px 0; }
+.who-tile { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; min-height: 180px; padding: 14px 8px; background: var(--card); border: 2px solid var(--line); border-radius: var(--r); box-shadow: 0 5px 0 var(--line); font: 700 20px var(--font); color: var(--ink); cursor: pointer; }
+.who-tile:active { transform: translateY(3px); box-shadow: 0 2px 0 var(--line); }
+.who-tile svg.chip { width: 100%; max-width: 110px; height: auto; }
+.who-tile .plus { font-size: 62px; line-height: 1.2; color: var(--green-d); }
+.famcode { font: 800 30px var(--font); letter-spacing: 2px; text-align: center; margin: 2px 0 10px; -webkit-user-select: text; user-select: text; }
 .hello { font-weight: 800; font-size: 19px; line-height: 1.1; }
 .quick { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 14px; }
 .qcard { position: relative; border-radius: 20px; padding: 12px; min-height: 92px; color: var(--ink); background: var(--card); border: 2px solid var(--line);

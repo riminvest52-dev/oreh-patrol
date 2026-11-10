@@ -1,0 +1,127 @@
+<!doctype html>
+<html lang="ru">
+<head><meta charset="utf-8"><title>Тест слияния прогресса</title>
+<style>body{font:15px system-ui;padding:16px} .bad{color:#b00} .ok{color:#080}</style></head>
+<body>
+<h2>Тест слияния прогресса</h2>
+<pre id="out"></pre>
+<script src="../js/core.js"></script>
+<script src="../js/state.js"></script>
+<script>
+'use strict';
+const log = [], results = { pass: 0, fail: 0 };
+function check(name, cond, extra) {
+  if (cond) results.pass++; else { results.fail++; log.push('ПРОВАЛ: ' + name + (extra !== undefined ? ' -> ' + JSON.stringify(extra) : '')); }
+}
+const dev = name => (st, f) => { f(st); st._ts = Date.now() + Math.random(); tallyFor(st, name); return st; };
+const earn = (st, n) => { st.acorns += n; st.earned += n; };
+const answer = (st, ok) => { st.solved++; if (ok) st.right++; };
+const clone = o => JSON.parse(JSON.stringify(o));
+const synced = o => { const c = clone(o); delete c.sound; return JSON.stringify(canon(c)); };
+const A = dev('A'), B = dev('B'), C = dev('C');
+
+/* База: общий прогресс двух устройств */
+function base() {
+  const s = fresh(); s.name = 'Тест';
+  A(s, x => { earn(x, 100); answer(x, true); answer(x, false); x.stars['fund:1'] = 2; });
+  return s;
+}
+
+{ /* заработанное складывается и не удваивается */
+  const a = base(), b = clone(a);
+  A(a, x => earn(x, 10)); B(b, x => earn(x, 5));
+  const m = mergeStates(a, b);
+  check('earned складывается', m.earned === 115, m.earned);
+  check('acorns складывается', m.acorns === 115, m.acorns);
+  const m2 = mergeStates(mergeStates(m, a), b);
+  check('повторное слияние не удваивает', m2.earned === 115, m2.earned);
+  check('идемпотентность', synced(mergeStates(m, m)) === synced(m));
+  check('слияние с собой', mergeStates(a, a).earned === a.earned);
+}
+{ /* наклейки */
+  const a = base(), b = clone(a);
+  A(a, x => { x.acorns -= STICKERS[0][2]; x.stickers.push(0); });
+  B(b, x => { x.acorns -= STICKERS[1][2]; x.stickers.push(1); });
+  const m = mergeStates(a, b);
+  check('наклейки объединились', m.stickers.join() === '0,1', m.stickers);
+  check('цена обеих вычтена', m.acorns === 100 - STICKERS[0][2] - STICKERS[1][2], m.acorns);
+}
+{ /* звёзды, медали */
+  const a = base(), b = clone(a);
+  A(a, x => { x.stars['fund:1'] = 3; x.stars['fund:2'] = 1; }); B(b, x => { x.stars['fund:2'] = 3; x.medals.fund = true; });
+  const m = mergeStates(a, b);
+  check('лучшие звёзды', m.stars['fund:1'] === 3 && m.stars['fund:2'] === 3, m.stars);
+  check('медаль сохранена', m.medals.fund === true);
+}
+{ /* решённая ошибка не возвращается */
+  const a = base(); a.mistakes.push({ id: 'm1', gen: 'g', d: 1, topic: 'fund', box: 3, due: '2026-01-01', ts: 5 });
+  const b = clone(a);
+  A(a, x => { x.gone.m1 = 10; x.mistakes = []; });
+  const m = mergeStates(b, a), m2 = mergeStates(m, b);
+  check('решённая ошибка не вернулась', m.mistakes.length === 0 && m2.mistakes.length === 0, m2.mistakes);
+}
+{ /* ошибка: одна задача с двух устройств хранится один раз, берётся свежая */
+  const a = base(), b = clone(a);
+  a.mistakes.push({ id: 'a', gen: 'g', d: 2, box: 1, ts: 5 }); b.mistakes.push({ id: 'b', gen: 'g', d: 2, box: 2, ts: 9 });
+  const m = mergeStates(a, b);
+  check('без дублей', m.mistakes.length === 1 && m.mistakes[0].id === 'b', m.mistakes);
+}
+{ /* сброс на одном устройстве побеждает старый прогресс на другом */
+  const a = base(), b = clone(a);
+  const r = Object.assign(fresh(), { name: a.name, _epoch: 1 });
+  check('сброс побеждает', mergeStates(b, r).earned === 0 && mergeStates(r, b).earned === 0);
+  check('новая эпоха сохраняется', mergeStates(b, r)._epoch === 1);
+}
+{ /* файл первой версии: счётчиков по устройствам ещё нет */
+  const old = { name: 'Старый', acorns: 30, earned: 40, solved: 12, right: 9, stickers: [0], stars: { 'x:1': 3 } };
+  const m = mergeStates(fresh(), old);
+  check('старые данные сохранены', m.solved === 12 && m.right === 9 && m.earned === 40 && m.name === 'Старый', m);
+  check('орехи старых данных', m.acorns === 40 - STICKERS[0][2], m.acorns);
+}
+{ /* серия дней через два устройства */
+  const a = base(), b = clone(a), d = n => addDays('2026-11-09', n);
+  [-3, -2, -1].forEach(n => a.history[d(n)] = { n: 3, ok: 2 });
+  a.streak = { last: d(-1), count: 3, best: 3 };
+  b.history[d(0)] = { n: 1, ok: 1 }; b.streak = { last: d(0), count: 1, best: 1 };
+  const m = mergeStates(a, b);
+  check('серия продолжается', m.streak.count === 4 && m.streak.last === d(0) && m.streak.best === 4, m.streak);
+}
+{ /* имя берётся из более свежих данных */
+  const a = base(), b = clone(a); a._ts = 100; b._ts = 200; b.name = 'Новое';
+  check('свежее имя', mergeStates(a, b).name === 'Новое' && mergeStates(b, a).name === 'Новое');
+}
+{ /* звук — настройка устройства */
+  const a = base(), b = clone(a); a.sound = false; b.sound = true;
+  check('звук не перезаписан', mergeStates(a, b).sound === false);
+}
+
+/* Случайная игра на трёх устройствах с синхронизацией через «облако» */
+for (let run = 0; run < 400; run++) {
+  const names = ['A', 'B', 'C'], devs = {}, expect = { solved: 0, right: 0, earned: 0 }, bought = new Set();
+  let cloud = null;
+  names.forEach(n => devs[n] = Object.assign(fresh(), { name: 'Игрок' }));
+  const syncDev = n => { if (cloud) devs[n] = mergeStates(devs[n], cloud); cloud = clone(devs[n]); };
+  for (let step = 0; step < 60; step++) {
+    const n = names[Math.floor(Math.random() * 3)], st = devs[n], r = Math.random();
+    if (r < 0.45) { const ok = Math.random() < 0.7; st.solved++; expect.solved++; if (ok) { st.right++; expect.right++; } }
+    else if (r < 0.7) { const k = 1 + Math.floor(Math.random() * 5); st.acorns += k; st.earned += k; expect.earned += k; }
+    else if (r < 0.8) { const i = Math.floor(Math.random() * STICKERS.length); if (!st.stickers.includes(i)) { st.stickers.push(i); st.acorns -= STICKERS[i][2]; bought.add(i); } }
+    else { syncDev(n); continue; }
+    st._ts = step + 1; tallyFor(st, n);
+  }
+  /* Два круга: после них все устройства должны видеть одно и то же */
+  for (let k = 0; k < 2; k++) names.forEach(syncDev);
+  const first = devs.A;
+  check('все сошлись', names.every(n => synced(devs[n]) === synced(first)), run);
+  check('ни одного решения не потеряно', first.solved === expect.solved && first.right === expect.right, [first.solved, expect.solved]);
+  check('ни одного ореха не потеряно', first.earned === expect.earned, [first.earned, expect.earned]);
+  check('наклейки все', first.stickers.length === bought.size, [first.stickers, [...bought]]);
+  const spent = first.stickers.reduce((s, i) => s + STICKERS[i][2], 0);
+  check('орехи = заработано − потрачено', first.acorns === Math.max(0, first.earned - spent), first.acorns);
+}
+
+window.RESULT = results;
+document.getElementById('out').innerHTML = `<b class="${results.fail ? 'bad' : 'ok'}">Проверок: ${results.pass + results.fail}, провалено: ${results.fail}</b>\n` + log.slice(0, 40).join('\n');
+</script>
+</body>
+</html>

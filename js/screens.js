@@ -1,6 +1,23 @@
 /* Экраны: знакомство, карта леса, локация, результаты, родителям, альбом */
 'use strict';
 
+/* ---------- Кто играет ---------- */
+function showWho() {
+  SES = null;
+  const tiles = F.profiles.map(p => `<button class="who-tile" data-act="pickWho" data-id="${p.id}">${ART.chip(p.hero, 'happy')}<b>${esc(playerName(p) || 'Новый игрок')}</b><span class="small muted">${(WORLDS[p.world] || {}).title || ''}</span></button>`).join('');
+  mount(`<h1 class="center" style="margin-top:14px">Кто играет?</h1>
+    <div class="who">${tiles}<button class="who-tile" data-act="addWho"><span class="plus">＋</span><b>Добавить</b><span class="small muted">нового игрока</span></button></div>
+    ${CLOUD_URL && !F.code ? '<button class="btn ghost block" data-act="enterCode">У нас уже есть код семьи</button>' : ''}`);
+}
+function enterWorld() { if (!S.name) showWelcome(); else showMap(); }
+ACT.who = () => showWho();
+ACT.pickWho = el => { useProfile(el.dataset.id); enterWorld(); };
+ACT.addWho = () => modal(`<h2>Новый игрок</h2><p class="muted">Что будем проходить?</p><div class="stack">
+  <button class="btn green block" data-act="addGo" data-w="five">Математику 5 класса</button>
+  <button class="btn ghost block" disabled>Подготовку к 1 классу (скоро)</button>
+  <button class="btn ghost block" data-act="close">Отмена</button></div>`);
+ACT.addGo = el => { closeModal(); addProfile(el.dataset.w); Cloud.soon(); showWelcome(); };
+
 /* ---------- Знакомство ---------- */
 function showWelcome() {
   mount(`<div class="hero">${ART.chip('funduk', 'cheer')}${ART.chip('mindal', 'happy')}</div>
@@ -47,7 +64,7 @@ function showMap() {
       <div class="nm">${t.name}</div><div class="st">★ ${st}/9</div></div>`;
   }).join('');
   const sn = streakNow();
-  mount(`<div class="topbar"><div class="avatar">${ART.chip('funduk', 'happy')}</div>
+  mount(`<div class="topbar"><div class="avatar" data-act="who" role="button" aria-label="Сменить игрока">${ART.chip((curProfile() || {}).hero || 'funduk', 'happy')}<span class="swap">⇄</span></div>
       <div class="grow"><div class="hello">Привет, ${esc(S.name || 'друг')}!</div><div class="small muted">${sn ? `🔥 ${sn} ${pl(sn, 'день', 'дня', 'дней')} подряд` : 'Ореховый патруль на связи'}</div></div>
       <span class="pill">${ART.acorn(22)}${S.acorns}</span><button class="iconbtn" data-act="parent" aria-label="Для взрослых">⚙️</button></div>
     <div class="quick">
@@ -154,7 +171,7 @@ function showParent() {
   }).join('');
   const recentBad = S.recent.filter(r => !r.ok).slice(0, 15).map(r => `<div class="mist"><div class="q">${TOPIC[r.topic] ? TOPIC[r.topic].icon : ''} ${esc(r.q)}</div>
     <div>Ответ: <span style="color:var(--red)">${esc(r.given)}</span> · верно: <b style="color:var(--green-d)">${esc(r.right)}</b> <span class="muted">· ${new Date(r.ts).toLocaleDateString('ru-RU')}</span></div></div>`).join('') || '<p class="muted">Ошибок пока нет.</p>';
-  mount(`<div class="topbar"><button class="iconbtn" data-act="map">←</button><div class="grow"><b>Для родителей</b><div class="small muted">Прогресс хранится только на этом устройстве</div></div></div>
+  mount(`<div class="topbar"><button class="iconbtn" data-act="map">←</button><div class="grow"><b>Для родителей · ${esc(S.name)}</b><div class="small muted">${CLOUD_URL ? 'Прогресс сохраняется на устройстве и в облаке семьи' : 'Прогресс хранится только на этом устройстве'}</div></div></div>
     <div class="card"><div class="row" style="justify-content:space-around;text-align:center">
       <div><div style="font-size:26px;font-weight:800">${S.solved}</div><div class="small muted">задач</div></div>
       <div><div style="font-size:26px;font-weight:800">${acc}%</div><div class="small muted">верно</div></div>
@@ -164,7 +181,9 @@ function showParent() {
       <div class="small muted center" style="margin-top:4px">Задач в день за последние 2 недели</div></div>
     <h3 style="margin-top:18px">Темы</h3><div class="card">${topics}<p class="small muted">«Уверенно» — 80%+ по последним ответам с учётом сложности, «почти» — 55–80%, «подтянуть» — ниже.</p></div>
     <h3 style="margin-top:18px">Последние ошибки</h3><div class="card">${recentBad}</div>
+    ${cloudCard()}
     <h3 style="margin-top:18px">Настройки</h3><div class="card">
+      <button class="btn ghost block" style="margin-bottom:12px" data-act="who">👧 Сменить или добавить игрока</button>
       <label class="small muted" for="pn">Имя</label><div class="row"><input class="input" id="pn" maxlength="20" value="${esc(S.name)}"><button class="btn" data-act="saveName">OK</button></div>
       <button class="btn ghost block" style="margin-top:12px" data-act="sound">${S.sound ? '🔊 Звук включён' : '🔇 Звук выключен'}</button>
       <button class="btn ghost block" style="margin-top:12px" data-act="export">📤 Перенести прогресс на другое устройство</button>
@@ -172,18 +191,47 @@ function showParent() {
       <button class="btn ghost block" style="margin-top:12px;color:var(--red)" data-act="reset">Сбросить весь прогресс</button></div>
     <p class="small muted center" style="margin-top:14px">Ореховый патруль · математика 5 класса по программе Л. Г. Петерсон (1–2 четверть)</p>`);
 }
+function cloudCard() {
+  if (!CLOUD_URL) return '';
+  return `<h3 style="margin-top:18px">Код семьи</h3><div class="card">
+    <div class="famcode">${F.code ? showCode(F.code) : '····-····'}</div>
+    <p class="small muted">Введите этот код один раз на новом телефоне или в другом браузере, и прогресс подтянется.</p>
+    <p class="small"><b>${Cloud.statusText()}</b></p>
+    <button class="btn green block" data-act="syncNow">☁️ Синхронизировать сейчас</button>
+    <button class="btn ghost block" style="margin-top:12px" data-act="copyFam">Скопировать код</button>
+    <button class="btn ghost block" style="margin-top:12px" data-act="enterCode">Ввести другой код</button></div>`;
+}
+ACT.syncNow = async () => { toast('Синхронизирую…'); await Cloud.now(); showParent(); };
+ACT.copyFam = () => { try { navigator.clipboard.writeText(showCode(F.code || '')).then(() => toast('Код скопирован'), () => toast('Не получилось скопировать')); } catch (e) { toast('Не получилось скопировать'); } };
+ACT.enterCode = () => modal(`<h2>Код семьи</h2><p class="muted small">Прогресс этого устройства объединится с прогрессом семьи.</p>
+  <input class="input" id="fcode" maxlength="12" autocomplete="off" autocapitalize="characters" spellcheck="false" placeholder="XXXX-XXXX">
+  <button class="btn green block" style="margin-top:10px" data-act="codeGo">Подключиться</button><button class="btn ghost block" style="margin-top:10px" data-act="close">Отмена</button>`);
+ACT.codeGo = async () => {
+  const code = cleanCode(document.getElementById('fcode').value);
+  if (!validCode(code)) { toast('В коде должно быть 8 знаков'); return; }
+  toast('Подключаюсь…');
+  const r = await Cloud.join(code);
+  if (r === 'net') { toast('Нет связи с облаком. Попробуйте позже.', 2600); return; }
+  if (r === 'none') { toast('Такой код не найден. Проверьте его.', 2600); return; }
+  closeModal(); toast('Готово, семья подключена!'); boot();
+};
 ACT.saveName = () => { const v = document.getElementById('pn').value.trim(); if (v) { S.name = v.slice(0, 20); save(); toast('Имя сохранено'); } };
 ACT.sound = () => { S.sound = !S.sound; save(); showParent(); };
 ACT.export = () => modal(`<h2>Перенос прогресса</h2><p class="muted small">Скопируйте этот код и вставьте его на другом устройстве через «Загрузить прогресс».</p>
   <textarea class="input" style="height:140px;font-size:12px" readonly onclick="this.select()">${exportCode()}</textarea>
   <button class="btn green block" style="margin-top:10px" data-act="copyCode">Скопировать</button><button class="btn ghost block" style="margin-top:10px" data-act="close">Закрыть</button>`);
 ACT.copyCode = () => { const ta = document.querySelector('#modal textarea'); ta.select(); try { navigator.clipboard.writeText(ta.value).then(() => toast('Скопировано!'), () => document.execCommand('copy')); } catch (e) { document.execCommand('copy'); toast('Скопировано!'); } };
-ACT.import = () => modal(`<h2>Загрузить прогресс</h2><p class="muted small">Вставьте код с другого устройства. Текущий прогресс на этом устройстве будет заменён.</p>
+ACT.import = () => modal(`<h2>Загрузить прогресс</h2><p class="muted small">Вставьте код с другого устройства. Прогресс объединится с текущим.</p>
   <textarea class="input" id="impc" style="height:140px;font-size:12px"></textarea><button class="btn green block" style="margin-top:10px" data-act="importGo">Загрузить</button><button class="btn ghost block" style="margin-top:10px" data-act="close">Отмена</button>`);
 ACT.importGo = () => { try { importCode(document.getElementById('impc').value); closeModal(); toast('Прогресс загружен!'); showParent(); } catch (e) { toast('Код не подошёл 😕'); } };
-ACT.reset = () => modal(`<h2>Сбросить весь прогресс?</h2><p class="muted">Звёзды, орешки, наклейки и статистика удалятся с этого устройства. Отменить нельзя.</p>
+ACT.reset = () => modal(`<h2>Сбросить весь прогресс?</h2><p class="muted">Звёзды, орешки, наклейки и статистика игрока ${esc(S.name)} удалятся ${CLOUD_URL ? 'на всех устройствах семьи' : 'с этого устройства'}. Отменить нельзя.</p>
   <div class="stack"><button class="btn block" style="background:var(--red);box-shadow:0 5px 0 var(--red-d)" data-act="resetGo">Да, сбросить</button><button class="btn ghost block" data-act="close">Отмена</button></div>`);
-ACT.resetGo = () => { resetAll(); closeModal(); showWelcome(); };
+ACT.resetGo = () => { resetAll(); closeModal(); showMap(); };
 
 /* ---------- Старт ---------- */
-if (!S.name) showWelcome(); else showMap();
+function boot() {
+  if (F.profiles.length === 1) { useProfile(F.profiles[0].id); enterWorld(); }
+  else showWho();
+}
+boot();
+Cloud.start();
