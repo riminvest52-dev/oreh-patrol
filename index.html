@@ -75,7 +75,7 @@
     }
     try { Cloud.start(); } catch (e) { }
   })();
-  if ('serviceWorker' in navigator && location.protocol !== 'file:') {
+  if ('serviceWorker' in navigator && location.protocol !== 'file:' && !window.OREH_PREVIEW) {   /* у пробной версии своего офлайна нет */
     window.addEventListener('load', () => navigator.serviceWorker.register('sw.js').catch(() => {}));
     /* Включилась новая версия игры — один раз перезагружаемся, чтобы все файлы были новыми */
     const hadSW = !!navigator.serviceWorker.controller; let reloaded = false;

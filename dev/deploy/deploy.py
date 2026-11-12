@@ -2,6 +2,8 @@
 
 Запуск из корня репозитория:  python dev/deploy/deploy.py           — выложить
                               python dev/deploy/deploy.py --dry-run — только показать, что уйдёт
+                              python dev/deploy/deploy.py --preview — пробная версия нового раздела в /preview/
+                                (игра у детей не меняется; голоса — в общую папку voice/, они вечные и не мешают)
 
 Нужен Yandex Cloud CLI (yc), один раз авторизованный командой `yc init`.
 Ключей и секретов здесь нет и быть не должно: yc берёт доступ из своего профиля на этом компьютере.
@@ -111,16 +113,31 @@ def upload_voice(root, yc, dry):
             sys.exit('Ошибка при выкладке done.json: ' + r.stderr)
 
 
+PREVIEW_HEAD = ('<head>\n<script>var VOICE_BASE = "../", OREH_PREVIEW = true;</script>\n'
+                '<style>body::after{content:"ПРОБНАЯ ВЕРСИЯ";position:fixed;bottom:6px;left:50%;transform:translateX(-50%);'
+                'background:#C0392B;color:#fff;font:700 12px system-ui,sans-serif;padding:3px 10px;border-radius:10px;z-index:9999;pointer-events:none}</style>')
+
+
 def main():
     root = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..'))
     dry = '--dry-run' in sys.argv
+    preview = '--preview' in sys.argv
     yc = None if dry else find_yc()
     files = collect(root)
+    if preview:   # без sw.js: пробная версия не ставит офлайн и не трогает кэш игры
+        tmp = tempfile.mkdtemp()
+        idx = os.path.join(tmp, 'index.html')
+        with open(os.path.join(root, 'index.html'), encoding='utf-8') as f:
+            html = f.read()
+        assert '<head>' in html
+        with open(idx, 'w', encoding='utf-8', newline='') as f:
+            f.write(html.replace('<head>', PREVIEW_HEAD, 1))
+        files = [('preview/' + k, idx if k == 'index.html' else p, t) for k, p, t in files if k != 'sw.js']
     print(f'Бакет {BUCKET}: голоса')
     upload_voice(root, yc, dry)
     print(f'Бакет {BUCKET}: файлов {len(files)}{" (проверка, без выкладки)" if dry else ""}')
     for key, path, ctype in files:
-        cache = 'no-cache' if key in NO_CACHE else 'max-age=3600'
+        cache = 'no-cache' if key in NO_CACHE or key.startswith('preview/') else 'max-age=3600'
         print(f'  {key:32} {ctype:40} {cache}')
         if dry:
             continue
@@ -129,7 +146,7 @@ def main():
         r = subprocess.run(cmd, capture_output=True, text=True, encoding='utf-8', errors='replace')
         if r.returncode:
             sys.exit(f'Ошибка при выкладке {key}:\n{r.stderr or r.stdout}')
-    print('Готово:' if not dry else 'Адрес:', SITE)
+    print('Готово:' if not dry else 'Адрес:', SITE + ('preview/' if preview else ''))
 
 
 if __name__ == '__main__':

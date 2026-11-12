@@ -25,7 +25,8 @@ const Voice = (() => {
   let ext = 'mp3';
   try { ext = localStorage.getItem('oreh_vext') || (probe.canPlayType && probe.canPlayType('audio/ogg; codecs=opus') ? 'ogg' : 'mp3'); } catch (e) { }
   const st = { ext, last: '', err: '' };   /* для строки «Проверка голоса» в меню родителя */
-  const url = (who, h) => `voice/${D.dirs[who]}/${h}.${ext}`;
+  const VB = typeof VOICE_BASE === 'string' ? VOICE_BASE : '';   /* пробная версия (/preview/) берёт голоса из общей папки игры */
+  const url = (who, h) => `${VB}voice/${D.dirs[who]}/${h}.${ext}`;
   const clipsOf = (text, who) => {
     if (!D || !has[who]) return null;
     const hs = voiceParts(text).map(voiceHash);
@@ -72,10 +73,10 @@ const Voice = (() => {
     });
   };
   /* Запись не сыграла: ogg → пробуем mp3 (и дальше всегда mp3), иначе — голос браузера */
-  const fail = (list, text, my, why) => {
+  const fail = (list, text, my, why, decode) => {
     if (my !== tok) return;
     st.err = why;
-    if (ext === 'ogg') {
+    if (decode && ext === 'ogg') {   /* только если файл есть, но не играет; нет сети — не повод менять формат навсегда */
       ext = 'mp3'; st.ext = 'mp3'; try { localStorage.setItem('oreh_vext', 'mp3'); } catch (e) { }
       return playList(list.map(u => u.replace(/\.ogg$/, '.mp3')), text, my);
     }
@@ -89,7 +90,7 @@ const Voice = (() => {
       getBlob(list[i++]).then(src => {
         if (my !== tok) return;
         let once = false;   /* onerror и отказ play() могут прийти оба — реагируем один раз */
-        const bad = why => { if (!once) { once = true; fail(list, text, my, why); } };
+        const bad = why => { if (!once) { once = true; fail(list, text, my, why, true); } };
         au.onended = next;
         au.onerror = () => bad('ошибка звука ' + (au.error ? au.error.code : ''));
         au.src = src;
