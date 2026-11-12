@@ -63,10 +63,15 @@ ACT.pQuit = () => { if (!PT) return showKidMap(); modal(`<h2>Выйти на п�
   <div class="stack"><button class="btn green block" data-act="close">Играть дальше</button><button class="btn ghost block" data-act="pQuitYes">На полянку</button></div>`); };
 ACT.pQuitYes = () => { closeModal(); PT = null; Voice.stop(); showKidMap(); };
 
+/* Фишка — голова героя (тот же рисунок, только кадр «по голове») */
+const pHead = (svg, vb) => svg.replace(/viewBox="[^"]*"/, `viewBox="${vb}"`).replace('class="chip ', 'class="chip head ');
 const P_PLAYERS = {
-  bird: [{ who: 'zhel', name: 'Жёлудик', art: () => ART.zhel('happy') }, { who: 'sor', name: 'Сорока', art: () => ART.soroka('happy'), bot: true }],
-  two: [{ who: 'zhel', name: 'Жёлудик', art: () => ART.zhel('happy') }, { who: 'fu', name: 'Фундук', art: () => ART.chip('funduk', 'happy', '', true) }]
+  bird: [{ who: 'zhel', name: 'Жёлудик', art: () => pHead(ART.zhel('happy'), '24 30 150 150') }, { who: 'sor', name: 'Сорока', art: () => ART.soroka('happy', '', true), bot: true }],
+  two: [{ who: 'zhel', name: 'Жёлудик', art: () => pHead(ART.zhel('happy'), '24 30 150 150') }, { who: 'fu', name: 'Фундук', art: () => ART.chip('funduk', 'happy', '', true) }]
 };
+/* Цвет игрока: кружок фишки и клетка, где она стоит. Жёлудик — тёплый жёлтый, Сорока — бирюзовый */
+const P_COLORS = { zhel: ['#FFD978', '#D99A1E'], sor: ['#A6E3DE', '#2F9C9A'], fu: ['#F7C3A3', '#C0663A'] };
+const pDots = r => '<span class="pdots">' + '●'.repeat(r) + '</span>';
 
 function pathStart(mode) {
   const d = kidLevel(PATH_ID), n = pathCells(d);
@@ -102,13 +107,19 @@ function pathRender() {
 function pathTokens() {
   const P = PT, pl = P_PLAYERS[P.mode];
   document.querySelectorAll('.ptoks').forEach(t => { t.innerHTML = ''; });
+  document.querySelectorAll('.pcell').forEach(c => c.classList.remove('p0', 'p1'));
+  const tr = document.querySelector('.ptrack');
+  if (tr) [0, 1].forEach(k => { const [f, e] = P_COLORS[pl[k].who]; tr.style.setProperty('--c' + k, f); tr.style.setProperty('--e' + k, e); });
   [0, 1].forEach(k => {
+    const cell = P.pos[k] && document.querySelector(`.pcell[data-i="${P.pos[k]}"]`); if (cell) cell.classList.add('p' + k);
     const at = P.pos[k], box = at ? document.querySelector(`.pcell[data-i="${at}"] .ptoks`) : document.querySelector('.pstart .ptoks');
-    if (box) box.insertAdjacentHTML('beforeend', `<span class="ptok t${k}${P.turn === k ? ' cur' : ''}" id="ptok${k}">${pl[k].art()}</span>`);
+    if (box) box.insertAdjacentHTML('beforeend', `<span class="ptok t${k}${P.turn === k ? ' cur' : ''}" id="ptok${k}" style="--c:${P_COLORS[pl[k].who][0]};--e:${P_COLORS[pl[k].who][1]}">${pl[k].art()}</span>`);
   });
 }
+/* Облачко Жёлудика. Пока ребёнок ходит, сверху всегда видно, что выпало: «Выпало 2 ●●» */
 const pBub = (html, mood) => {
-  const b = document.getElementById('kbub'); if (b) b.innerHTML = html;
+  const r = PT && PT.roll;
+  const b = document.getElementById('kbub'); if (b) b.innerHTML = (r ? `<span class="proll">Выпало <b>${r}</b> ${pDots(r)}</span>` : '') + html;
   const h = document.querySelector('#khelp svg'); if (h && mood) h.outerHTML = ART.zhel(mood);
 };
 const pMark = (k, cls) => { const c = document.querySelector(`.pcell[data-i="${k}"]`); if (c) { c.classList.remove('ok', 'no', 'hint', 'goal'); if (cls) c.classList.add(cls); } };
@@ -117,6 +128,7 @@ const pClear = () => document.querySelectorAll('.pcell').forEach(c => c.classLis
 /* ---------- Ходы ---------- */
 async function pathTurn() {
   const P = PT, id = P.id, me = P_PLAYERS[P.mode][P.turn];
+  P.roll = 0;
   pathTokens(); pClear();
   const spin = document.getElementById('pspin');
   document.getElementById('pwho').textContent = `Ход: ${me.name}`;
@@ -150,8 +162,9 @@ async function pathSpun(r) {
   spin.disabled = true; spin.innerHTML = ART.top('', 'spinning');
   Sound.tap && Sound.tap();
   await pWait(1000); if (!pAlive(id)) return;
-  spin.innerHTML = ART.top(r);
-  pBub(`Выпало <b class="pbig">${r}</b>`, 'happy');
+  spin.innerHTML = ART.top(r, '', true);   /* число и столько же точек — остаётся на волчке до следующего броска */
+  if (!P_PLAYERS[P.mode][k].bot) { P.roll = r; pBub('', 'happy'); }
+  else pBub(`Выпало <b class="pbig">${r}</b> ${pDots(r)}`, 'happy');
   await Voice.say(`Выпало ${r}.`, 'zh'); if (!pAlive(id)) return;
   const pos = P.pos[k], target = Math.min(P.n, pos + r);
   if (P_PLAYERS[P.mode][k].bot) { await pathWalk(k, target); return pathAfter(); }
@@ -265,6 +278,7 @@ async function pathAfter() {
   const k = P.turn;
   if (P.pos[k] >= P.n) return pathFinish(k);
   await pWait(500); if (PT !== P) return;
+  P.roll = 0;   /* все шаги сделаны — «Выпало» можно убрать */
   P.turn = 1 - P.turn;
   pathTurn();
 }
@@ -290,7 +304,7 @@ async function pathFinish(winner) {
   const st = S.stars[PATH_ID] || 0;
   mountKid(`<div class="result pfinal">
     <div class="pscene">${ART.oak('big')}<div class="pwin">${winner === 0 ? ART.zhel('cheer') : w.who === 'sor' ? ART.soroka('cheer') : ART.chip('funduk', 'cheer')}</div>
-      <div class="plose">${winner === 0 ? (pl[1].who === 'sor' ? ART.soroka('think') : ART.chip('funduk', 'happy', '', true)) : ART.zhel('happy')}</div></div>
+      <div class="plose">${winner === 0 ? (pl[1].who === 'sor' ? ART.soroka('oops') : ART.chip('funduk', 'happy', '', true)) : ART.zhel('happy')}</div></div>
     <h1>${title}</h1>
     ${!lizaWon && P.mode === 'bird' ? '<p style="font-size:20px">А ты отлично считала!</p>' : ''}
     <div class="bigstars kst">${'★'.repeat(st)}<i>${'★'.repeat(3 - st)}</i></div>

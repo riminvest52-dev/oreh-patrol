@@ -383,16 +383,24 @@ svg.ch-show .ch-arm-r { transform-origin: 138px 158px; animation: zhwave .45s ea
 .pcell b { display: flex; align-items: center; justify-content: center; width: 100%; aspect-ratio: 1; border-radius: 14px; background: #FFFBF3;
   border: 3px solid #D9A96A; box-shadow: 0 4px 0 #C08A4E; font-size: clamp(18px, 3.6vw, 34px); font-weight: 800; }
 .ptrack.n20 .pcell b { border-radius: 10px; font-size: clamp(14px, 2vw, 24px); border-width: 2px; }
-.pcell.next b { background: #FFE9A8; border-color: var(--gold-d); animation: kpulse 1s ease-in-out infinite; }
+/* Клетка с фишкой — цвет игрока (две фишки — пополам) */
+.pcell.p0 b { background: var(--c0); border-color: var(--e0); }
+.pcell.p1 b { background: var(--c1); border-color: var(--e1); }
+.pcell.p0.p1 b { background: linear-gradient(90deg, var(--c0) 50%, var(--c1) 50%); }
+.pcell.next b { background: #fff; border: 3px dashed var(--green); animation: kpulse 1s ease-in-out infinite; }   /* «шагай сюда» — не путать с цветом игрока */
 .pcell.ok b { background: #DDF2CC; border-color: var(--green); }
 .pcell.no b { background: #FBE0D8; border-color: var(--red); }
 .pcell.hint b { background: #FFF2C4; }
 .pcell.goal b { background: #FFD36E; border-color: var(--gold-d); animation: kpulse 1s ease-in-out infinite; }
-.ptoks { display: flex; justify-content: center; align-items: flex-end; height: 64px; width: 100%; }
-.ptrack.n20 .ptoks { height: 48px; }
-.ptok { display: block; height: 100%; flex: 0 1 auto; min-width: 0; }
-.ptok svg { height: 100%; width: auto; max-width: 100%; display: block; }
-.ptok.t1 { margin-left: -14%; }
+/* Фишка — голова героя в кружке его цвета. На планшете не меньше 48 px; может выходить за ширину клетки */
+.ptoks { display: flex; justify-content: center; align-items: flex-end; height: 68px; width: 100%; overflow: visible; padding-bottom: 4px; }
+.ptrack.n20 .ptoks { height: 56px; }
+.ptok { display: block; height: 100%; aspect-ratio: 1; flex: none; border-radius: 50%; background: var(--c); border: 3px solid var(--e);
+  box-shadow: 0 3px 0 var(--e); overflow: hidden; box-sizing: border-box; }
+.ptok svg { width: 100%; height: 100%; display: block; }
+.ptok svg.zh, .ptok svg.sor, .ptok svg.ch { animation: none; }
+.ptok.t1 { margin-left: -16px; }
+.ptok.cur { position: relative; z-index: 1; }
 .ptok.hop { animation: phop .45s cubic-bezier(.3, .7, .4, 1); }
 @keyframes phop { 40% { transform: translateY(-16px); } }
 .poak { flex: none; width: clamp(64px, 11vw, 110px); }
@@ -401,19 +409,33 @@ svg.ch-show .ch-arm-r { transform-origin: 138px 158px; animation: zhwave .45s ea
 .pbottom .helper { flex: 1; margin-top: 0; }
 .pspin { flex: none; display: flex; flex-direction: column; align-items: center; gap: 4px; }
 .ptopbtn { width: 128px; height: 136px; border: 0; background: none; padding: 0; cursor: pointer; }
-.ptopbtn[disabled] { opacity: .6; cursor: default; }
+.ptopbtn[disabled] { cursor: default; }   /* не бледнеет: на волчке остаётся крупно, что выпало */
 .ptopbtn:not([disabled]) svg { animation: kpulse 1.2s ease-in-out infinite; }
 .ptopbtn svg { width: 100%; height: 100%; }
 svg.ktop.spinning .ktop-body { transform-box: fill-box; transform-origin: 50% 70%; animation: pspin .25s linear infinite; }
 @keyframes pspin { 0% { transform: rotate(-14deg) scaleX(1); } 50% { transform: rotate(14deg) scaleX(.82); } 100% { transform: rotate(-14deg) scaleX(1); } }
 .pbig { font-size: 40px; font-weight: 800; line-height: 1; }
+.proll { display: block; font-size: 26px; font-weight: 800; margin-bottom: 4px; }
+.proll b { font-size: 40px; line-height: 1; }
+.pdots { color: var(--gold-d); letter-spacing: 4px; font-size: 26px; }
 .pfinal .pscene { position: relative; width: min(340px, 90%); margin: 0 auto; }
 .pfinal .pscene svg.oak { width: 70%; height: auto; display: block; margin: 0 auto; }
 .pfinal .pwin { position: absolute; left: 0; bottom: 0; width: 34%; }
 .pfinal .plose { position: absolute; right: 0; bottom: 0; width: 24%; }
 .pfinal .pwin svg, .pfinal .plose svg { width: 100%; height: auto; }
-svg.sor { overflow: visible; animation: zhbob 2.4s ease-in-out infinite; }
-svg.sor-cheer .sor-hop { transform-box: fill-box; transform-origin: 50% 100%; animation: zhjump .8s cubic-bezier(.3, .7, .4, 1) 2; }
+/* ---------- Сорока: покачивание, моргание раз в 3–5 с, хвост качается; cheer — прыжок со взмахом крыльев ---------- */
+svg.sor { overflow: visible; }
+svg.sor.head { overflow: hidden; }
+svg.sor .sor-bob { animation: zhbob 2.4s ease-in-out infinite; }
+svg.sor .sor-eyes { transform-box: fill-box; transform-origin: center; animation: zhblink var(--blink, 4s) linear infinite; }
+svg.sor .sor-tail { transform-origin: 136px 202px; animation: chtail 3s ease-in-out infinite; }
+svg.sor-cheer .sor-jump { transform-box: fill-box; transform-origin: 50% 100%; animation: zhjump .8s cubic-bezier(.3, .7, .4, 1) 2; }
+svg.sor-cheer .sor-wing { animation: sorflap .2s ease-in-out 8 alternate; }
+@keyframes sorflap { from { transform: rotate(0); } to { transform: rotate(-18deg); } }
+svg.sor-happy .sor-wing-r { animation: sorwave 1.6s ease-in-out infinite; }
+@keyframes sorwave { 0%, 60%, 100% { transform: rotate(0); } 70%, 90% { transform: rotate(-16deg); } 80% { transform: rotate(4deg); } }
+svg.sor-sly .sor-spark { animation: sorspark 1.2s ease-in-out infinite; }
+@keyframes sorspark { 0%, 100% { opacity: 1; } 50% { opacity: .2; } }
 /* Узко (телефон): дуб уходит под ряд, чтобы клетки были крупнее;
    20 клеток — две строки по 10 (1–10, под ними 11–20), обе читаются слева направо. Планшет — всегда один ряд. */
 @media (max-width: 600px) {
@@ -423,11 +445,11 @@ svg.sor-cheer .sor-hop { transform-box: fill-box; transform-origin: 50% 100%; an
   .poak svg { width: 58px; }
   .ptrack.n20 .pcells { grid-template-columns: repeat(10, minmax(0, 1fr)); gap: 2px; row-gap: 2px; }
   .ptrack.n20 .pcell b { border-radius: 8px; font-size: 16px; box-shadow: 0 2px 0 #C08A4E; }
-  .ptrack.n20 .ptoks { height: 34px; }
+  .ptrack.n20 .ptoks { height: 32px; }
   .ptrack.n20 .pstart { align-self: flex-start; }   /* старт — у первой строки, рядом с 1 */
   .pcell b { font-size: 17px; border-radius: 9px; border-width: 2px; }
-  .ptoks { height: 42px; }
+  .ptoks { height: 38px; }
   .pbottom { flex-direction: column-reverse; align-items: stretch; }
   .pspin { align-self: center; }
 }
-@media (prefers-reduced-motion: reduce) { svg.sor, svg.sor *, .ptok.hop, svg.ktop.spinning .ktop-body { animation: none !important; } }
+@media (prefers-reduced-motion: reduce) { svg.sor, svg.sor *, .ptok, .ptok *, svg.ktop.spinning .ktop-body { animation: none !important; } }
