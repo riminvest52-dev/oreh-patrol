@@ -75,6 +75,9 @@
   })();
   if ('serviceWorker' in navigator && location.protocol !== 'file:') {
     window.addEventListener('load', () => navigator.serviceWorker.register('sw.js').catch(() => {}));
+    /* Включилась новая версия игры — один раз перезагружаемся, чтобы все файлы были новыми */
+    const hadSW = !!navigator.serviceWorker.controller; let reloaded = false;
+    navigator.serviceWorker.addEventListener('controllerchange', () => { if (hadSW && !reloaded) { reloaded = true; location.reload(); } });
   }
 </script>
 </body>

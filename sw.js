@@ -1,8 +1,11 @@
 /* Офлайн-режим и быстрый старт при плохой связи.
-   - Файлы игры: сначала из кэша (мгновенно), свежая копия скачивается в фоне и пригодится при следующем запуске.
-   - index.html: из сети, но ждём не больше 3 секунд, иначе — из кэша.
-   При обновлении игры поменяйте VERSION — телефоны скачают все файлы заново одним пакетом. */
-const VERSION = 'oreh-v3.4';
+   - Страница и файлы игры: только из кэша СВОЕЙ версии — никогда не смешиваем старые и новые файлы
+     (смесь ломала игру на первом запуске после обновления: новый index.html + старый kid.js).
+   - Нового в кэше нет (первый запуск) — из сети, страница ждёт сеть не больше 3 секунд.
+   - Обновление: новый sw.js скачивает ВСЕ файлы новой версии одним пакетом, включается сразу,
+     а страница (index.html, controllerchange) один раз перезагружается уже целиком новой.
+   При обновлении игры поменяйте VERSION. */
+const VERSION = 'oreh-v3.4.1';
 const FILES = [
   './', './index.html', './manifest.webmanifest', './css/style.css',
   './js/core.js', './js/t-fund.js', './js/t-lang.js', './js/t-models.js', './js/t-logic.js', './js/t-div.js',
@@ -25,7 +28,7 @@ self.addEventListener('activate', e => {
 
 const fresh = req => fetch(req, { cache: 'no-cache' });
 const store = (req, r) => { if (r && r.ok && r.type === 'basic') { const copy = r.clone(); return caches.open(VERSION).then(c => c.put(req, copy)).then(() => r); } return Promise.resolve(r); };
-const fromCache = req => caches.match(req, { ignoreSearch: true });
+const fromCache = req => caches.open(VERSION).then(c => c.match(req, { ignoreSearch: true }));
 
 /* Страница-заглушка на самый плохой случай: нет ни сети, ни кэша */
 const OFFLINE = `<!doctype html><html lang="ru"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
@@ -37,8 +40,12 @@ const offlinePage = () => new Response(OFFLINE, { status: 503, headers: { 'Conte
 
 function page(e) {
   const req = e.request;
+  const cached = () => fromCache(req).then(r => r || fromCache('./index.html')).then(r => r || fromCache('./'));
+  return cached().then(hit => hit || pageNet(e, cached));
+}
+function pageNet(e, cached) {
+  const req = e.request;
   const net = fresh(req).then(r => store(req, r));
-  const cached = () => fromCache(req).then(r => r || caches.match('./index.html')).then(r => r || caches.match('./'));
   return new Promise(resolve => {
     let done = false;
     const give = r => { if (!done && r) { done = true; resolve(r); } };
@@ -71,9 +78,8 @@ function voice(e) {
 
 function asset(e) {
   const req = e.request;
-  const net = fresh(req).then(r => store(req, r));
-  e.waitUntil(net.catch(() => null));                  /* обновление в фоне */
-  return fromCache(req).then(r => r || net);
+  /* без фонового обновления: новая версия приходит только целиком, через смену VERSION */
+  return fromCache(req).then(r => r || fresh(req).then(r2 => store(req, r2)));
 }
 
 self.addEventListener('fetch', e => {

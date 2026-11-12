@@ -61,8 +61,9 @@ const Voice = (() => {
   const fetched = new Set();
   const getBlob = u => {
     if (blobs.has(u)) { const b = blobs.get(u); blobs.delete(u); blobs.set(u, b); return Promise.resolve(b); }
-    return fetch(u).then(r => { if (!r.ok) throw new Error(r.status); return r.blob(); }).then(b => {
-      const o = URL.createObjectURL(b); blobs.set(u, o);
+    return fetch(u).then(r => { if (!r.ok) throw new Error(r.status); return r.arrayBuffer(); }).then(buf => {
+      /* тип задаём сами: не зависим от того, с каким типом файл когда-то лёг в кэш */
+      const o = URL.createObjectURL(new Blob([buf], { type: /\.ogg$/.test(u) ? 'audio/ogg' : 'audio/mpeg' })); blobs.set(u, o);
       if (blobs.size > 80) { const [k, v] = blobs.entries().next().value; URL.revokeObjectURL(v); blobs.delete(k); }
       return o;
     });
