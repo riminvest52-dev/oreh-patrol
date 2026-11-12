@@ -213,6 +213,7 @@ function showParent() {
       <label class="small muted" for="pn">Имя</label><div class="row"><input class="input" id="pn" maxlength="20" value="${esc(S.name)}"><button class="btn" data-act="saveName">OK</button></div>
       <button class="btn ghost block" style="margin-top:12px" data-act="sound">${S.sound ? '🔊 Звук включён' : '🔇 Звук выключен'}</button>
       <button class="btn ghost block" style="margin-top:12px" data-act="voice5">${Voice.on() ? '🗣️ Голоса героев включены' : '🤐 Голоса героев выключены'}</button>
+      <button class="btn ghost block" style="margin-top:12px" data-act="vtest">🔈 Проверить голос</button><div class="small muted center" id="vtest" style="margin-top:6px"></div>
       <button class="btn ghost block" style="margin-top:12px" data-act="export">📤 Перенести прогресс на другое устройство</button>
       <button class="btn ghost block" style="margin-top:12px" data-act="import">📥 Загрузить прогресс</button>
       <button class="btn ghost block" style="margin-top:12px;color:var(--red)" data-act="reset">Сбросить весь прогресс</button></div>
@@ -245,6 +246,15 @@ ACT.codeGo = async () => {
 ACT.saveName = () => { const v = document.getElementById('pn').value.trim(); if (v) { S.name = v.slice(0, 20); save(); toast('Имя сохранено'); } };
 ACT.sound = () => { S.sound = !S.sound; save(); showParent(); };
 ACT.voice5 = () => { Voice.toggle(); showParent(); };
+/* Проверка голоса: говорит Жёлудик, потом строка — версия игры и чем звучало (записи или голос браузера) */
+ACT.vtest = async () => {
+  const out = document.getElementById('vtest'); if (out) out.textContent = 'Слушайте…';
+  if (!Voice.on()) Voice.toggle();
+  await Voice.say('Озвучка включена.', 'zh');
+  let ver = '?'; try { ver = ((await caches.keys()).find(k => /^oreh-v\d/.test(k)) || '?').replace('oreh-v', ''); } catch (e) { }
+  const s = Voice.status;
+  if (out) out.textContent = `Версия ${ver} · звучало: ${s.last || '—'} · формат ${s.ext}${s.err ? ' · ' + s.err : ''}${navigator.serviceWorker && navigator.serviceWorker.controller ? '' : ' · без офлайна'}`;
+};
 ACT.export = () => modal(`<h2>Перенос прогресса</h2><p class="muted small">Скопируйте этот код и вставьте его на другом устройстве через «Загрузить прогресс».</p>
   <textarea class="input" style="height:140px;font-size:12px" readonly onclick="this.select()">${exportCode()}</textarea>
   <button class="btn green block" style="margin-top:10px" data-act="copyCode">Скопировать</button><button class="btn ghost block" style="margin-top:10px" data-act="close">Закрыть</button>`);

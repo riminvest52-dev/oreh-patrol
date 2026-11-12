@@ -21,7 +21,10 @@ const Voice = (() => {
   const has = {};
   if (D) for (const w of VOICE_WHO) has[w] = new Set((D.has[w] || '').split(' '));
   const probe = document.createElement('audio');
-  const ext = probe.canPlayType && probe.canPlayType('audio/ogg; codecs=opus') ? 'ogg' : 'mp3';
+  /* ogg (меньше) там, где браузер обещает его сыграть; если на деле не играет — один раз переходим на mp3 и запоминаем */
+  let ext = 'mp3';
+  try { ext = localStorage.getItem('oreh_vext') || (probe.canPlayType && probe.canPlayType('audio/ogg; codecs=opus') ? 'ogg' : 'mp3'); } catch (e) { }
+  const st = { ext, last: '', err: '' };   /* для строки «Проверка голоса» в меню родителя */
   const url = (who, h) => `voice/${D.dirs[who]}/${h}.${ext}`;
   const clipsOf = (text, who) => {
     if (!D || !has[who]) return null;
@@ -68,6 +71,16 @@ const Voice = (() => {
       return o;
     });
   };
+  /* Запись не сыграла: ogg → пробуем mp3 (и дальше всегда mp3), иначе — голос браузера */
+  const fail = (list, text, my, why) => {
+    if (my !== tok) return;
+    st.err = why;
+    if (ext === 'ogg') {
+      ext = 'mp3'; st.ext = 'mp3'; try { localStorage.setItem('oreh_vext', 'mp3'); } catch (e) { }
+      return playList(list.map(u => u.replace(/\.ogg$/, '.mp3')), text, my);
+    }
+    tok++; st.last = 'браузер'; browserSay(text);
+  };
   function playList(list, text, my) {
     let i = 0;
     const next = () => {
@@ -75,15 +88,18 @@ const Voice = (() => {
       if (i >= list.length) return done();
       getBlob(list[i++]).then(src => {
         if (my !== tok) return;
+        let once = false;   /* onerror и отказ play() могут прийти оба — реагируем один раз */
+        const bad = why => { if (!once) { once = true; fail(list, text, my, why); } };
         au.onended = next;
+        au.onerror = () => bad('ошибка звука ' + (au.error ? au.error.code : ''));
         au.src = src;
         const p = au.play();
-        if (p && p.catch) p.catch(err => {
+        if (p && p.then) p.then(() => { st.last = 'записи'; st.err = ''; }, err => {
           /* Нет касания экрана (автозапуск) — сыграем после первого касания */
           if (err && err.name === 'NotAllowedError') { if (my === tok) pending = () => playList(list, text, my); }
-          else if (my === tok) { tok++; browserSay(text); }
+          else bad(String(err && err.name || err));
         });
-      }).catch(() => { if (my === tok) { tok++; browserSay(text); } });   /* нет файла и нет сети — голос браузера */
+      }).catch(e => fail(list, text, my, 'нет файла: ' + (e && e.message)));   /* нет файла и нет сети — mp3 или голос браузера */
     };
     next();
   }
@@ -110,7 +126,7 @@ const Voice = (() => {
       const p = new Promise(r => { finish = r; });
       safety = setTimeout(done, 2500 + voiceClean(text).length * 110);   /* на случай, если звук «завис» */
       const list = clipsOf(text, who);
-      if (list) playList(list, text, tok); else browserSay(text);
+      if (list) playList(list, text, tok); else { st.last = 'браузер (нет записи)'; browserSay(text); }
       return p;
     },
     /* Докачка записей темы заранее: сервис-воркер положит их в кэш, задания потом звучат сразу и без сети */
@@ -122,7 +138,7 @@ const Voice = (() => {
       const worker = () => { if (i >= list.length) return; fetch(list[i++]).catch(() => { }).then(worker); };
       for (let k = 0; k < 4; k++) worker();
     },
-    _clipsOf: clipsOf
+    _clipsOf: clipsOf, status: st
   };
 })();
 
