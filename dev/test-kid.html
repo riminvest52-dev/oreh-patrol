@@ -32,7 +32,7 @@ function checkKid(t) {
   return e;
 }
 const sum = {}, share = {}; let total = 0, fails = 0;
-for (const T of KID_TOPICS) {
+for (const T of KID_TOPICS.filter(t => !t.game)) {   /* разделы-игры проверяет свой тест (test-path.html) */
   let two = 0, n = 0;
   for (const g of T.gens) for (let d = 1; d <= 3; d++) {
     let f = 0, ex = '';

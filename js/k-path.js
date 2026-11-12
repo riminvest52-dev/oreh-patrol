@@ -76,6 +76,7 @@ function pathStart(mode) {
   pathTurn();
 }
 const P_REPEAT = 900;   /* мс после каждого числа на ходу ребёнка: «повтори за мной» */
+const pRepeat = () => PT && PT.n > 10 ? 450 : P_REPEAT;   /* на 20 клетках числа уже знакомы — пауза короче */
 const pAlive = id => PT && PT.id === id;
 const pWait = ms => new Promise(r => setTimeout(r, ms));
 
@@ -126,8 +127,9 @@ async function pathTurn() {
     await pWait(300);
     return pathSpun(pathSpin(true));
   }
-  /* Каждый третий ход человека — сначала «покажи, где живёт число» */
-  if (P.turn === 0 && P.human % 3 === 2) {
+  /* Регулярно (на 10 клетках чаще, на 20 — реже, чтобы партия укладывалась в 3–5 минут) — сначала «покажи, где живёт число» */
+  const every = P.n > 10 ? 4 : 3;
+  if (P.turn === 0 && P.human % every === every - 1) {
     P.human++;
     return pathQuestion(pathWhere(P.n, P.pos.filter(Boolean)), () => pathTurn());
   }
@@ -237,7 +239,7 @@ async function pathTapStep(k) {
   P.pos[me] = next; pathTokens(); pathHop(me);
   pBub(`<span class="pbig">${next}</span>`, 'happy');
   await Voice.say(String(next), 'zh'); if (!pAlive(id)) return;
-  await pWait(P_REPEAT); if (!pAlive(id)) return;   /* пауза: Лиза повторяет число вслух */
+  await pWait(pRepeat()); if (!pAlive(id)) return;   /* пауза: Лиза повторяет число вслух */
   if (next >= P.target) return pathAfter();
   P.phase = 'tap'; pMark(next + 1, 'next');
 }
@@ -253,7 +255,7 @@ async function pathWalk(k, target) {
     pathTokens(); pathHop(k);
     pBub(`<span class="pbig">${P.pos[k]}</span>`, 'happy');
     await Voice.say(String(P.pos[k]), 'zh'); if (!pAlive(id)) return;
-    await pWait(P_PLAYERS[P.mode][k].bot ? 250 : P_REPEAT); if (!pAlive(id)) return;   /* на своём ходу — время повторить число */
+    await pWait(P_PLAYERS[P.mode][k].bot ? 250 : pRepeat()); if (!pAlive(id)) return;   /* на своём ходу — время повторить число */
   }
 }
 const pathHop = k => { const t = document.getElementById('ptok' + k); if (t) { t.classList.remove('hop'); void t.offsetWidth; t.classList.add('hop'); } };
