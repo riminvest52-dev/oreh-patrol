@@ -120,8 +120,84 @@ for (let run = 0; run < 400; run++) {
   check('орехи = заработано − потрачено', first.acorns === Math.max(0, first.earned - spent), first.acorns);
 }
 
-window.RESULT = results;
-document.getElementById('out').innerHTML = `<b class="${results.fail ? 'bad' : 'ok'}">Проверок: ${results.pass + results.fail}, провалено: ${results.fail}</b>\n` + log.slice(0, 40).join('\n');
+/* ---------- Семейный кабинет: восстановление, удаление и отмена (данные устройства на время теста откладываем) ---------- */
+{
+  const keepLS = Object.assign({}, localStorage), keepF = F, keepS = S;
+  try {
+    const st = (n, ep = 0) => Object.assign(fresh(), { name: 'Тест', earned: n, acorns: n, _epoch: ep, _ts: 1000 + n, _tally: { X: { earned: n, solved: 0, right: 0 } } });
+    F = { v: 2, device: 'dT', code: null, lastSync: 0, profiles: [{ id: 'p1', world: 'five', hero: 'mindal' }], current: 'p1' };
+    S = st(50); writeJson(profKey('p1'), S);
+    const n = restoreDoc({ v: 2, profiles: [{ id: 'p1', world: 'five', hero: 'mindal' }], states: { p1: st(20) } });
+    check('восстановлен один игрок', n === 1, n);
+    check('прогресс как в копии', S.earned === 20 && S.acorns === 20, [S.earned, S.acorns]);
+    check('копия получила новую эпоху', S._epoch === 1, S._epoch);
+    const stale = st(60);   /* другое устройство ещё со старыми данными */
+    check('копия побеждает старые данные других устройств', mergeStates(stale, S).earned === 20 && mergeStates(S, stale).earned === 20);
+    let bad = false; try { restoreDoc({ v: 2, profiles: [], states: {} }); } catch (e) { bad = true; }
+    check('пустая копия не принимается', bad);
+
+    F.profiles.push({ id: 'p2', world: 'kid', hero: 'zhel' }); writeJson(profKey('p2'), st(5));
+    const remoteOld = JSON.parse(JSON.stringify(F.profiles[0]));
+    deleteProfile('p1');
+    check('удалённого не видно', liveProfiles().length === 1 && liveProfiles()[0].id === 'p2');
+    check('текущим стал другой игрок', F.current === 'p2', F.current);
+    check('удаление побеждает старую запись с другого устройства', !!newerProfile(F.profiles[0], remoteOld).del);
+    const remoteDel = JSON.parse(JSON.stringify(F.profiles[0]));
+    F.profiles[0].ch = Date.now() - 5; undeleteProfile('p1');
+    check('отмена удаления', liveProfiles().length === 2 && !F.profiles[0].del);
+    check('отмена побеждает запись «удалён»', !newerProfile(F.profiles[0], remoteDel).del);
+    check('данные вернулись вместе с игроком', readProfile('p1').earned === 20);
+    deleteProfile('p1'); F.profiles[0].del = Date.now() - 29 * 864e5; purgeProfiles();
+    check('29 дней — ещё можно вернуть', !F.profiles[0].gone && !!readProfile('p1'));
+    F.profiles[0].del = Date.now() - 31 * 864e5; purgeProfiles();
+    check('через 30 дней удалён насовсем', F.profiles[0].gone === 1 && !readProfile('p1'));
+    undeleteProfile('p1');
+    check('удалённого насовсем не вернуть', !!F.profiles[0].del);
+  } finally {
+    localStorage.clear(); for (const k in keepLS) localStorage.setItem(k, keepLS[k]);
+    F = keepF; S = keepS;
+  }
+}
+
+/* ---------- Облако: та же логика, что в облачной функции (нужен запущенный dev/kv_server.py) ---------- */
+async function serverTests() {
+  const URL = 'http://127.0.0.1:8766';
+  const post = async b => { const r = await fetch(URL, { method: 'POST', body: JSON.stringify(b) }); return Object.assign({ status: r.status }, await r.json()); };
+  try { await post({ op: 'dev_wipe' }); } catch (e) { log.push('ПРОПУЩЕНО: облако на компьютере не запущено (python dev/kv_server.py)'); results.skip = 1; return; }
+  const hex = () => Array.from(crypto.getRandomValues(new Uint8Array(32)), b => b.toString(16).padStart(2, '0')).join('');
+  const key = hex(), doc = n => ({ v: 2, profiles: [{ id: 'p1', world: 'five' }], states: { p1: Object.assign(fresh(), { name: 'Тест', earned: n, acorns: n }) }, devices: {} });
+  let r = await post({ op: 'get', key, _ip: '10.1.1.1' });
+  check('новой семьи ещё нет', r.status === 200 && r.doc === null, r);
+  await post({ op: 'put', key, doc: doc(10) }); await post({ op: 'put', key, doc: doc(20) });
+  r = await post({ op: 'get', key }); check('сохранено последнее', r.doc.states.p1.earned === 20);
+  r = await post({ op: 'backups', key }); check('предыдущая версия хранится', r.list.length === 1 && r.list[0].id === 'prev', r.list);
+  r = await post({ op: 'backup', key, id: 'prev' }); check('предыдущая = 10', r.doc.states.p1.earned === 10);
+  await post({ op: 'dev_shift', days: 1 }); await post({ op: 'put', key, doc: doc(30) });
+  await post({ op: 'dev_shift', days: 1 }); await post({ op: 'put', key, doc: doc(40) });
+  r = await post({ op: 'backups', key }); const days = r.list.filter(b => b.id !== 'prev');
+  check('копия на каждый день', days.length === 2, r.list);
+  r = await post({ op: 'backup', key, id: days[1].id }); check('копия первого дня = 20', r.doc && r.doc.states.p1.earned === 20, r.doc && r.doc.states.p1.earned);
+  r = await post({ op: 'backup', key, id: days[0].id }); check('копия второго дня = 30', r.doc && r.doc.states.p1.earned === 30);
+  await post({ op: 'put', key, doc: Object.assign(doc(41), { email: 'mama@example.com', phone: '+7' }) });
+  r = await post({ op: 'get', key }); check('лишние поля (почта, телефон) не хранятся', !('email' in r.doc) && !('phone' in r.doc), Object.keys(r.doc));
+  r = await post({ op: 'put', key: 'нет', doc: doc(1) }); check('ключ — только хэш кода', r.status === 400);
+  /* Неверные коды: 10 в час с одного адреса */
+  const ip = '10.0.' + (Math.random() * 250 | 0) + '.' + (Math.random() * 250 | 0), codes = [];
+  for (let i = 0; i < 10; i++) codes.push((await post({ op: 'join', key: hex(), _ip: ip })).status);
+  check('10 неверных кодов — «такой семьи нет»', codes.every(c => c === 200), codes);
+  r = await post({ op: 'join', key: hex(), _ip: ip }); check('11-й неверный код за час — отказ', r.status === 429, r.status);
+  r = await post({ op: 'join', key, _ip: ip }); check('даже верный код с этого адреса — после паузы', r.status === 429);
+  r = await post({ op: 'join', key, _ip: '10.200.0.1' }); check('с другого адреса верный код работает', r.status === 200 && !!r.doc);
+  r = await post({ op: 'backups', key: hex(), _ip: ip }); check('список копий чужой семьи тоже ограничен', r.status === 429);
+  await post({ op: 'dev_shift', days: 1 });
+  r = await post({ op: 'join', key, _ip: ip }); check('через час снова можно', r.status === 200 && !!r.doc);
+  await post({ op: 'dev_wipe' });
+}
+
+serverTests().catch(e => { results.fail++; log.push('ПРОВАЛ: облако — ' + e.message); }).finally(() => {
+  window.RESULT = results;
+  document.getElementById('out').innerHTML = `<b class="${results.fail ? 'bad' : 'ok'}">Проверок: ${results.pass + results.fail}, провалено: ${results.fail}${results.skip ? ' (облако не проверено)' : ''}</b>\n` + log.slice(0, 40).join('\n');
+});
 </script>
 </body>
 </html>

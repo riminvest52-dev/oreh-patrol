@@ -495,3 +495,28 @@ svg.sor-sly .sor-spark { animation: sorspark 1.2s ease-in-out infinite; }
 @media (prefers-reduced-motion: reduce) { .f3:not(.root) { animation-duration: .01s; animation-delay: 0s; } .f3scene { animation: none; } }
 .hrow { display: flex; align-items: center; gap: 10px; padding: 8px 0; border-bottom: 1px dashed var(--line); }
 .hrow .grow { flex: 1; min-width: 0; } .hrow .btn { flex: none; min-height: 44px; padding: 8px 14px; font-size: 16px; }
+
+/* ---------- Семейный кабинет (js/family.js) ---------- */
+.cbar { display: block; width: 100%; text-align: left; padding: 13px 16px; margin: 4px 0 6px; border-radius: 16px; border: 2px solid transparent; font: 800 17px var(--font); cursor: pointer; }
+.cbar.ok { background: #E3F4DA; color: #2F6B22; border-color: #B9DFA6; }
+.cbar.wait { background: #FFF1C9; color: #845600; border-color: #F2D27A; }
+.cbar.fail { background: #FFE0D9; color: #A3321B; border-color: #F2B1A3; }
+.cbar.none { background: #F1E7D8; color: #6B5A44; border-color: var(--line); }
+.iconbtn { position: relative; }
+.cdot { position: absolute; right: -6px; top: -6px; width: 20px; height: 20px; border-radius: 50%; border: 2px solid #fff; font: normal 12px/16px system-ui, sans-serif; color: #fff; text-align: center; pointer-events: none; }
+.cdot.ok { background: var(--green); } .cdot.wait { background: var(--gold); } .cdot.fail { background: var(--red); } .cdot.none { background: #B8A78F; }
+.family h3 { margin: 16px 0 8px; }
+.kidcard { display: flex; gap: 12px; background: var(--card); border: 2px solid var(--line); border-radius: var(--r); box-shadow: 0 4px 0 var(--line); padding: 12px; margin-bottom: 12px; }
+.kidcard.gone { opacity: .75; }
+.kidcard .kch svg.chip { width: 64px; height: 64px; }
+.kidcard .kn { font-weight: 800; font-size: 19px; }
+.kidcard .kstat { display: flex; flex-wrap: wrap; gap: 6px 14px; margin: 6px 0; font-weight: 800; }
+.kidcard .kstat span { display: inline-flex; align-items: center; gap: 4px; }
+.kidcard .krow { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
+.kidcard .krow .btn, .drow .btn { padding: 8px 12px; font-size: 14px; }
+.drow { display: flex; align-items: center; gap: 10px; padding: 8px 0; border-bottom: 1px dashed var(--line); }
+.drow:last-child { border-bottom: 0; }
+.qrbox { background: #fff; border-radius: 14px; padding: 8px; max-width: 280px; margin: 0 auto 10px; }
+.qrbox svg { display: block; width: 100%; height: auto; }
+.newdev { margin: 12px 0 4px; padding: 14px 16px; border-radius: var(--r); background: #E8F3FF; border: 2px solid #A9CBEA; font-weight: 700; }
+.newdev .btn { padding: 8px 14px; font-size: 15px; margin-left: 4px; }

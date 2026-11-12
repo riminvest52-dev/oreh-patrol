@@ -12,7 +12,7 @@ function addDays(s, n) { const d = new Date(s + 'T12:00:00'); d.setDate(d.getDat
 
 const fresh = () => ({ v: 2, name: '', created: today(), acorns: 0, earned: 0, sound: true, stars: {}, medals: {},
   mastery: {}, skill: {}, mistakes: [], history: {}, streak: { last: null, count: 0, best: 0 }, daily: { date: null, done: false },
-  stickers: [], diag: null, recent: [], hands: {}, solved: 0, right: 0, _epoch: 0, _ts: 0, _tally: {}, gone: {} });
+  stickers: [], diag: null, recent: [], hands: {}, play: {}, solved: 0, right: 0, _epoch: 0, _ts: 0, _tally: {}, gone: {} });
 const newId = p => p + Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
 const readJson = k => { try { const v = localStorage.getItem(k); return v ? JSON.parse(v) : null; } catch (e) { return null; } };
 const writeJson = (k, v) => { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) { } };
@@ -263,11 +263,85 @@ function mergeStates(a, b) {
   const HA = A.hands || {}, HB = B.hands || {};
   for (const k of keysOf(HA, HB)) { const x = HA[k], y = HB[k]; R.hands[k] = !x ? y : !y ? x : y.st === 'ok' && x.st !== 'ok' ? y : x; }
   R.diag = !A.diag ? B.diag : !B.diag ? A.diag : B.diag.date > A.diag.date ? B.diag : A.diag;
+  /* Время игры: секунды по дням и устройствам, берём большее */
+  const PA = A.play || {}, PB = B.play || {};
+  for (const d of keysOf(PA, PB)) { const x = PA[d] || {}, y = PB[d] || {}; R.play[d] = {}; for (const k of keysOf(x, y)) R.play[d][k] = Math.max(x[k] || 0, y[k] || 0); }
 
   const seen = new Set();
   R.recent = [...A.recent, ...B.recent].filter(r => { const k = r.ts + '|' + r.q; if (seen.has(k)) return false; seen.add(k); return true; })
     .sort((x, y) => y.ts - x.ts).slice(0, 40);
   return copy(R);
+}
+
+/* ---------- Время игры: считаем, пока экран открыт и ребёнок что-то нажимал в последнюю минуту ---------- */
+let lastTouch = 0;
+const PLAY_TICK = 15;
+function playTick() {
+  if (!F.current || document.visibilityState !== 'visible' || Date.now() - lastTouch > 60000) return;
+  const d = today(), P = S.play || (S.play = {}), day = P[d] || (P[d] = {});
+  day[F.device] = (day[F.device] || 0) + PLAY_TICK;
+  const old = addDays(d, -60); for (const k of Object.keys(P)) if (k < old) delete P[k];
+  writeJson(profKey(F.current), S);            /* в облако уйдёт со следующим сохранением */
+}
+const weekMinutes = st => { let s = 0; for (let i = 0; i < 7; i++) { const day = (st.play || {})[addDays(today(), -i)] || {}; for (const k in day) s += day[k]; } return Math.round(s / 60); };
+if (typeof document !== 'undefined' && typeof setInterval !== 'undefined') {
+  ['pointerdown', 'keydown'].forEach(ev => document.addEventListener(ev, () => { lastTouch = Date.now(); }, true));
+  setInterval(playTick, PLAY_TICK * 1000);
+}
+
+/* ---------- Игроки семьи: удаление можно отменить 30 дней ---------- */
+const DEL_DAYS = 30;
+const liveProfiles = () => F.profiles.filter(p => !p.del);
+/* Из двух записей об одном игроке берём более свежую (ch — время последнего изменения записи) */
+const newerProfile = (a, b) => ((b.ch || 0) > (a.ch || 0) ? b : a);
+function deleteProfile(id) {
+  const p = F.profiles.find(x => x.id === id); if (!p) return;
+  p.del = Date.now(); p.ch = Date.now();
+  if (F.current === id) { const next = liveProfiles()[0]; if (next) useProfile(next.id); else { F.current = null; S = fresh(); } }
+  saveFamily(); if (typeof Cloud !== 'undefined') Cloud.soon();
+}
+function undeleteProfile(id) {
+  const p = F.profiles.find(x => x.id === id); if (!p || p.gone) return;
+  p.del = 0; p.ch = Date.now(); saveFamily(); if (typeof Cloud !== 'undefined') Cloud.soon();
+}
+/* Через 30 дней от удалённого остаётся только отметка «удалён», чтобы он не вернулся с другого устройства */
+function purgeProfiles() {
+  let changed = false;
+  for (const p of F.profiles) if (p.del && !p.gone && Date.now() - p.del > DEL_DAYS * 864e5) {
+    p.gone = 1; changed = true; try { localStorage.removeItem(profKey(p.id)); } catch (e) { }
+  }
+  if (changed) saveFamily();
+  return changed;
+}
+/* Изменить данные другого игрока (имя, сброс), не заходя под ним */
+function editProfileState(id, fn) {
+  const isCur = id === F.current, st = isCur ? S : readProfile(id);
+  if (!st) return;
+  fn(st); st._ts = Date.now(); tallyFor(st, F.device);
+  writeJson(profKey(id), st); if (isCur) S = st;
+  if (typeof Cloud !== 'undefined') Cloud.soon();
+}
+const resetState = st => Object.assign(fresh(), { name: st.name, sound: st.sound, _epoch: (st._epoch || 0) + 1 });
+
+/* Восстановление из копии: прогресс игроков становится как в копии на всех устройствах (новая «эпоха» побеждает при слиянии).
+   Игроки, которых в копии нет, не трогаются. Возвращает число восстановленных игроков */
+function restoreDoc(doc) {
+  if (!doc || doc.v !== 2 || !Array.isArray(doc.profiles) || !doc.states) throw new Error('bad');
+  let n = 0;
+  for (const rp of doc.profiles) {
+    const remote = doc.states[rp.id];
+    if (!remote || rp.gone || !WORLDS[rp.world]) continue;
+    const isCur = rp.id === F.current, local = isCur ? S : readProfile(rp.id);
+    const st = Object.assign(normState(remote), { _epoch: Math.max(local ? local._epoch || 0 : 0, remote._epoch || 0) + 1, _ts: Date.now(), sound: local ? local.sound : true });
+    writeJson(profKey(rp.id), st); if (isCur) S = st;
+    const ex = F.profiles.find(p => p.id === rp.id), entry = Object.assign({}, rp, { del: 0, gone: 0, ch: Date.now() });
+    if (ex) Object.assign(ex, entry); else F.profiles.push(entry);
+    n++;
+  }
+  if (!n) throw new Error('empty');
+  if (!F.current || !liveProfiles().some(p => p.id === F.current)) useProfile(liveProfiles()[0].id);
+  saveFamily(); if (typeof Cloud !== 'undefined') Cloud.soon();
+  return n;
 }
 
 let F = loadFamily();

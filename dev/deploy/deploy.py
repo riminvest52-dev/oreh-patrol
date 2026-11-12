@@ -36,7 +36,7 @@ TYPES = {
 }
 NO_CACHE = {'index.html', 'sw.js'}          # браузер всегда сверяется с сервером
 LAST = ['index.html', 'sw.js']              # в самом конце; sw.js последним: новая версия «включается», когда все файлы уже на месте
-SKIP_DIRS = {'dev', 'docs', '.git', '.github', '.claude', 'node_modules', '_old', 'voice'}   # voice/ — отдельно, см. upload_voice; docs/ — задания и отчёты, на сайт не нужны
+SKIP_DIRS = {'dev', 'docs', 'server', '.git', '.github', '.claude', 'node_modules', '_old', 'voice'}   # voice/ — отдельно, см. upload_voice; docs/ — задания и отчёты, на сайт не нужны
 VOICE_CACHE = 'public, max-age=31536000, immutable'   # имя папки голоса меняется при любой перезаписи — файлы вечные
 SKIP_FILES = {'README.md', 'CLAUDE.md', '.gitignore', '.gitattributes', '.nojekyll'}
 

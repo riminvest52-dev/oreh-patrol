@@ -404,7 +404,7 @@ function showKidMap() {
   }).join('');
   mountKid(`<div class="topbar"><div class="avatar" data-act="who" role="button" aria-label="Сменить игрока">${ART.zhel('happy')}<span class="swap">⇄</span></div>
       <div class="grow"><div class="hello">Привет, ${esc(S.name || 'друг')}!</div><div class="small muted">Лесная полянка</div></div>
-      <span class="pill">${ART.acorn(22)}${S.acorns}</span><button class="iconbtn" data-act="parent" aria-label="Для взрослых">⚙️</button></div>
+      <span class="pill">${ART.acorn(22)}${S.acorns}</span><button class="iconbtn" data-act="parent" aria-label="Для взрослых">⚙️${cloudDot()}</button></div>
     <div class="ktiles">${tiles}</div>
     <button class="btn gold block" style="margin-top:16px" data-act="album">📒 Наклейки · ${S.stickers.length}</button>`);
   Praise.hello(); Voice.prefetch('kid');
@@ -570,10 +570,10 @@ function showKidParent() {
       <div><div style="font-size:26px;font-weight:800">${acc}%</div><div class="small muted">сразу верно</div></div>
       <div><div style="font-size:26px;font-weight:800">${stars}</div><div class="small muted">звёзд из ${KID_TOPICS.length * 3}</div></div>
       <div><div style="font-size:26px;font-weight:800">${S.streak.best}</div><div class="small muted">лучшая серия</div></div></div></div>
+    ${familyEntry()}
     ${movedCard()}
     <h3 style="margin-top:18px">Темы</h3><div class="card">${rows}
       <p class="small muted">В игре 6 заданий. Если 5 из 6 решены с первого раза, тема получает звёздочку, и задания становятся сложнее: ступень 1 — числа до 5, ступень 2 — до 10, ступень 3 — до 20. После двух ошибок подряд задания на время становятся проще.</p></div>
-    ${cloudCard()}
     <h3 style="margin-top:18px">Настройки</h3><div class="card">
       <button class="btn ghost block" style="margin-bottom:12px" data-act="who">👧 Сменить или добавить игрока</button>
       <label class="small muted" for="pn">Имя</label><div class="row"><input class="input" id="pn" maxlength="20" value="${esc(S.name)}"><button class="btn" data-act="saveName">OK</button></div>

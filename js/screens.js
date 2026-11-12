@@ -5,8 +5,8 @@
 const NEW_HOME = 'https://oreh-patrol.website.yandexcloud.net/';
 const OLD_HOME = /(^|\.)github\.io$/.test(location.hostname);
 const movedCard = () => OLD_HOME ? `<div class="moved"><div class="mvh">🚚 Игра переехала!</div>
-  <p>Теперь «Ореховый патруль» живёт по новому адресу, он открывается быстрее и без перебоев. Нажми кнопку: игра откроется там вместе со всеми звёздами и орешками.</p>
-  <button class="btn green block" data-act="moveGo">Открыть новую игру →</button>
+  <p>Теперь «Ореховый патруль» живёт по новому адресу, он открывается быстрее и без перебоев. Нажми кнопку: игра откроется там вместе со всеми звёздами и орешками, а взрослый сможет подключить её к облаку семьи.</p>
+  <button class="btn green block" data-act="moveGo">Перенести в семью →</button>
   <button class="btn ghost block" style="margin-top:8px" data-act="moveCode">Показать код переноса</button>
   <p class="small muted" style="margin-top:8px">Новый адрес: ${NEW_HOME.replace('https://', '')}</p></div>` : '';
 ACT.moveGo = () => { location.href = NEW_HOME + '#move=' + exportMove(); };
@@ -25,10 +25,9 @@ function takeMove() {
 /* ---------- Кто играет ---------- */
 function showWho() {
   SES = null;
-  const tiles = F.profiles.map(p => `<button class="who-tile" data-act="pickWho" data-id="${p.id}">${ART.chip(p.hero, 'happy', '', true)}<b>${esc(playerName(p) || 'Новый игрок')}</b><span class="small muted">${(WORLDS[p.world] || {}).title || ''}</span></button>`).join('');
-  mount(`${movedCard()}<h1 class="center" style="margin-top:14px">Кто играет?</h1>
-    <div class="who">${tiles}<button class="who-tile" data-act="addWho"><span class="plus">＋</span><b>Добавить</b><span class="small muted">нового игрока</span></button></div>
-    ${CLOUD_URL && !F.code ? '<button class="btn ghost block" data-act="enterCode">У нас уже есть код семьи</button>' : ''}`);
+  const tiles = liveProfiles().map(p => `<button class="who-tile" data-act="pickWho" data-id="${p.id}">${ART.chip(p.hero, 'happy', '', true)}<b>${esc(playerName(p) || 'Новый игрок')}</b><span class="small muted">${(WORLDS[p.world] || {}).title || ''}</span></button>`).join('');
+  mount(`${movedCard()}${newDeviceCard()}<h1 class="center" style="margin-top:14px">Кто играет?</h1>
+    <div class="who">${tiles}<button class="who-tile" data-act="addWho"><span class="plus">＋</span><b>Добавить</b><span class="small muted">нового игрока</span></button></div>`);
 }
 const isKid = () => (curProfile() || {}).world === 'kid';
 function enterWorld() { if (isKid()) return S.name ? showKidMap() : showKidWelcome(); if (!S.name) showWelcome(); else showMap(); }
@@ -89,7 +88,7 @@ function showMap() {
   const sn = streakNow();
   mount(`<div class="topbar"><div class="avatar" data-act="who" role="button" aria-label="Сменить игрока">${ART.chip((curProfile() || {}).hero || 'funduk', 'happy', '', true)}<span class="swap">⇄</span></div>
       <div class="grow"><div class="hello">Привет, ${esc(S.name || 'друг')}!</div><div class="small muted">${sn ? `🔥 ${sn} ${pl(sn, 'день', 'дня', 'дней')} подряд` : 'Ореховый патруль на связи'}</div></div>
-      <span class="pill">${ART.acorn(22)}${S.acorns}</span><button class="iconbtn" data-act="parent" aria-label="Для взрослых">⚙️</button></div>
+      <span class="pill">${ART.acorn(22)}${S.acorns}</span><button class="iconbtn" data-act="parent" aria-label="Для взрослых">⚙️${cloudDot()}</button></div>
     <div class="quick">
       <div class="qcard ${dailyDone || !S.diag ? '' : 'hot'}" data-act="daily">${dailyDone ? '<span class="done">✅</span>' : ''}<div class="qi">☀️</div><div><div class="qt">Задание дня</div><div class="qs">${dailyDone ? 'Выполнено! Можно ещё' : '10 задач · +10 орешков'}</div></div></div>
       <div class="qcard" data-act="review">${due ? `<span class="badge">${due}</span>` : ''}<div class="qi">🧺</div><div><div class="qt">Корзинка ошибок</div><div class="qs">${due ? 'Пора повторить!' : S.mistakes.length ? `${S.mistakes.length} ждут своего дня` : 'Пока пусто'}</div></div></div>
@@ -197,7 +196,8 @@ function showParent() {
   }).join('');
   const recentBad = S.recent.filter(r => !r.ok).slice(0, 15).map(r => `<div class="mist"><div class="q">${TOPIC[r.topic] ? TOPIC[r.topic].icon : ''} ${esc(r.q)}</div>
     <div>Ответ: <span style="color:var(--red)">${esc(r.given)}</span> · верно: <b style="color:var(--green-d)">${esc(r.right)}</b> <span class="muted">· ${new Date(r.ts).toLocaleDateString('ru-RU')}</span></div></div>`).join('') || '<p class="muted">Ошибок пока нет.</p>';
-  mount(`<div class="topbar"><button class="iconbtn" data-act="map">←</button><div class="grow"><b>Для родителей · ${esc(S.name)}</b><div class="small muted">${CLOUD_URL ? 'Прогресс сохраняется на устройстве и в облаке семьи' : 'Прогресс хранится только на этом устройстве'}</div></div></div>
+  mount(`<div class="topbar"><button class="iconbtn" data-act="map">←</button><div class="grow"><b>Для родителей · ${esc(S.name)}</b><div class="small muted">${CLOUD_URL && F.code ? 'Прогресс сохраняется на устройстве и в облаке семьи' : 'Прогресс хранится только на этом устройстве'}</div></div></div>
+    ${familyEntry()}
     <div class="card"><div class="row" style="justify-content:space-around;text-align:center">
       <div><div style="font-size:26px;font-weight:800">${S.solved}</div><div class="small muted">задач</div></div>
       <div><div style="font-size:26px;font-weight:800">${acc}%</div><div class="small muted">верно</div></div>
@@ -208,7 +208,6 @@ function showParent() {
     ${movedCard()}<h3 style="margin-top:18px">Темы</h3><div class="card">${topics}<p class="small muted">Тема оценивается по самому слабому навыку внутри неё. «Уверенно» — 80%+ по последним ответам с учётом сложности, «почти» — 55–80%, «подтянуть» — ниже. Ответ с подсказкой освоенность не повышает, со второй попытки — считается ошибкой.</p></div>
     ${typeof handsParentCard === 'function' ? handsParentCard() : ''}
     <h3 style="margin-top:18px">Последние ошибки</h3><div class="card">${recentBad}</div>
-    ${cloudCard()}
     <h3 style="margin-top:18px">Настройки</h3><div class="card">
       <button class="btn ghost block" style="margin-bottom:12px" data-act="who">👧 Сменить или добавить игрока</button>
       <label class="small muted" for="pn">Имя</label><div class="row"><input class="input" id="pn" maxlength="20" value="${esc(S.name)}"><button class="btn" data-act="saveName">OK</button></div>
@@ -220,30 +219,7 @@ function showParent() {
       <button class="btn ghost block" style="margin-top:12px;color:var(--red)" data-act="reset">Сбросить весь прогресс</button></div>
     <p class="small muted center" style="margin-top:14px">Ореховый патруль · математика 5 класса по программе Л. Г. Петерсон (1–2 четверть)</p>`);
 }
-function cloudCard() {
-  if (!CLOUD_URL) return '';
-  return `<h3 style="margin-top:18px">Код семьи</h3><div class="card">
-    <div class="famcode">${F.code ? showCode(F.code) : '····-····'}</div>
-    <p class="small muted">Введите этот код один раз на новом телефоне или в другом браузере, и прогресс подтянется.</p>
-    <p class="small"><b>${Cloud.statusText()}</b></p>
-    <button class="btn green block" data-act="syncNow">☁️ Синхронизировать сейчас</button>
-    <button class="btn ghost block" style="margin-top:12px" data-act="copyFam">Скопировать код</button>
-    <button class="btn ghost block" style="margin-top:12px" data-act="enterCode">Ввести другой код</button></div>`;
-}
-ACT.syncNow = async () => { toast('Синхронизирую…'); await Cloud.now(); showParent(); };
-ACT.copyFam = () => { try { navigator.clipboard.writeText(showCode(F.code || '')).then(() => toast('Код скопирован'), () => toast('Не получилось скопировать')); } catch (e) { toast('Не получилось скопировать'); } };
-ACT.enterCode = () => modal(`<h2>Код семьи</h2><p class="muted small">Прогресс этого устройства объединится с прогрессом семьи.</p>
-  <input class="input" id="fcode" maxlength="12" autocomplete="off" autocapitalize="characters" spellcheck="false" placeholder="XXXX-XXXX">
-  <button class="btn green block" style="margin-top:10px" data-act="codeGo">Подключиться</button><button class="btn ghost block" style="margin-top:10px" data-act="close">Отмена</button>`);
-ACT.codeGo = async () => {
-  const code = cleanCode(document.getElementById('fcode').value);
-  if (!validCode(code)) { toast('В коде должно быть 8 знаков'); return; }
-  toast('Подключаюсь…');
-  const r = await Cloud.join(code);
-  if (r === 'net') { toast('Нет связи с облаком. Попробуйте позже.', 2600); return; }
-  if (r === 'none') { toast('Такой код не найден. Проверьте его.', 2600); return; }
-  closeModal(); toast('Готово, семья подключена!'); boot();
-};
+/* Код семьи, устройства и копии — в js/family.js (экран «Семья») */
 ACT.saveName = () => { const v = document.getElementById('pn').value.trim(); if (v) { S.name = v.slice(0, 20); save(); toast('Имя сохранено'); } };
 ACT.sound = () => { S.sound = !S.sound; save(); showParent(); };
 ACT.voice5 = () => { Voice.toggle(); showParent(); };
@@ -269,11 +245,17 @@ ACT.resetGo = () => { resetAll(); closeModal(); showMap(); };
 
 /* ---------- Старт ---------- */
 function boot() {
+  closeModal();
   const moved = takeMove();
-  if (OLD_HOME && F.profiles.length) return showWho();   /* на старом адресе сразу видно «Игра переехала» */
-  if (moved && F.current) { useProfile(F.current); return enterWorld(); }
-  if (F.profiles.length === 1) { useProfile(F.profiles[0].id); enterWorld(); }
+  const famLink = takeFam();
+  purgeProfiles();
+  const live = liveProfiles();
+  if (F.current && !live.some(p => p.id === F.current)) F.current = null;
+  if (OLD_HOME && live.length) return showWho();   /* на старом адресе сразу видно «Игра переехала» */
+  if (moved && F.current) { useProfile(F.current); enterWorld(); }
+  else if (live.length === 1) { useProfile(live[0].id); enterWorld(); }
   else showWho();
+  if (!OLD_HOME && !famLink) setTimeout(askCloudOnce, 600);
 }
 /* boot() и Cloud.start() вызывает index.html, когда загружены ВСЕ скрипты: мир Лизы (kid.js) подключается последним.
    Раньше boot() стоял здесь, и устройство, где единственный игрок — Лиза, получало белый экран. */
