@@ -89,33 +89,7 @@ ${zhBrows(mood)}${zhEyes(mood)}
 };
 (() => { const base = ART.chip; ART.chip = (who, mood, cls, bust) => who === 'zhel' ? ART.zhel(mood, cls) : base(who, mood, cls, bust); })();
 
-/* ---------- Озвучка: встроенный синтез речи браузера. Настройка хранится на устройстве ---------- */
-const Voice = (() => {
-  const has = 'speechSynthesis' in window;
-  let voice = null;
-  const pickV = () => {
-    try {
-      const vs = speechSynthesis.getVoices().filter(v => /^ru/i.test(v.lang));
-      voice = vs.find(v => /google/i.test(v.name)) || vs.find(v => /milena|irina|svetlana|daria|female/i.test(v.name)) || vs[0] || null;
-    } catch (e) { voice = null; }
-  };
-  if (has) { pickV(); try { speechSynthesis.addEventListener('voiceschanged', pickV); } catch (e) { } }
-  const on = () => { try { return localStorage.getItem('oreh_voice') !== '0'; } catch (e) { return true; } };
-  return {
-    has, on,
-    toggle() { try { localStorage.setItem('oreh_voice', on() ? '0' : '1'); } catch (e) { } if (!on()) this.stop(); },
-    say(text) {
-      if (!has || !on() || !text) return;
-      try {
-        speechSynthesis.cancel();
-        const u = new SpeechSynthesisUtterance(String(text).replace(/<[^>]+>/g, ' ').replace(/−/g, ' минус ').replace(/\+/g, ' плюс '));
-        u.lang = 'ru-RU'; if (voice) u.voice = voice; u.rate = 0.88; u.pitch = 1.1;
-        speechSynthesis.speak(u);
-      } catch (e) { }
-    },
-    stop() { try { if (has) speechSynthesis.cancel(); } catch (e) { } }
-  };
-})();
+/* Озвучка (Voice) и похвала (Praise) — в js/voice.js */
 
 /* ---------- Темы ---------- */
 const KID_TOPICS = [
@@ -171,7 +145,7 @@ const dice = n => `<div class="dice">${Array.from({ length: 9 }, (_, i) => `<i c
 KG.k_flash = d => {
   const n = d === 1 ? R.int(1, 4) : d === 2 ? R.int(2, 6) : R.int(4, 7);
   return { kind: 'flash', n, ms: d === 1 ? 2200 : d === 2 ? 1600 : 1200, scene: dice(n), text: 'Сколько было точек?', say: 'Посмотри и запомни: сколько точек?',
-    hint: 'Нажми «Покажи ещё раз» и посмотри внимательно.', opts: numOpts(n, 1, 9), ans: n, why: `Было ${n} ${pl(n, 'точка', 'точки', 'точек')}.` };
+    hint: 'Нажми «Покажи ещё раз» и посмотри внимательно.', opts: numOpts(n, 1, 9), ans: n, why: `${n === 1 ? 'Была' : 'Было'} ${n} ${pl(n, 'точка', 'точки', 'точек')}.` };
 };
 /* 2. Цифры */
 KG.k_digit = d => {
@@ -180,12 +154,12 @@ KG.k_digit = d => {
     hint: 'Сначала посчитай картинки, потом найди такую цифру.', opts: numOpts(n, 1, 10), ans: n, why: `Тут ${n} ${kf(it, n)}. Это цифра ${n}.` };
   const vals = R.shuffle(numOpts(n, 1, hi).map(o => o.v));
   return { kind: 'pick', scene: `<div class="kbig">${n}</div>`, text: `Где ${n} ${kf(it, n)}?`, say: `Найди, где ${n} ${kf(it, n)}.`, layout: 'col',
-    hint: 'Посчитай картинки в каждой строчке.', opts: vals.map(v => ({ h: grp(it.e, v, 'small'), v })), ans: n, why: `Вот ${n} ${kf(it, n)} — как цифра ${n}.` };
+    hint: 'Посчитай картинки в каждой строчке.', opts: vals.map(v => ({ h: grp(it.e, v, 'small'), v })), ans: n, why: `Вот ${n} ${kf(it, n)}. Это цифра ${n}.` };
 };
 KG.k_put = d => {
   const it = R.pick(KI.filter(x => x.put)), n = d === 1 ? R.int(1, 5) : d === 2 ? R.int(3, 8) : R.int(6, 10);
-  return { kind: 'put', e: it.e, n, pile: Math.min(14, n + R.int(2, 4)), text: `Положи в корзинку ${n} ${kf(it, n)}`,
-    say: `Положи в корзинку ${n} ${kf(it, n)}. Потом нажми «Готово».`, hint: 'Клади по одному и считай вслух. Лишнее можно вернуть — нажми на него в корзинке.',
+  return { kind: 'put', e: it.e, n, pile: Math.min(14, n + R.int(2, 4)), text: `Положи в корзинку ${n} ${n === 1 ? it.s : kf(it, n)}`,
+    say: `Положи в корзинку ${n} ${n === 1 ? it.s : kf(it, n)}. Потом нажми «Готово».`, hint: 'Клади по одному и считай вслух. Лишнее можно вернуть — нажми на него в корзинке.',
     ans: n, why: `Нужно ${n}: кладём по одному и считаем до ${n}.` };
 };
 /* 3. Больше и меньше */
@@ -236,7 +210,7 @@ KG.k_next = d => {
     opts: numOpts(n, 0, 20), ans: n, why: `${n - 1}, ${n}, ${n + 1} — число ${n} посередине.` };
   const x = kind === 'before' ? n - 1 : n + 1;
   return { kind: 'pick', scene: `<div class="kline">${kind === 'before' ? `<span class="q">?</span><span>${n}</span>` : `<span>${n}</span><span class="q">?</span>`}</div>`,
-    text: `Какое число ${kind === 'before' ? 'перед' : 'после'} ${n}?`, say: `Какое число стоит ${kind === 'before' ? 'перед' : 'после'} числа ${n}?`,
+    text: `Какое число ${kind === 'before' ? 'перед' : 'после'} ${n}?`, say: `Какое число стоит ${kind === 'before' ? 'перед числом' : 'после числа'} ${n}?`,
     hint: kind === 'before' ? 'Перед — это на один меньше.' : 'После — это на один больше.',
     opts: numOpts(x, 0, 20), ans: x, why: kind === 'before' ? `Перед ${n} стоит ${x}: ${x}, ${n}.` : `После ${n} идёт ${x}: ${n}, ${x}.` };
 };
@@ -269,7 +243,7 @@ KG.k_sub = d => {
   const it = R.pick(KI), n = d === 1 ? R.int(2, 5) : R.int(4, 10), k = R.int(1, d === 1 ? n - 1 : Math.min(n - 1, 5)), r = n - k;
   return { kind: 'pick', ans: r, opts: numOpts(r, 0, 10),
     scene: d < 3 ? `<div class="kgrp small">${Array.from({ length: n }, (_, i) => (i >= r ? `<span class="gone"><i>${it.e}</i></span>` : `<span>${it.e}</span>`)).join('')}</div>` : `<div class="kex">${n} − ${k} = ?</div>`,
-    text: d < 3 ? 'Сколько осталось?' : `Сколько будет ${n} − ${k}?`, say: d < 3 ? `Было ${n} ${kf(it, n)}. ${k} убрали — они зачёркнуты. Сколько осталось?` : `Сколько будет ${n} минус ${k}?`,
+    text: d < 3 ? 'Сколько осталось?' : `Сколько будет ${n} − ${k}?`, say: d < 3 ? `Было ${n} ${kf(it, n)}. ${k === 1 ? 'Одну картинку убрали — она зачёркнута' : k + ' убрали — они зачёркнуты'}. Сколько осталось?` : `Сколько будет ${n} минус ${k}?`,
     hint: d < 3 ? 'Зачёркнутые убрали. Посчитай только тех, кто не зачёркнут.' : `Начни с ${n} и отсчитай назад ${k}.`, why: d < 3 ? `Было ${n}, зачёркнуто ${k}. Не зачёркнуто ${r}: ${n} − ${k} = ${r}.` : `${n} − ${k} = ${r}`, whySay: `Было ${n}, убрали ${k}, осталось ${r}.` };
 };
 /* 7. Фигуры и размеры */
@@ -416,7 +390,6 @@ ACT.kJoin = () => {
   const v = document.getElementById('nm').value.trim();
   if (!v) { toast('Напиши имя 🙂'); return; }
   S.name = v.slice(0, 20); save(); showKidMap();
-  Voice.say(`Привет, ${S.name}! Выбирай игру.`);
 };
 function showKidMap() {
   K = null; Voice.stop();
@@ -431,13 +404,15 @@ function showKidMap() {
       <span class="pill">${ART.acorn(22)}${S.acorns}</span><button class="iconbtn" data-act="parent" aria-label="Для взрослых">⚙️</button></div>
     <div class="ktiles">${tiles}</div>
     <button class="btn gold block" style="margin-top:16px" data-act="album">📒 Наклейки · ${S.stickers.length}</button>`);
+  Praise.hello(); Voice.prefetch('kid');
 }
 ACT.kTopic = el => kidStart(el.dataset.id);
 ACT.kAgain = el => kidStart(el.dataset.id);
 function kidStart(tid) {
   const T = KTOPIC[tid], q = [];
   while (q.length < KID_PER_SESSION) q.push(...R.shuffle(T.gens));
-  K = { tid, d: kidLevel(tid), queue: q.slice(0, KID_PER_SESSION), i: 0, first: 0, acorns: 0, wrongRun: 0 };
+  K = { tid, d: kidLevel(tid), queue: q.slice(0, KID_PER_SESSION), i: 0, first: 0, acorns: 0, wrongRun: 0, run: 0 };
+  Voice.prefetch(tid);
   kidNext();
 }
 function kidNext() {
@@ -463,7 +438,7 @@ function renderKid() {
     <div class="kbody"><div class="kq"><button class="ksay" data-act="kSay" aria-label="Прочитать ещё раз">🔊</button><div class="kt">${t.text}</div></div>
     <div class="kright"><div class="kscene">${scene}</div>${opts}</div>
     <div class="helper" id="khelp">${ART.zhel('happy')}<div class="bubble" id="kbub">${K.i === 0 ? 'Я читаю задание вслух. Нажми 🔊, чтобы послушать ещё раз.' : R.pick(['Ты справишься!', 'Подумай, не спеши.', 'Я рядом!', 'Интересно, что получится?'])}</div></div></div></div>`);
-  Voice.say(t.say);
+  Voice.say(t.say, 'nr');
   if (t.kind === 'flash') kFlash();
 }
 function kFlash() {
@@ -475,12 +450,12 @@ const kBub = (html, mood) => {
   const b = document.getElementById('kbub'); if (b) b.innerHTML = html;
   const h = document.querySelector('#khelp svg'); if (h && mood) h.outerHTML = ART.zhel(mood);
 };
-ACT.kSay = () => { if (K) Voice.say(K.t.say); };
+ACT.kSay = () => { if (K) Voice.say(K.t.say, 'nr'); };
 ACT.kShow = () => { if (K && !K.done) { K.flashTok++; kFlash(); } };
 ACT.kTap = el => {
   if (!K || K.done || el.classList.contains('on')) return;
   K.tapped++; el.classList.add('on'); el.insertAdjacentHTML('beforeend', `<b>${K.tapped}</b>`);
-  Voice.say(String(K.tapped));
+  Voice.say(String(K.tapped), 'zh');
 };
 ACT.kMove = el => {
   if (!K || K.done) return;
@@ -506,7 +481,7 @@ function kAnswer(v, el) {
   if (el) el.classList.add('off');
   if (K.tries < 2) {
     kBub(`Не совсем. Попробуй ещё! <div class="small muted" style="margin-top:4px">💡 ${t.hint || 'Посмотри ещё раз внимательно.'}</div>`, 'think');
-    Voice.say('Попробуй ещё раз! ' + (t.hint || ''));
+    Voice.say('Попробуй ещё раз! ' + (t.hint || ''), 'zh');
     return;
   }
   kResolve(false);
@@ -539,10 +514,13 @@ function kResolve(ok) {
   });
   document.querySelectorAll('.kit, .tenframe .cell, .kdone').forEach(b => { b.disabled = true; });
   if (!ok) kSolve();
-  const praise = R.pick(['Молодец!', 'Верно!', 'Умница!', 'Здорово!', 'Отлично!']);
+  /* Похвала голосом: со второй попытки, 3 и 5 подряд — всегда, обычный верный ответ — примерно 1 из 3 */
+  K.run = first ? K.run + 1 : 0;
+  const p = !ok ? null : Praise.say(!first ? 'second' : K.run === 5 ? 'streak5' : K.run === 3 ? 'streak3' : 'ok', 'kid');
+  const praise = p ? esc(p.text) : R.pick(['Молодец!', 'Верно!', 'Умница!', 'Здорово!', 'Отлично!']);
   if (ok) Sound.ok();
-  kBub(ok ? (first ? `${praise} +1 ${ART.acorn(18)}` : `${praise} Получилось!`) : `Смотри! ${esc(t.why)}`, ok ? 'cheer' : 'show');
-  Voice.say(ok ? praise : 'Смотри. ' + (t.whySay || t.why));
+  kBub(ok ? (first ? `${praise} +1 ${ART.acorn(18)}` : p ? praise : `${praise} Получилось!`) : `Смотри! ${esc(t.why)}`, ok ? 'cheer' : 'show');
+  if (!ok) Voice.say('Смотри. ' + (t.whySay || t.why), 'zh');
   const last = K.i + 1 >= K.queue.length;
   document.querySelector('.kright').insertAdjacentHTML('beforeend', `<button class="btn green block big knext" data-act="kNext">${last ? 'Готово 🏁' : 'Дальше ➜'}</button>`);
   setTimeout(() => { const b = document.querySelector('.knext'); if (b) b.scrollIntoView({ behavior: 'smooth', block: 'center' }); }, 60);
@@ -571,7 +549,7 @@ function kidFinish() {
     <p style="font-size:20px">Сразу верно: <b>${k.first}</b> из ${k.queue.length}</p>
     <p><span class="pill">+${k.acorns + 2} ${ART.acorn(20)}</span></p>
     <div class="stack"><button class="btn green block big" data-act="kAgain" data-id="${k.tid}">Ещё раз 🔁</button><button class="btn ghost block big" data-act="map">На полянку 🌳</button></div></div>`);
-  Voice.say(`Молодец${S.name ? ', ' + S.name : ''}! ${earn ? 'У тебя новая звёздочка!' : 'Сыграем ещё?'}`);
+  Praise.say(earn ? 'star' : 'level', 'kid');
 }
 
 /* ---------- Раздел для взрослых ---------- */
@@ -602,4 +580,4 @@ function showKidParent() {
       <button class="btn ghost block" style="margin-top:12px;color:var(--red)" data-act="reset">Сбросить прогресс игрока</button></div>
     <p class="small muted center" style="margin-top:14px">Ореховый патруль · Лесная полянка · счёт, сравнение, состав числа, фигуры, ориентирование, логика</p>`);
 }
-ACT.kVoice = () => { Voice.toggle(); showKidParent(); if (Voice.on()) Voice.say('Озвучка включена.'); };
+ACT.kVoice = () => { Voice.toggle(); showKidParent(); if (Voice.on()) Voice.say('Озвучка включена.', 'zh'); };

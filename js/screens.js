@@ -99,6 +99,7 @@ function showMap() {
     <h3 style="margin:4px 0 0">Карта леса</h3>
     <div class="forest" style="height:${H}px"><svg class="paths" viewBox="0 0 ${W} ${H}" preserveAspectRatio="none">${deco}
       <path d="${path}" stroke="#E2B47C" stroke-width="22" fill="none" stroke-linecap="round"/><path d="${path}" stroke="#F6D7A6" stroke-width="12" fill="none" stroke-linecap="round" stroke-dasharray="2 18"/></svg>${nodes}</div>`);
+  Praise.hello(); Voice.prefetch('five');
 }
 let resizeT; window.addEventListener('resize', () => { clearTimeout(resizeT); resizeT = setTimeout(() => { if (document.querySelector('.forest')) showMap(); }, 200); });
 ACT.daily = () => startDaily();
@@ -211,6 +212,7 @@ function showParent() {
       <button class="btn ghost block" style="margin-bottom:12px" data-act="who">👧 Сменить или добавить игрока</button>
       <label class="small muted" for="pn">Имя</label><div class="row"><input class="input" id="pn" maxlength="20" value="${esc(S.name)}"><button class="btn" data-act="saveName">OK</button></div>
       <button class="btn ghost block" style="margin-top:12px" data-act="sound">${S.sound ? '🔊 Звук включён' : '🔇 Звук выключен'}</button>
+      <button class="btn ghost block" style="margin-top:12px" data-act="voice5">${Voice.on() ? '🗣️ Голоса героев включены' : '🤐 Голоса героев выключены'}</button>
       <button class="btn ghost block" style="margin-top:12px" data-act="export">📤 Перенести прогресс на другое устройство</button>
       <button class="btn ghost block" style="margin-top:12px" data-act="import">📥 Загрузить прогресс</button>
       <button class="btn ghost block" style="margin-top:12px;color:var(--red)" data-act="reset">Сбросить весь прогресс</button></div>
@@ -242,6 +244,7 @@ ACT.codeGo = async () => {
 };
 ACT.saveName = () => { const v = document.getElementById('pn').value.trim(); if (v) { S.name = v.slice(0, 20); save(); toast('Имя сохранено'); } };
 ACT.sound = () => { S.sound = !S.sound; save(); showParent(); };
+ACT.voice5 = () => { Voice.toggle(); showParent(); };
 ACT.export = () => modal(`<h2>Перенос прогресса</h2><p class="muted small">Скопируйте этот код и вставьте его на другом устройстве через «Загрузить прогресс».</p>
   <textarea class="input" style="height:140px;font-size:12px" readonly onclick="this.select()">${exportCode()}</textarea>
   <button class="btn green block" style="margin-top:10px" data-act="copyCode">Скопировать</button><button class="btn ghost block" style="margin-top:10px" data-act="close">Закрыть</button>`);

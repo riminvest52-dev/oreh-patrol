@@ -35,7 +35,7 @@ function startReview() {
   begin({ mode: 'review', early, title: 'Корзинка ошибок', queue: R.shuffle(list).slice(0, 10).map(m => ({ gen: m.gen, d: m.d, mistakeId: m.id })) });
 }
 function begin(cfg) {
-  SES = Object.assign({ i: 0, ok: 0, score: 0, acorns: 0, wrongStreak: 0, cleanRun: 0, pend: null, cheapN: 0, results: [] }, cfg);
+  SES = Object.assign({ i: 0, ok: 0, score: 0, acorns: 0, wrongStreak: 0, cleanRun: 0, run: 0, pend: null, cheapN: 0, results: [] }, cfg);
   /* Повтор «Ростка» после 3★: орешки только за каждый второй чистый ответ */
   SES.cheap = SES.mode === 'level' && SES.level === 1 && starsOf(SES.topic, 1) === 3;
   nextTask();
@@ -198,8 +198,13 @@ function answered(ok, given) {
        <details${second ? ' open' : ''}><summary class="small muted">Как решать?</summary>${steps}</details></div>`
     : `<div class="feedback bad"><div class="fh">🤔 ${phrase(PH_BAD)}</div>${trap ? `<div class="trapline">🔎 ${nb(trap.msg)}</div>` : ''}<div>Правильный ответ: <b>${esc(answerText(t))}</b></div>${steps}</div>`;
   document.getElementById('fb').insertAdjacentHTML('beforeend', `<button class="btn ${ok ? 'green' : ''} block" style="margin-top:14px" data-act="next">${last ? 'Готово 🏁' : ok ? 'Дальше →' : 'Понятно, дальше →'}</button>`);
+  /* Похвала голосом (js/voice.js): со второй попытки, звёздочка, 3 и 5 подряд — всегда, обычный верный ответ — примерно 1 из 3 */
+  SES.run = first ? SES.run + 1 : 0;
+  const p = ok ? Praise.say(second ? 'second' : SES.star ? 'star' : SES.run === 5 ? 'streak5' : SES.run === 3 ? 'streak3' : 'ok', 'five') : Praise.say('bad', 'five');
+  const hero = p ? (p.who === 'mi' ? 'mindal' : 'funduk') : ok ? 'funduk' : 'mindal';
+  const line = p ? esc(p.text) : ok ? R.pick(['Ура! 🎉', 'Молодец!', 'Так держать!', 'Орешек наш! 🌰']) : R.pick(['Прочитай разбор — в следующий раз точно получится!', 'Я положу эту задачку в корзинку, повторим позже 🧺', 'Ошибаться — нормально. Главное — понять!']);
   const hl = document.getElementById('helper');
-  hl.innerHTML = `${ART.chip(ok ? 'funduk' : 'mindal', ok ? 'cheer' : 'show')}<div class="bubble">${ok ? R.pick(['Ура! 🎉', 'Молодец!', 'Так держать!', 'Орешек наш! 🌰']) : R.pick(['Прочитай разбор — в следующий раз точно получится!', 'Я положу эту задачку в корзинку, повторим позже 🧺', 'Ошибаться — нормально. Главное — понять!'])}</div>`;
+  hl.innerHTML = `${ART.chip(hero, ok ? 'cheer' : 'show')}<div class="bubble">${line}</div>`;
   setTimeout(() => { const fb = document.getElementById('fb'); if (fb) fb.scrollIntoView({ behavior: 'smooth', block: 'start' }); }, 60);
 }
 ACT.next = () => { SES.i++; nextTask(); };
@@ -220,6 +225,7 @@ function finish() {
       if (win) { const first = !S.medals[s.topic]; S.medals[s.topic] = true; S.stars[lvKey(s.topic, 4)] = 3; if (first) giveAcorns(15); }
       save();
       if (win) { Sound.win(); confetti(); }
+      if (win) setTimeout(() => Praise.say('medal', 'five'), 0);
       return showResult({
         mood: win ? 'cheer' : 'think', title: win ? `Испытание пройдено! 🏅` : 'Почти получилось!',
         text: win ? `${T.who} говорит спасибо! Ты получаешь медаль «${T.name}».` : `Нужно ${n - 1} верных из ${n} с первой попытки, а у тебя ${scTxt}. Попробуй ещё раз — ты сможешь!`,
@@ -231,7 +237,7 @@ function finish() {
     const prev = starsOf(s.topic, s.level);
     S.stars[lvKey(s.topic, s.level)] = Math.max(prev, stars);
     const bonus = Math.max(0, stars - prev) * 2; giveAcorns(bonus); save();
-    if (stars >= 2) { Sound.win(); if (stars === 3) confetti(); }
+    if (stars >= 2) { Sound.win(); if (stars === 3) confetti(); setTimeout(() => Praise.say('level', 'five'), 0); }
     const nextOpen = s.level < 4 && isOpen(s.topic, s.level + 1);
     const btns = [];
     if (stars >= 2 && nextOpen) btns.push([`Дальше: ${LEVELS[s.level].name} →`, 'nextLevel', 'green']);

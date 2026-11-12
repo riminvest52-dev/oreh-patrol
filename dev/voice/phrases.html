@@ -1,0 +1,34 @@
+<!doctype html>
+<html lang="ru"><head><meta charset="utf-8"><title>Фразы для озвучки</title></head>
+<body><p>Все фразы, которые игра может сказать голосом. Читает dev/voice/gen.py (headless Chrome --dump-dom).</p>
+<div id="app"></div><div id="modal" class="hidden"></div><div id="toast" class="hidden"></div>
+<script src="../../js/core.js"></script><script src="../../js/t-fund.js"></script><script src="../../js/t-lang.js"></script><script src="../../js/t-models.js"></script>
+<script src="../../js/t-logic.js"></script><script src="../../js/t-div.js"></script><script src="../../js/topics.js"></script><script src="../../js/art.js"></script>
+<script src="../../js/state.js"></script><script src="../../js/cloud.js"></script><script src="../../js/ui.js"></script><script src="../../js/voice-data.js"></script><script src="../../js/voice.js"></script>
+<script src="../../js/play.js"></script><script src="../../js/screens.js"></script><script src="../../js/kid.js"></script>
+<pre id="out"></pre>
+<script>
+const RUNS = +(new URLSearchParams(location.search).get('runs') || 12000);
+const M = new Map(), errs = [];
+function add(who, text, topic) {
+  for (const s of voiceParts(text)) {
+    const h = voiceHash(s), k = who + '/' + h;
+    let e = M.get(k);
+    if (!e) { e = { who, h, text: s, topics: new Set() }; M.set(k, e); }
+    else if (e.text !== s) errs.push('коллизия хэша: ' + e.text + ' / ' + s);
+    e.topics.add(topic);
+  }
+}
+/* Лиза: задание — Рассказчик, подсказка и разбор — Жёлудик */
+for (const T of KID_TOPICS) for (const g of T.gens) for (let d = 1; d <= 3; d++) for (let i = 0; i < RUNS; i++) {
+  const t = makeKid(g, d);
+  add('nr', t.say, T.id);
+  add('zh', 'Попробуй ещё раз! ' + (t.hint || ''), T.id);
+  add('zh', 'Смотри. ' + (t.whySay || t.why), T.id);
+}
+for (let n = 1; n <= 20; n++) add('zh', String(n), 'k_cnt');
+add('zh', 'Озвучка включена.', 'kid');
+for (const [world, cats] of Object.entries(PRAISE)) for (const list of Object.values(cats)) for (const [who, text] of list) add(who, text, world);
+const items = [...M.values()].map(e => ({ who: e.who, h: e.h, text: e.text, topics: [...e.topics] }));
+document.getElementById('out').textContent = JSON.stringify({ runs: RUNS, errs, items });
+</script></body></html>

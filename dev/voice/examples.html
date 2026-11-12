@@ -1,0 +1,47 @@
+<!doctype html>
+<html lang="ru"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Голоса в игре — примеры</title>
+<style>
+  body { margin: 0; padding: 16px; background: #FFF3DE; color: #4A2814; font: 16px/1.4 system-ui, -apple-system, "Segoe UI", sans-serif; }
+  h1 { font-size: 22px; margin: 0 0 6px; }
+  .intro { margin: 0 0 18px; max-width: 720px; }
+  h2 { font-size: 19px; margin: 22px 0 8px; }
+  h2 span { font-size: 14px; font-weight: 500; opacity: .7; }
+  .wrap { overflow-x: auto; }
+  table { border-collapse: collapse; background: #fff; border-radius: 14px; overflow: hidden; min-width: 520px; }
+  th, td { padding: 8px; border-bottom: 1px solid #F1E2C8; text-align: center; vertical-align: middle; }
+  th { background: #F7DFB2; font-size: 20px; }
+  th small { display: block; font-size: 11px; font-weight: 500; line-height: 1.25; margin-top: 2px; }
+  .ph { text-align: left; font-size: 15px; min-width: 180px; }
+  th.ph { font-size: 14px; }
+  button { width: 52px; height: 44px; border: 0; border-radius: 12px; background: #5E9E4A; color: #fff; font-size: 20px; cursor: pointer;
+    box-shadow: 0 3px 0 #3F7432; }
+  button.on { background: #F3A23F; box-shadow: 0 3px 0 #B9701F; }
+  th.pick, td.pick { background: #E3F2D6; }
+  h2 b { font-size: 13px; padding: 2px 8px; border-radius: 8px; vertical-align: middle; }
+  h2 b.ok { background: #5E9E4A; color: #fff; }  h2 b.new { background: #F3A23F; color: #fff; }
+  .note { margin-top: 22px; font-size: 14px; opacity: .8; max-width: 720px; }
+</style></head><body>
+<h1>🌰 Голоса в игре — примеры</h1>
+<p class="intro">Так звучит игра теперь. Фраза собирается из записанных предложений — как в самой игре.</p>
+<div class="wrap"><table><thead><tr><th class="ph">Что</th><th class="ph">Фраза</th><th></th></tr></thead><tbody>
+<tr><td><b>Задание Лизе</b><br><small>Рассказчик</small></td><td>Было 7 орешков. 2 убрали — они зачёркнуты. Сколько осталось?</td><td><button data-src="../voice/nr-3680f3/iaimoo.mp3 ../voice/nr-3680f3/10fgf6b.mp3 ../voice/nr-3680f3/1kmoogf.mp3">▶</button></td></tr>
+<tr><td><b>Подсказка после ошибки</b><br><small>Жёлудик</small></td><td>Попробуй ещё раз! Острый носик знака всегда смотрит на меньшее число.</td><td><button data-src="../voice/zh-00f5ed/1c48xk1.mp3 ../voice/zh-00f5ed/1rh83f4.mp3">▶</button></td></tr>
+<tr><td><b>Разбор после ошибки</b><br><small>Жёлудик</small></td><td>Смотри. Было 9, убрали 1, осталось 8.</td><td><button data-src="../voice/zh-00f5ed/wdtndm.mp3 ../voice/zh-00f5ed/16iw4bi.mp3">▶</button></td></tr>
+<tr><td><b>Похвала Лизе</b><br><small>Жёлудик</small></td><td>Попробовала ещё раз — и вышло! Здорово, Лиза!</td><td><button data-src="../voice/zh-00f5ed/vvd6l0.mp3 ../voice/zh-00f5ed/4i70dd.mp3">▶</button></td></tr>
+<tr><td><b>Похвала Насте</b><br><small>Фундук</small></td><td>Три подряд! Настя, ты в ударе.</td><td><button data-src="../voice/fu-908c38/13xvod8.mp3 ../voice/fu-908c38/e2zu8z.mp3">▶</button></td></tr>
+<tr><td><b>Утешение Насте</b><br><small>Миндалинка</small></td><td>Ошибаться — нормально. Главное — понять!</td><td><button data-src="../voice/mi-92b4d9/6hcpfn.mp3 ../voice/mi-92b4d9/18cmwk3.mp3">▶</button></td></tr>
+<tr><td><b>Медаль Испытания</b><br><small>Дедушка Ёж</small></td><td>Медаль твоя, Настя! Это было настоящее испытание.</td><td><button data-src="../voice/ez-89f3c3/mmtxye.mp3 ../voice/ez-89f3c3/w308xo.mp3">▶</button></td></tr>
+</tbody></table></div>
+<script>
+  var a = new Audio(), cur = null, list = [], i = 0;
+  function stop() { if (cur) cur.classList.remove('on'); cur = null; a.pause(); }
+  a.onended = function () { if (i < list.length) { a.src = list[i++]; a.play(); } else stop(); };
+  document.addEventListener('click', function (e) {
+    var b = e.target.closest('button[data-src]'); if (!b) return;
+    var same = cur === b; stop(); if (same) return;
+    cur = b; b.classList.add('on'); list = b.dataset.src.split(' '); i = 1; a.src = list[0]; a.play();
+  });
+</script>
+</body></html>

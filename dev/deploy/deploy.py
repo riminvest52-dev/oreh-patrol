@@ -11,6 +11,7 @@ import os
 import shutil
 import subprocess
 import sys
+import urllib.request
 
 BUCKET = 'oreh-patrol'
 SITE = 'https://oreh-patrol.website.yandexcloud.net/'
@@ -32,7 +33,8 @@ TYPES = {
 }
 NO_CACHE = {'index.html', 'sw.js'}          # браузер всегда сверяется с сервером
 LAST = ['sw.js', 'index.html']              # в самом конце: новая версия «включается», когда все файлы уже на месте
-SKIP_DIRS = {'dev', '.git', '.github', '.claude', 'node_modules', '_old'}
+SKIP_DIRS = {'dev', '.git', '.github', '.claude', 'node_modules', '_old', 'voice'}   # voice/ — отдельно, см. upload_voice
+VOICE_CACHE = 'public, max-age=31536000, immutable'   # имя папки голоса меняется при любой перезаписи — файлы вечные
 SKIP_FILES = {'README.md', '.gitignore', '.gitattributes', '.nojekyll'}
 
 
@@ -64,11 +66,47 @@ def collect(root):
     return out
 
 
+def upload_voice(root, yc, dry):
+    """Голоса: тысячи файлов, поэтому папка целиком одной командой и только если её ещё нет в бакете.
+    Готовность папки отмечает файл done.json, он выкладывается последним."""
+    base = os.path.join(root, 'voice')
+    if not os.path.isdir(base):
+        return
+    for d in sorted(os.listdir(base)):
+        n = len(os.listdir(os.path.join(base, d)))
+        try:
+            urllib.request.urlopen(f'{SITE}voice/{d}/done.json', timeout=15).read()
+            print(f'  voice/{d}: уже в бакете ({n} файлов)')
+            continue
+        except Exception:
+            pass
+        print(f'  voice/{d}: выкладываю {n} файлов')
+        if dry:
+            continue
+        for ext, ctype in (('ogg', 'audio/ogg'), ('mp3', 'audio/mpeg')):
+            other = 'mp3' if ext == 'ogg' else 'ogg'
+            cmd = [yc, 'storage', 's3', 'cp', os.path.join(base, d), f's3://{BUCKET}/voice/{d}/', '--recursive', '--exclude', f'*.{other}',
+                   '--content-type', ctype, '--cache-control', VOICE_CACHE, '--no-guess-mime-type', '--only-show-errors']
+            r = subprocess.run(cmd, capture_output=True, text=True, encoding='utf-8', errors='replace')
+            if r.returncode:
+                sys.exit(f'Ошибка при выкладке voice/{d}: {r.stderr or r.stdout}')
+        done = os.path.join(root, 'dev', 'deploy', '.done.json')
+        with open(done, 'w') as f:
+            f.write('{"files": %d}' % n)
+        r = subprocess.run([yc, 'storage', 's3', 'cp', done, f's3://{BUCKET}/voice/{d}/done.json', '--content-type', 'application/json',
+                            '--cache-control', 'no-cache', '--no-guess-mime-type', '--only-show-errors'], capture_output=True, text=True)
+        os.remove(done)
+        if r.returncode:
+            sys.exit('Ошибка при выкладке done.json: ' + r.stderr)
+
+
 def main():
     root = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..'))
     dry = '--dry-run' in sys.argv
     yc = None if dry else find_yc()
     files = collect(root)
+    print(f'Бакет {BUCKET}: голоса')
+    upload_voice(root, yc, dry)
     print(f'Бакет {BUCKET}: файлов {len(files)}{" (проверка, без выкладки)" if dry else ""}')
     for key, path, ctype in files:
         cache = 'no-cache' if key in NO_CACHE else 'max-age=3600'

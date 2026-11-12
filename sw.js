@@ -2,21 +2,25 @@
    - Файлы игры: сначала из кэша (мгновенно), свежая копия скачивается в фоне и пригодится при следующем запуске.
    - index.html: из сети, но ждём не больше 3 секунд, иначе — из кэша.
    При обновлении игры поменяйте VERSION — телефоны скачают все файлы заново одним пакетом. */
-const VERSION = 'oreh-v3.3';
+const VERSION = 'oreh-v3.4';
 const FILES = [
   './', './index.html', './manifest.webmanifest', './css/style.css',
   './js/core.js', './js/t-fund.js', './js/t-lang.js', './js/t-models.js', './js/t-logic.js', './js/t-div.js',
-  './js/topics.js', './js/art.js', './js/state.js', './js/cloud.js', './js/ui.js', './js/play.js', './js/screens.js', './js/kid.js',
+  './js/topics.js', './js/art.js', './js/state.js', './js/cloud.js', './js/ui.js', './js/voice-data.js', './js/voice.js', './js/play.js', './js/screens.js', './js/kid.js',
   './icons/icon-180.png', './icons/icon-192.png', './icons/icon-512.png'
 ];
 const PAGE_TIMEOUT = 3000;
+/* Голоса героев — отдельный кэш, он переживает обновления игры: файлы докачиваются по мере открытия тем.
+   Папка голоса меняет имя при любой перезаписи, так что файл по одному адресу никогда не меняется. */
+const VOICE_CACHE = 'oreh-voice';
 
 self.addEventListener('install', e => {
   /* cache: 'reload' — мимо HTTP-кэша браузера, чтобы не положить в новую версию старые файлы */
   e.waitUntil(caches.open(VERSION).then(c => c.addAll(FILES.map(f => new Request(f, { cache: 'reload' })))).then(() => self.skipWaiting()));
 });
 self.addEventListener('activate', e => {
-  e.waitUntil(caches.keys().then(keys => Promise.all(keys.filter(k => k !== VERSION).map(k => caches.delete(k)))).then(() => self.clients.claim()));
+  e.waitUntil(caches.keys().then(keys => Promise.all(keys.filter(k => k !== VERSION && k !== VOICE_CACHE).map(k => caches.delete(k))))
+    .then(pruneVoice).then(() => self.clients.claim()));
 });
 
 const fresh = req => fetch(req, { cache: 'no-cache' });
@@ -46,6 +50,25 @@ function page(e) {
   });
 }
 
+/* Убираем из кэша записи старых папок голоса (их больше нет в js/voice-data.js) */
+function pruneVoice() {
+  return caches.match('./js/voice-data.js').then(r => r ? r.text() : '').then(js => {
+    const m = js.match(/"dirs":\{([^}]*)\}/); if (!m) return;
+    const keep = new Set((m[1].match(/"[a-z]+-[0-9a-f]+"/g) || []).map(s => s.slice(1, -1)));
+    return caches.open(VOICE_CACHE).then(c => c.keys().then(reqs => Promise.all(reqs.map(q => {
+      const d = (new URL(q.url).pathname.match(/\/voice\/([^/]+)\//) || [])[1];
+      return d && !keep.has(d) ? c.delete(q) : null;
+    }))));
+  }).catch(() => null);
+}
+function voice(e) {
+  const req = e.request;
+  return caches.open(VOICE_CACHE).then(c => c.match(req).then(hit => hit || fetch(req).then(r => {
+    if (r && r.ok && r.type === 'basic') c.put(req, r.clone()).catch(() => null);
+    return r;
+  })));
+}
+
 function asset(e) {
   const req = e.request;
   const net = fresh(req).then(r => store(req, r));
@@ -58,6 +81,7 @@ self.addEventListener('fetch', e => {
   if (req.method !== 'GET') return;
   const url = new URL(req.url);
   if (url.origin !== location.origin) return;
+  if (/\/voice\/[^/]+\/[^/]+\.(ogg|mp3)$/.test(url.pathname)) return e.respondWith(voice(e));
   const isPage = req.mode === 'navigate' || url.pathname.endsWith('/') || url.pathname.endsWith('/index.html');
   e.respondWith(isPage ? page(e) : asset(e));
 });
