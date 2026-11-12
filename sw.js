@@ -87,6 +87,7 @@ self.addEventListener('fetch', e => {
   if (req.method !== 'GET') return;
   const url = new URL(req.url);
   if (url.origin !== location.origin) return;
+  if (url.pathname.startsWith('/preview/')) return;   /* пробная версия нового раздела — всегда из сети, мимо кэша игры */
   if (/\/voice\/[^/]+\/[^/]+\.(ogg|mp3)$/.test(url.pathname)) return e.respondWith(voice(e));
   const isPage = req.mode === 'navigate' || url.pathname.endsWith('/') || url.pathname.endsWith('/index.html');
   e.respondWith(isPage ? page(e) : asset(e));
