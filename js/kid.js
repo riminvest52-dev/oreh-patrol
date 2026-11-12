@@ -588,6 +588,7 @@ function showKidParent() {
       <div><div style="font-size:26px;font-weight:800">${acc}%</div><div class="small muted">сразу верно</div></div>
       <div><div style="font-size:26px;font-weight:800">${stars}</div><div class="small muted">звёзд из 27</div></div>
       <div><div style="font-size:26px;font-weight:800">${S.streak.best}</div><div class="small muted">лучшая серия</div></div></div></div>
+    ${movedCard()}
     <h3 style="margin-top:18px">Темы</h3><div class="card">${rows}
       <p class="small muted">В игре 6 заданий. Если 5 из 6 решены с первого раза, тема получает звёздочку, и задания становятся сложнее: ступень 1 — числа до 5, ступень 2 — до 10, ступень 3 — до 20. После двух ошибок подряд задания на время становятся проще.</p></div>
     ${cloudCard()}
@@ -597,6 +598,7 @@ function showKidParent() {
       <button class="btn ghost block" style="margin-top:12px" data-act="kVoice">${Voice.on() ? '🗣️ Озвучка заданий включена' : '🤐 Озвучка заданий выключена'}</button>
       ${Voice.has ? '' : '<p class="small muted">Этот браузер не умеет читать вслух. Попробуйте Chrome.</p>'}
       <button class="btn ghost block" style="margin-top:12px" data-act="sound">${S.sound ? '🔊 Звуки включены' : '🔇 Звуки выключены'}</button>
+      <button class="btn ghost block" style="margin-top:12px" data-act="import">📥 Загрузить прогресс</button>
       <button class="btn ghost block" style="margin-top:12px;color:var(--red)" data-act="reset">Сбросить прогресс игрока</button></div>
     <p class="small muted center" style="margin-top:14px">Ореховый патруль · Лесная полянка · счёт, сравнение, состав числа, фигуры, ориентирование, логика</p>`);
 }

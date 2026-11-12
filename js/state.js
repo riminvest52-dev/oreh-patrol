@@ -168,8 +168,36 @@ const STICKERS = [
 ];
 
 function exportCode() { try { return btoa(unescape(encodeURIComponent(JSON.stringify(S)))); } catch (e) { return ''; } }
+/* Переезд на новый адрес: все игроки устройства одним кодом. У нового адреса своё хранилище, поэтому прогресс переносим явно */
+const toCode = o => btoa(unescape(encodeURIComponent(JSON.stringify(o))));
+const fromCode = c => JSON.parse(decodeURIComponent(escape(atob(c.trim().replace(/\s+/g, '')))));
+function exportMove() {
+  if (F.current) writeJson(profKey(F.current), S);
+  return toCode({ t: 'move', v: 1, cur: F.profiles.findIndex(p => p.id === F.current),
+    profiles: F.profiles.map(p => ({ world: p.world, hero: p.hero, created: p.created, st: readProfile(p.id) || fresh() })) });
+}
+/* Игрок с тем же миром и именем объединяется, остальные добавляются. Возвращает число перенесённых игроков */
+function importMove(obj) {
+  if (!obj || obj.t !== 'move' || !Array.isArray(obj.profiles)) throw new Error('bad');
+  let cur = null, n = 0;
+  obj.profiles.forEach((m, i) => {
+    if (!m || !m.st || typeof m.st !== 'object' || !WORLDS[m.world]) return;
+    const same = F.profiles.find(p => p.world === m.world && playerName(p) === (m.st.name || ''));
+    let id;
+    if (same) { id = same.id; const mine = readProfile(id) || fresh(); writeJson(profKey(id), mergeStates(mine, Object.assign({}, m.st, { _epoch: mine._epoch }))); }
+    else { id = newId('p'); F.profiles.push({ id, world: m.world, hero: m.hero || (m.world === 'kid' ? 'zhel' : 'mindal'), created: m.created || today() }); writeJson(profKey(id), normState(m.st)); }
+    if (i === obj.cur) cur = id;
+    n++;
+  });
+  if (!n) throw new Error('empty');
+  F.current = cur || F.current || F.profiles[0].id; saveFamily();
+  S = readProfile(F.current) || fresh();
+  if (typeof Cloud !== 'undefined') Cloud.soon();
+  return n;
+}
 function importCode(code) {
-  const obj = JSON.parse(decodeURIComponent(escape(atob(code.trim()))));
+  const obj = fromCode(code);
+  if (obj && obj.t === 'move') return importMove(obj);
   if (!obj || typeof obj !== 'object' || !('acorns' in obj)) throw new Error('bad');
   S = mergeStates(S, Object.assign({}, obj, { _epoch: S._epoch })); save();
 }

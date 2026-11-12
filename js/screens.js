@@ -1,11 +1,32 @@
 /* Экраны: знакомство, карта леса, локация, результаты, родителям, альбом */
 'use strict';
 
+/* ---------- Переезд с GitHub Pages ---------- */
+const NEW_HOME = 'https://oreh-patrol.website.yandexcloud.net/';
+const OLD_HOME = /(^|\.)github\.io$/.test(location.hostname);
+const movedCard = () => OLD_HOME ? `<div class="moved"><div class="mvh">🚚 Игра переехала!</div>
+  <p>Теперь «Ореховый патруль» живёт по новому адресу, он открывается быстрее и без перебоев. Нажми кнопку: игра откроется там вместе со всеми звёздами и орешками.</p>
+  <button class="btn green block" data-act="moveGo">Открыть новую игру →</button>
+  <button class="btn ghost block" style="margin-top:8px" data-act="moveCode">Показать код переноса</button>
+  <p class="small muted" style="margin-top:8px">Новый адрес: ${NEW_HOME.replace('https://', '')}</p></div>` : '';
+ACT.moveGo = () => { location.href = NEW_HOME + '#move=' + exportMove(); };
+ACT.moveCode = () => modal(`<h2>Код переноса</h2><p class="muted small">Если кнопка не сработала: откройте ${NEW_HOME.replace('https://', '')}, зайдите в раздел для взрослых → «Загрузить прогресс» и вставьте этот код. Переедут все игроки.</p>
+  <textarea class="input" style="height:140px;font-size:12px" readonly onclick="this.select()">${exportMove()}</textarea>
+  <button class="btn green block" style="margin-top:10px" data-act="copyCode">Скопировать</button><button class="btn ghost block" style="margin-top:10px" data-act="close">Закрыть</button>`);
+/* На новом адресе: прогресс приходит в части ссылки после #, на сервер она не отправляется */
+function takeMove() {
+  const m = /^#move=(.+)$/.exec(location.hash);
+  if (!m) return false;
+  try { history.replaceState(null, '', location.pathname + location.search); } catch (e) { location.hash = ''; }
+  try { const n = importMove(fromCode(decodeURIComponent(m[1]))); setTimeout(() => toast(`Прогресс перенесён! Игроков: ${n} 🎉`, 3000), 300); return true; }
+  catch (e) { setTimeout(() => toast('Не получилось перенести прогресс 😕 Попробуйте код переноса.', 3500), 300); return false; }
+}
+
 /* ---------- Кто играет ---------- */
 function showWho() {
   SES = null;
   const tiles = F.profiles.map(p => `<button class="who-tile" data-act="pickWho" data-id="${p.id}">${ART.chip(p.hero, 'happy', '', true)}<b>${esc(playerName(p) || 'Новый игрок')}</b><span class="small muted">${(WORLDS[p.world] || {}).title || ''}</span></button>`).join('');
-  mount(`<h1 class="center" style="margin-top:14px">Кто играет?</h1>
+  mount(`${movedCard()}<h1 class="center" style="margin-top:14px">Кто играет?</h1>
     <div class="who">${tiles}<button class="who-tile" data-act="addWho"><span class="plus">＋</span><b>Добавить</b><span class="small muted">нового игрока</span></button></div>
     ${CLOUD_URL && !F.code ? '<button class="btn ghost block" data-act="enterCode">У нас уже есть код семьи</button>' : ''}`);
 }
@@ -183,7 +204,7 @@ function showParent() {
       <div><div style="font-size:26px;font-weight:800">${S.mistakes.length}</div><div class="small muted">в корзинке</div></div></div>
       <div class="days">${days.map(d => { const n = (S.history[d] || {}).n || 0; return `<div class="${n ? '' : 'zero'}" style="height:${Math.max(4, n / maxN * 100)}%" title="${d}: ${n}"></div>`; }).join('')}</div>
       <div class="small muted center" style="margin-top:4px">Задач в день за последние 2 недели</div></div>
-    <h3 style="margin-top:18px">Темы</h3><div class="card">${topics}<p class="small muted">Тема оценивается по самому слабому навыку внутри неё. «Уверенно» — 80%+ по последним ответам с учётом сложности, «почти» — 55–80%, «подтянуть» — ниже. Ответ с подсказкой освоенность не повышает, со второй попытки — считается ошибкой.</p></div>
+    ${movedCard()}<h3 style="margin-top:18px">Темы</h3><div class="card">${topics}<p class="small muted">Тема оценивается по самому слабому навыку внутри неё. «Уверенно» — 80%+ по последним ответам с учётом сложности, «почти» — 55–80%, «подтянуть» — ниже. Ответ с подсказкой освоенность не повышает, со второй попытки — считается ошибкой.</p></div>
     <h3 style="margin-top:18px">Последние ошибки</h3><div class="card">${recentBad}</div>
     ${cloudCard()}
     <h3 style="margin-top:18px">Настройки</h3><div class="card">
@@ -227,15 +248,18 @@ ACT.export = () => modal(`<h2>Перенос прогресса</h2><p class="mu
 ACT.copyCode = () => { const ta = document.querySelector('#modal textarea'); ta.select(); try { navigator.clipboard.writeText(ta.value).then(() => toast('Скопировано!'), () => document.execCommand('copy')); } catch (e) { document.execCommand('copy'); toast('Скопировано!'); } };
 ACT.import = () => modal(`<h2>Загрузить прогресс</h2><p class="muted small">Вставьте код с другого устройства. Прогресс объединится с текущим.</p>
   <textarea class="input" id="impc" style="height:140px;font-size:12px"></textarea><button class="btn green block" style="margin-top:10px" data-act="importGo">Загрузить</button><button class="btn ghost block" style="margin-top:10px" data-act="close">Отмена</button>`);
-ACT.importGo = () => { try { importCode(document.getElementById('impc').value); closeModal(); toast('Прогресс загружен!'); showParent(); } catch (e) { toast('Код не подошёл 😕'); } };
+ACT.importGo = () => { try { const n = importCode(document.getElementById('impc').value); closeModal(); toast(n ? `Прогресс перенесён! Игроков: ${n}` : 'Прогресс загружен!'); if (n) boot(); else showParent(); } catch (e) { toast('Код не подошёл 😕'); } };
 ACT.reset = () => modal(`<h2>Сбросить весь прогресс?</h2><p class="muted">Звёзды, орешки, наклейки и статистика игрока ${esc(S.name)} удалятся ${CLOUD_URL ? 'на всех устройствах семьи' : 'с этого устройства'}. Отменить нельзя.</p>
   <div class="stack"><button class="btn block" style="background:var(--red);box-shadow:0 5px 0 var(--red-d)" data-act="resetGo">Да, сбросить</button><button class="btn ghost block" data-act="close">Отмена</button></div>`);
 ACT.resetGo = () => { resetAll(); closeModal(); showMap(); };
 
 /* ---------- Старт ---------- */
 function boot() {
+  const moved = takeMove();
+  if (OLD_HOME && F.profiles.length) return showWho();   /* на старом адресе сразу видно «Игра переехала» */
+  if (moved && F.current) { useProfile(F.current); return enterWorld(); }
   if (F.profiles.length === 1) { useProfile(F.profiles[0].id); enterWorld(); }
   else showWho();
 }
-boot();
-Cloud.start();
+/* boot() и Cloud.start() вызывает index.html, когда загружены ВСЕ скрипты: мир Лизы (kid.js) подключается последним.
+   Раньше boot() стоял здесь, и устройство, где единственный игрок — Лиза, получало белый экран. */
