@@ -13,6 +13,7 @@ function startLevel(topicId, n) {
 function startDiag() {
   const queue = [];
   for (const T of TOPICS) {
+    if (T.noDiag) continue;
     if (T.id === 'fund') { queue.push({ gen: 'f_div0', d: 2 }, { gen: 'f_units', d: 2 }); continue; }
     const [a, b] = R.shuffle(T.gens);
     queue.push({ gen: a, d: 1 }, { gen: b || a, d: 2 });
@@ -65,8 +66,10 @@ function answerUI(t) {
     <div class="keypad">${[1, 2, 3, 4, 5, 6, 7, 8, 9].map(k => `<button class="key" data-act="key" data-k="${k}">${k}</button>`).join('')}
     <button class="key del" data-act="key" data-k="del">⌫</button><button class="key" data-act="key" data-k="0">0</button>
     <button class="key" style="background:var(--green);color:#fff;border-color:var(--green-d);box-shadow:0 4px 0 var(--green-d)" data-act="check">✓</button></div>`;
+  if (t.type === 'build') return buildUI(t);
+  if (t.optHtml) return `<div class="opts two pics">${t.options.map((o, i) => `<button class="opt pic" data-act="pick" data-i="${i}" aria-label="Вариант ${o}">${t.optHtml[i]}</button>`).join('')}</div>`;
   if (t.type === 'choice') {
-    const two = t.options.length === 2 || (t.options.length === 3 && t.options.every(o => o.length < 12)) ? (t.options.length === 2 ? ' two' : '') : '';
+    const two = t.options.length === 2 || t.cols2 || (t.options.length === 3 && t.options.every(o => o.length < 12)) ? (t.options.length === 2 || t.cols2 ? ' two' : '') : '';
     return `<div class="opts${two}">${t.options.map((o, i) => `<button class="opt${t.mono ? ' mono' : ''}" data-act="pick" data-i="${i}">${o}</button>`).join('')}</div>`;
   }
   return `<div class="chips${t.wide ? ' wide' : ''}">${t.items.map((o, i) => `<button class="chipb" data-act="tog" data-i="${i}">${o}</button>`).join('')}</div>
@@ -138,6 +141,14 @@ ACT.check = () => {
     document.querySelector('.keypad').classList.add('hidden');
     return answered(ok, fmt(given));
   }
+  if (t.type === 'build') {   /* «Построй по трём видам» (js/t-vol.js) */
+    const B = SES.bh, ok = t.check(B), txt = buildText(B);
+    if (!B.flat().some(Boolean)) { toast('Сначала поставь кубики 🙂'); return; }
+    if (!ok && SES.tries === 0 && canRetry(t)) return retry(txt);
+    document.querySelectorAll('.vbc').forEach(b => { b.disabled = true; });
+    document.getElementById('vbcheck').classList.add('hidden');
+    return answered(ok, txt);
+  }
   const chosen = [...SES.sel].map(i => t.items[i]);
   const ok = chosen.length === t.answer.length && chosen.every(c => t.answer.includes(c));
   if (!ok && SES.tries === 0 && canRetry(t)) return retry(chosen.join('; ') || '—');
@@ -189,13 +200,15 @@ function answered(ok, given) {
   if (ok) Sound.ok(); else Sound.bad();
   SES.results.push({ ok: first, topic: t.topic, gen: t.gen });
   const last = SES.i + 1 >= SES.queue.length;
-  const steps = `<ol>${t.explain.map(s => `<li>${nb(s)}</li>`).join('')}</ol>`;
+  /* Шаг «запиши как в тетради» и картинка после ответа (складывание развёртки) — js/t-vol.js */
+  const steps = `<ol>${t.explain.map(s => `<li>${nb(s)}</li>`).join('')}</ol>`
+    + (t.note ? `<div class="tetrad"><div class="small"><b>📓 Запиши в тетрадь:</b></div><div class="tline">${t.note}</div></div>` : '') + (t.after || '');
   const trap = ok ? null : (findTrap(t, given) || SES.firstTrap);
   const okHead = second ? '👍 Получилось со второй попытки!' : `✅ ${phrase(PH_OK)} ${ac ? `+${ac} ${ART.acorn(20)}` : ''}`;
   const okNote = second ? 'В следующий раз постарайся с первой — тогда будет орешек.' : SES.hint ? 'С подсказкой ответ идёт в счёт звёзд половинкой.' : (credit === 1 && !ac && SES.cheap ? 'Этот уровень уже пройден на 3★ — здесь орешек за каждый второй ответ.' : '');
   document.getElementById('fb').innerHTML = ok
     ? `<div class="feedback ok"><div class="fh">${okHead}</div>${okNote ? `<div class="small muted">${okNote}</div>` : ''}
-       <details${second ? ' open' : ''}><summary class="small muted">Как решать?</summary>${steps}</details></div>`
+       <details${second || t.after || t.note ? ' open' : ''}><summary class="small muted">Как решать?</summary>${steps}</details></div>`
     : `<div class="feedback bad"><div class="fh">🤔 ${phrase(PH_BAD)}</div>${trap ? `<div class="trapline">🔎 ${nb(trap.msg)}</div>` : ''}<div>Правильный ответ: <b>${esc(answerText(t))}</b></div>${steps}</div>`;
   document.getElementById('fb').insertAdjacentHTML('beforeend', `<button class="btn ${ok ? 'green' : ''} block" style="margin-top:14px" data-act="next">${last ? 'Готово 🏁' : ok ? 'Дальше →' : 'Понятно, дальше →'}</button>`);
   /* Похвала голосом (js/voice.js): со второй попытки, звёздочка, 3 и 5 подряд — всегда, обычный верный ответ — примерно 1 из 3 */
@@ -252,9 +265,9 @@ function finish() {
   }
   if (s.mode === 'diag') {
     const scores = {};
-    TOPICS.forEach(T => { scores[T.id] = 0; });
+    TOPICS.forEach(T => { if (!T.noDiag) scores[T.id] = 0; });
     s.results.forEach(r => { if (r.ok) scores[r.topic]++; });
-    TOPICS.forEach(T => { const sc = scores[T.id]; S.mastery[T.id] = { m: [0.3, 0.6, 0.85][sc], n: 2, ok: sc, ts: Date.now() }; });
+    TOPICS.forEach(T => { if (T.noDiag) return; const sc = scores[T.id]; S.mastery[T.id] = { m: [0.3, 0.6, 0.85][sc], n: 2, ok: sc, ts: Date.now() }; });
     S.diag = { date: today(), scores }; giveAcorns(5); save(); Sound.win();
     return showDiagResult(scores, ok, n);
   }

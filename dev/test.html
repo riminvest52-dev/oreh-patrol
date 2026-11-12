@@ -4,6 +4,7 @@
 <body><h1>Тест генераторов</h1><div id="out"></div>
 <script src="../js/core.js"></script><script src="../js/t-fund.js"></script><script src="../js/t-lang.js"></script>
 <script src="../js/t-models.js"></script><script src="../js/t-logic.js"></script><script src="../js/t-div.js"></script><script src="../js/topics.js"></script>
+<script>const ACT = {}; const S = {};</script><script src="../js/t-vol.js"></script>
 <script>
 const strip = s => String(s).replace(/<[^>]+>/g, '');
 function check(t) {
@@ -24,7 +25,11 @@ function check(t) {
     if (t.answer.length === t.items.length) errs.push('all items correct');
     if (new Set(t.items).size !== t.items.length) errs.push('dup items');
     if (!t.answer.every(a => t.items.includes(a))) errs.push('answer not subset');
+  } else if (t.type === 'build') {
+    if (!t.check(t.sol)) errs.push('build: own solution rejected');
+    if (t.check(t.sol.map(r => r.map(() => 0)))) errs.push('build: empty accepted');
   } else errs.push('bad type ' + t.type);
+  if (t.optHtml && (t.optHtml.length !== t.options.length || new Set(t.optHtml).size !== t.optHtml.length)) errs.push('optHtml mismatch/dup');
   for (const x of t.traps || []) {
     if (String(x.v) === String(t.answer) || (t.type === 'num' && +x.v === t.answer)) errs.push('trap equals answer: ' + x.v);
     if (!x.msg || /undefined|NaN|null/.test(x.msg)) errs.push('bad trap msg: ' + x.msg);
@@ -72,7 +77,14 @@ for (let d = 1; d <= 3; d++) for (let i = 0; i < 2000; i++) {
   const sg = lines.map(sig);
   if (new Set(sg).size !== sg.length) NEAR.push(`d${d}: ` + lines.join(' | '));
 }
-window.TEST = { total, fails, summary, share5050, share, near: NEAR.length, nearEx: NEAR.slice(0, 5), plural: PLURAL.slice(0, 20), pluralN: PLURAL.length, trapMiss: TRAPMISS };
+/* Объёмная мастерская: развёртки и грани */
+const VOLX = [];
+if (HEXO.all.length !== 35 || HEXO.ok.length !== 11) VOLX.push('hexo ' + HEXO.all.length + '/' + HEXO.ok.length);
+for (const cs of HEXO.all) for (const T of SYM8) if (!!foldNet(polyNorm(cs.map(T))) !== !!foldNet(cs)) VOLX.push('fold not symmetric ' + polyKey(cs));
+{ const cross = [[1, 0], [0, 1], [1, 1], [2, 1], [3, 1], [1, 2]], f = foldNet(cross), opp = (a, b) => (f[a] ^ 1) === f[b];
+  if (!opp(1, 3) || !opp(2, 4) || !opp(0, 5)) VOLX.push('cross opposite wrong ' + f); }
+for (let i = 0; i < 300; i++) { const H = stairs(3, 3, 0, 4, 26); if (H && viewTop(H).flat().length !== 9) VOLX.push('top size'); }
+window.TEST = { volx: VOLX, total, fails, summary, share5050, share, near: NEAR.length, nearEx: NEAR.slice(0, 5), plural: PLURAL.slice(0, 20), pluralN: PLURAL.length, trapMiss: TRAPMISS };
 out.innerHTML = `<p><b>${total}</b> заданий, ошибок: <b class="${fails ? 'bad' : ''}">${fails}</b>. Заданий «из двух» (50/50): ${share5050}% (${Object.entries(share).map(([k, v]) => TOPIC[k].name + ' ' + v + '%').join(', ')}). Остров правды, строк одного шаблона в задании: ${NEAR.length}. Подозрительных склонений: ${PLURAL.length}</p><pre>${PLURAL.slice(0, 20).join(String.fromCharCode(10))}</pre><pre>${Object.entries(summary).map(([k, v]) => k + ': ' + v).join('\n')}</pre><h2>Примеры</h2>` +
   samples.map(s => `<div class="task"><pre>${s.replace(/</g, '&lt;')}</pre></div>`).join('');
 </script></body></html>

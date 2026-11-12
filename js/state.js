@@ -12,7 +12,7 @@ function addDays(s, n) { const d = new Date(s + 'T12:00:00'); d.setDate(d.getDat
 
 const fresh = () => ({ v: 2, name: '', created: today(), acorns: 0, earned: 0, sound: true, stars: {}, medals: {},
   mastery: {}, skill: {}, mistakes: [], history: {}, streak: { last: null, count: 0, best: 0 }, daily: { date: null, done: false },
-  stickers: [], diag: null, recent: [], solved: 0, right: 0, _epoch: 0, _ts: 0, _tally: {}, gone: {} });
+  stickers: [], diag: null, recent: [], hands: {}, solved: 0, right: 0, _epoch: 0, _ts: 0, _tally: {}, gone: {} });
 const newId = p => p + Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
 const readJson = k => { try { const v = localStorage.getItem(k); return v ? JSON.parse(v) : null; } catch (e) { return null; } };
 const writeJson = (k, v) => { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) { } };
@@ -259,6 +259,9 @@ function mergeStates(a, b) {
 
   const da = A.daily, db = B.daily;
   R.daily = da.date === db.date ? { date: da.date, done: !!(da.done || db.done) } : (db.date || '') > (da.date || '') ? db : da;
+  /* Задания руками: подтверждённое взрослым важнее «сделала» */
+  const HA = A.hands || {}, HB = B.hands || {};
+  for (const k of keysOf(HA, HB)) { const x = HA[k], y = HB[k]; R.hands[k] = !x ? y : !y ? x : y.st === 'ok' && x.st !== 'ok' ? y : x; }
   R.diag = !A.diag ? B.diag : !B.diag ? A.diag : B.diag.date > A.diag.date ? B.diag : A.diag;
 
   const seen = new Set();

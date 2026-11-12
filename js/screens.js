@@ -126,7 +126,7 @@ function showTopic(id) {
     <div class="loc-head"><div class="big">${T.icon}</div><div class="bubble grow"><b>${T.who}:</b> ${T.intro}</div></div>
     <div class="row" style="margin-bottom:12px"><button class="btn gold grow" data-act="sheet">📜 Шпаргалка</button></div>
     <div class="small muted" style="margin:0 0 6px 2px">Освоено: <b style="color:${col}">${lbl}</b></div>
-    <div class="levels">${lv}</div>`);
+    <div class="levels">${lv}</div>${T.extra ? T.extra() : ''}`);
 }
 ACT.topic = el => showTopic(el.dataset.id);
 ACT.toTopic = () => showTopic(curTopic);
@@ -147,7 +147,7 @@ function showResult(r) {
 ACT.again = () => startLevel(LASTRES.again[0], LASTRES.again[1]);
 ACT.nextLevel = () => startLevel(LASTRES.again[0], LASTRES.again[1] + 1);
 function showDiagResult(scores, ok, n) {
-  const rows = TOPICS.map(T => {
+  const rows = TOPICS.filter(T => !T.noDiag).map(T => {
     const sc = scores[T.id], col = ['#D9553A', '#F5B43C', '#5E9E4A'][sc];
     return `<div class="trow"><div style="font-size:22px">${T.icon}</div><div><div class="tn">${T.name}</div><div class="bar"><i style="width:${(sc / 2) * 100}%;background:${col}"></i></div></div><div class="small" style="font-weight:800;color:${col}">${sc}/2</div></div>`;
   }).join('');
@@ -206,6 +206,7 @@ function showParent() {
       <div class="days">${days.map(d => { const n = (S.history[d] || {}).n || 0; return `<div class="${n ? '' : 'zero'}" style="height:${Math.max(4, n / maxN * 100)}%" title="${d}: ${n}"></div>`; }).join('')}</div>
       <div class="small muted center" style="margin-top:4px">Задач в день за последние 2 недели</div></div>
     ${movedCard()}<h3 style="margin-top:18px">Темы</h3><div class="card">${topics}<p class="small muted">Тема оценивается по самому слабому навыку внутри неё. «Уверенно» — 80%+ по последним ответам с учётом сложности, «почти» — 55–80%, «подтянуть» — ниже. Ответ с подсказкой освоенность не повышает, со второй попытки — считается ошибкой.</p></div>
+    ${typeof handsParentCard === 'function' ? handsParentCard() : ''}
     <h3 style="margin-top:18px">Последние ошибки</h3><div class="card">${recentBad}</div>
     ${cloudCard()}
     <h3 style="margin-top:18px">Настройки</h3><div class="card">

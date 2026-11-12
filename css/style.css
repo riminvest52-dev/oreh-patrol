@@ -453,3 +453,44 @@ svg.sor-sly .sor-spark { animation: sorspark 1.2s ease-in-out infinite; }
   .pspin { align-self: center; }
 }
 @media (prefers-reduced-motion: reduce) { svg.sor, svg.sor *, .ptok, .ptok *, svg.ktop.spinning .ktop-body { animation: none !important; } }
+
+/* ---------- Объёмная мастерская (js/t-vol.js) ---------- */
+.task .fig.iso { width: min(100%, 340px); }
+.task .fig.vnet { width: min(70%, 240px); }
+.vlbl { font-family: var(--font); font-weight: 800; fill: #2E7D4F; }
+.opts.pics .opt.pic { display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 30px 8px 10px; min-height: 110px; justify-content: center; position: relative; }
+.opt.pic .olbl { position: absolute; left: 10px; top: 6px; font-weight: 800; font-size: 18px; color: var(--muted, #8A6A4A); }
+.opt.pic svg { max-width: 100%; max-height: 120px; width: auto; height: auto; }
+.v3 { display: flex; gap: 14px; justify-content: center; align-items: flex-end; flex-wrap: wrap; margin-top: 10px; text-align: center; }
+.v3 > div { display: flex; flex-direction: column; align-items: center; gap: 4px; font-size: 15px; }
+.v3 svg, .hfig svg, .feedback svg.vview { max-width: 100%; height: auto; }
+.feedback li svg.vview { display: block; margin: 6px 0; max-width: 220px; }
+.vbuild { display: flex; gap: 16px; align-items: center; justify-content: center; flex-wrap: wrap; }
+.vbgrid { display: grid; gap: 6px; width: 200px; }
+.vbc { aspect-ratio: 1; border-radius: 12px; border: 3px dashed #D9BC8C; background: #FFF8EC; font: 800 26px var(--font); color: var(--ink); cursor: pointer; }
+.vbc.on { background: #FBD98B; border: 3px solid #C47A3A; box-shadow: 0 3px 0 #C47A3A; }
+.vbprev svg { width: 200px; height: auto; display: block; }
+.tetrad { margin-top: 12px; padding: 10px 12px 12px; border-radius: 12px; border: 2px solid #C9D9F0; background-color: #FFFFFF;
+  background-image: linear-gradient(#DCE8F7 1px, transparent 1px), linear-gradient(90deg, #DCE8F7 1px, transparent 1px); background-size: 18px 18px; }
+.tetrad .tline { font: 700 20px var(--font); color: #2B3E8C; margin-top: 4px; }
+.card.hands { margin-top: 16px; border: 3px dashed #E3A257; }
+.card.hands .hh { font-weight: 800; color: #C47A3A; margin-bottom: 4px; }
+.hfig { display: flex; justify-content: center; margin: 6px 0 12px; }
+.fold3d { position: relative; margin: 12px auto 0; perspective: 1000px; cursor: pointer; overflow: hidden; min-height: 260px; background: #FFF8EC; border-radius: 16px; }
+.f3scene { position: absolute; width: var(--s); height: var(--s); transform-style: preserve-3d; transform-origin: 50% 50% calc(var(--s) / -2);
+  transform: rotateX(-24deg) rotateY(-28deg); animation: f3spin 7s linear var(--spin) infinite; }
+@keyframes f3spin { from { transform: rotateX(-24deg) rotateY(-28deg); } to { transform: rotateX(-24deg) rotateY(332deg); } }
+.f3 { position: absolute; width: var(--s); height: var(--s); box-sizing: border-box; transform-style: preserve-3d; background: rgba(255, 224, 160, .93);
+  border: 2px solid #5A3214; display: flex; align-items: center; justify-content: center; }
+.f3 > b { font: 800 22px var(--font); color: #5A3214; pointer-events: none; }
+.f3.e { transform-origin: left center; --fold: rotateY(90deg); }
+.f3.w { transform-origin: right center; --fold: rotateY(-90deg); }
+.f3.s { transform-origin: center top; --fold: rotateX(-90deg); }
+.f3.n { transform-origin: center bottom; --fold: rotateX(90deg); }
+.f3:not(.root) { animation: f3fold .9s ease-in-out calc(1s + var(--d) * .9s) forwards; }
+.f3.root { background: rgba(191, 227, 180, .95); }
+@keyframes f3fold { from { transform: none; } to { transform: var(--fold); } }
+.f3tip { position: absolute; left: 0; right: 0; bottom: 4px; text-align: center; }
+@media (prefers-reduced-motion: reduce) { .f3:not(.root) { animation-duration: .01s; animation-delay: 0s; } .f3scene { animation: none; } }
+.hrow { display: flex; align-items: center; gap: 10px; padding: 8px 0; border-bottom: 1px dashed var(--line); }
+.hrow .grow { flex: 1; min-width: 0; } .hrow .btn { flex: none; min-height: 44px; padding: 8px 14px; font-size: 16px; }
