@@ -101,8 +101,11 @@ const KID_TOPICS = [
   { id: 'k_add', name: 'Плюс и минус', icon: '➕', gens: ['k_add', 'k_sub'] },
   { id: 'k_shape', name: 'Фигуры и размеры', icon: '🔺', gens: ['k_shape', 'k_size'] },
   { id: 'k_where', name: 'Где что стоит', icon: '🧺', gens: ['k_where', 'k_order'] },
-  { id: 'k_logic', name: 'Логика', icon: '🧩', gens: ['k_odd', 'k_pattern'] }
+  { id: 'k_logic', name: 'Логика', icon: '🧩', gens: ['k_odd', 'k_pattern'] },
+  /* Разделы-игры рядом с математикой: свой экран, регистрируются в KID_GAMES (js/k-path.js и следующие) */
+  { id: 'k_path', name: 'Тропинка к дубу', icon: '🌳', gens: [], game: true }
 ];
+const KID_GAMES = {};
 const KTOPIC = Object.fromEntries(KID_TOPICS.map(t => [t.id, t]));
 const KID_PER_SESSION = 6;
 
@@ -392,7 +395,7 @@ ACT.kJoin = () => {
   S.name = v.slice(0, 20); save(); showKidMap();
 };
 function showKidMap() {
-  K = null; Voice.stop();
+  K = null; if (typeof PT !== 'undefined') PT = null; Voice.stop();
   const next = KID_TOPICS.reduce((m, T) => (S.stars[T.id] || 0) < (S.stars[m.id] || 0) ? T : m, KID_TOPICS[0]).id;
   const tiles = KID_TOPICS.map(T => {
     const st = S.stars[T.id] || 0;
@@ -406,8 +409,9 @@ function showKidMap() {
     <button class="btn gold block" style="margin-top:16px" data-act="album">📒 Наклейки · ${S.stickers.length}</button>`);
   Praise.hello(); Voice.prefetch('kid');
 }
-ACT.kTopic = el => kidStart(el.dataset.id);
-ACT.kAgain = el => kidStart(el.dataset.id);
+const kidOpen = tid => KTOPIC[tid] && KTOPIC[tid].game ? KID_GAMES[tid].start() : kidStart(tid);
+ACT.kTopic = el => kidOpen(el.dataset.id);
+ACT.kAgain = el => kidOpen(el.dataset.id);
 function kidStart(tid) {
   const T = KTOPIC[tid], q = [];
   while (q.length < KID_PER_SESSION) q.push(...R.shuffle(T.gens));
@@ -564,7 +568,7 @@ function showKidParent() {
     <div class="card"><div class="row" style="justify-content:space-around;text-align:center">
       <div><div style="font-size:26px;font-weight:800">${S.solved}</div><div class="small muted">заданий</div></div>
       <div><div style="font-size:26px;font-weight:800">${acc}%</div><div class="small muted">сразу верно</div></div>
-      <div><div style="font-size:26px;font-weight:800">${stars}</div><div class="small muted">звёзд из 27</div></div>
+      <div><div style="font-size:26px;font-weight:800">${stars}</div><div class="small muted">звёзд из ${KID_TOPICS.length * 3}</div></div>
       <div><div style="font-size:26px;font-weight:800">${S.streak.best}</div><div class="small muted">лучшая серия</div></div></div></div>
     ${movedCard()}
     <h3 style="margin-top:18px">Темы</h3><div class="card">${rows}

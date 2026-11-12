@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Тропинка к дубу — скриншоты</title>
+<link rel="stylesheet" href="../css/style.css">
+</head>
+<body>
+<!-- Скриншоты Тропинки: ?s=setup|d1|d2|d3|two|final. Озвучка и звуки выключены. -->
+<div id="app"></div>
+<div id="modal" class="modal hidden"></div>
+<div id="toast" class="toast hidden"></div>
+<script src="../js/core.js"></script>
+<script src="../js/t-fund.js"></script>
+<script src="../js/t-lang.js"></script>
+<script src="../js/t-models.js"></script>
+<script src="../js/t-logic.js"></script>
+<script src="../js/t-div.js"></script>
+<script src="../js/topics.js"></script>
+<script src="../js/art.js"></script><script src="../js/art2.js"></script>
+<script src="../js/state.js"></script>
+<script src="../js/cloud.js"></script>
+<script src="../js/ui.js"></script><script src="../js/voice-data.js"></script><script src="../js/voice.js"></script>
+<script src="../js/play.js"></script>
+<script src="../js/screens.js"></script>
+<script src="../js/kid.js"></script><script src="../js/k-path.js"></script>
+<script src="shots.js"></script>
+<script>
+  try { localStorage.setItem('oreh_voice', '0'); } catch (e) { }
+  const kp = F.profiles.find(p => p.world === 'kid');
+  if (kp) useProfile(kp.id); else addProfile('kid');
+  S.name = 'Лиза'; S.sound = false; save();
+  const s = new URLSearchParams(location.search).get('s') || 'setup';
+  const stage = (stars, mode, f) => { S.stars.k_path = stars; pathStart(mode); setTimeout(() => { f(); }, 400); };
+  const draw = (pos, turn) => { PT.pos = pos; PT.turn = turn; pathRender(); pathTokens(); document.getElementById('pwho').textContent = 'Ход: ' + P_PLAYERS[PT.mode][turn].name; };
+  if (s === 'setup') pathSetup();
+  if (s === 'd1') stage(0, 'bird', () => { draw([3, 2], 0); PT.phase = 'tap'; PT.target = 5; document.getElementById('pspin').innerHTML = ART.top(2); pMark(4, 'next'); pBub('Шагай: нажимай на клетки по порядку 👆', 'show'); });
+  if (s === 'd2') stage(1, 'bird', () => { draw([4, 3], 0); const q = pathAsk(4, 2, 10); PT.phase = 'ask'; PT.q = q; document.getElementById('pspin').innerHTML = ART.top(2); pBub(`<b>${q.text}</b> 👆`, 'think'); });
+  if (s === 'd3') stage(2, 'bird', () => { draw([11, 9], 0); const q = { kind: 'where', ans: 17, text: 'Покажи, где живёт число 17.' }; PT.phase = 'ask'; PT.q = q; pBub(`<b>${q.text}</b> 👆`, 'think'); });
+  if (s === 'two') stage(1, 'two', () => { draw([6, 5], 1); PT.phase = 'spin'; document.getElementById('pspin').disabled = false; pBub('Ход Фундука! Крути волчок. 👇', 'happy'); });
+  if (s === 'final') stage(0, 'bird', () => { PT.pos = [10, 7]; PT.asks = 8; PT.first = 7; PT.acorns = 7; pathFinish(0); });
+</script>
+</body>
+</html>

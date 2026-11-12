@@ -100,6 +100,9 @@ STRESS = {
     'зачёркнуты': 'зач+ёркнуты', 'зачёркнуто': 'зач+ёркнуто', 'клубнички': 'клубн+ички', 'клубничку': 'клубн+ичку',
     'клубничек': 'клубн+ичек', 'пчёлок': 'пч+ёлок', 'пчёлку': 'пч+ёлку', 'лягушек': 'лягуш+ек', 'бабочек': 'б+абочек',
     'коровок': 'кор+овок', 'пятиклассники': 'пятикл+ассники', 'браво': 'бр+аво', 'испытание': 'испыт+ание',
+    # Тропинка к дубу
+    'выпало': 'в+ыпало', 'волчок': 'волч+ок', 'сорока': 'сор+ока', 'сороки': 'сор+оки', 'сорокой': 'сор+окой',
+    'дуба': 'д+уба', 'шагай': 'шаг+ай', 'клетку': 'кл+етку', 'клетки': 'кл+етки', 'клетке': 'кл+етке', 'первой': 'п+ервой',
 }
 STRESS_RE = re.compile(r'(?<![а-яё+])(' + '|'.join(sorted(STRESS, key=len, reverse=True)) + r')(?![а-яё])', re.I)
 
@@ -228,12 +231,15 @@ def norm(s):
     return [WORDNUM.get(w.replace('е', 'ё'), WORDNUM.get(w, w)) for w in words]
 
 
-def check(items, n):
+def check(items, n, topic=None):
     random.seed(7)
+    dirs = {w: rev_of(w, items) for w in VOICES}
+    if topic:   # --topic k_path: только фразы одного раздела
+        items = [i for i in items if topic in i.get('topics', [])]
     named = [i for i in items if i['who'] in ('fu', 'mi', 'ez') or re.search('Лиз|Наст', i['text'])]
     rest = [i for i in items if i not in named]
-    sample = random.sample(named, min(15, len(named))) + random.sample(rest, n - min(15, len(named)))
-    dirs = {w: rev_of(w, items) for w in VOICES}
+    k = min(15, len(named), n)
+    sample = random.sample(named, k) + random.sample(rest, min(n - k, len(rest)))
     bad = 0
     for i in sample:
         path = os.path.join(OUT, dirs[i['who']], i['h'] + '.ogg')
@@ -249,6 +255,6 @@ def check(items, n):
 if __name__ == '__main__':
     items = load_phrases()
     if '--check' in sys.argv:
-        check(items, int(sys.argv[sys.argv.index('--check') + 1]))
+        check(items, int(sys.argv[sys.argv.index('--check') + 1]), sys.argv[sys.argv.index('--topic') + 1] if '--topic' in sys.argv else None)
     else:
         build(items, '--yes' in sys.argv)

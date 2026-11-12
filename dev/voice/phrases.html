@@ -3,9 +3,9 @@
 <body><p>Все фразы, которые игра может сказать голосом. Читает dev/voice/gen.py (headless Chrome --dump-dom).</p>
 <div id="app"></div><div id="modal" class="hidden"></div><div id="toast" class="hidden"></div>
 <script src="../../js/core.js"></script><script src="../../js/t-fund.js"></script><script src="../../js/t-lang.js"></script><script src="../../js/t-models.js"></script>
-<script src="../../js/t-logic.js"></script><script src="../../js/t-div.js"></script><script src="../../js/topics.js"></script><script src="../../js/art.js"></script>
+<script src="../../js/t-logic.js"></script><script src="../../js/t-div.js"></script><script src="../../js/topics.js"></script><script src="../../js/art.js"></script><script src="../../js/art2.js"></script>
 <script src="../../js/state.js"></script><script src="../../js/cloud.js"></script><script src="../../js/ui.js"></script><script src="../../js/voice-data.js"></script><script src="../../js/voice.js"></script>
-<script src="../../js/play.js"></script><script src="../../js/screens.js"></script><script src="../../js/kid.js"></script>
+<script src="../../js/play.js"></script><script src="../../js/screens.js"></script><script src="../../js/kid.js"></script><script src="../../js/k-path.js"></script>
 <pre id="out"></pre>
 <script>
 const RUNS = +(new URLSearchParams(location.search).get('runs') || 12000);
@@ -27,6 +27,7 @@ for (const T of KID_TOPICS) for (const g of T.gens) for (let d = 1; d <= 3; d++)
   add('zh', 'Смотри. ' + (t.whySay || t.why), T.id);
 }
 for (let n = 1; n <= 20; n++) add('zh', String(n), 'k_cnt');
+for (const [id, g] of Object.entries(KID_GAMES)) for (const [who, text] of g.phrases()) add(who, text, id);
 add('zh', 'Озвучка включена.', 'kid');
 for (const [world, cats] of Object.entries(PRAISE)) for (const list of Object.values(cats)) for (const [who, text] of list) add(who, text, world);
 const items = [...M.values()].map(e => ({ who: e.who, h: e.h, text: e.text, topics: [...e.topics] }));

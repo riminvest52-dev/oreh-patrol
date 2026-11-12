@@ -1,0 +1,48 @@
+<!doctype html>
+<html lang="ru"><head><meta charset="utf-8"><title>Тест: Тропинка к дубу</title>
+<style>body{font:14px system-ui;margin:16px}pre{white-space:pre-wrap}.bad{color:#b00}#app,#modal,#toast{display:none}</style></head>
+<body><h1>Тест «Тропинки к дубу»</h1><div id="out"></div>
+<div id="app"></div><div id="modal" class="hidden"></div><div id="toast" class="hidden"></div>
+<script src="../js/core.js"></script><script src="../js/t-fund.js"></script><script src="../js/t-lang.js"></script><script src="../js/t-models.js"></script>
+<script src="../js/t-logic.js"></script><script src="../js/t-div.js"></script><script src="../js/topics.js"></script><script src="../js/art.js"></script><script src="../js/art2.js"></script>
+<script src="../js/state.js"></script><script src="../js/cloud.js"></script><script src="../js/ui.js"></script><script src="../js/voice-data.js"></script><script src="../js/voice.js"></script>
+<script src="../js/play.js"></script><script src="../js/screens.js"></script><script src="../js/kid.js"></script><script src="../js/k-path.js"></script>
+<script>
+const errs = [], said = new Set();
+/* 1. Вопросы «куда придёшь»: ответ — ровно одна клетка на поле, без перешагивания дуба */
+for (const n of [10, 20]) for (let pos = 0; pos < n; pos++) for (const r of [1, 2]) {
+  const q = pathAsk(pos, r, n);
+  if (pos + r > n) { if (q) errs.push(`ask за дубом: ${pos}+${r}/${n}`); continue; }
+  if (!q || q.ans !== pos + r || q.ans < 1 || q.ans > n) errs.push(`ask: ${pos}+${r}/${n}`);
+  else { said.add('nr|' + q.text); said.add('zh|Попробуй ещё раз! ' + q.hint); }
+}
+/* 2. «Покажи, где живёт число»: ответ на поле и не под фишкой */
+for (let i = 0; i < 20000; i++) {
+  const n = R.pick([10, 20]), busy = [R.int(0, n), R.int(0, n)].filter(Boolean), q = pathWhere(n, busy);
+  if (q.ans < 1 || q.ans > n || busy.includes(q.ans)) errs.push(`where: ${q.ans} / ${n} / ${busy}`);
+  said.add('nr|' + q.text); said.add('zh|Попробуй ещё раз! ' + q.hint); said.add('zh|Вот число ' + q.ans + '.');
+}
+/* 3. Партии: всегда кончаются; сколько ходов и примерно минут (ход человека ≈ 14 с, Сороки ≈ 8 с, шаг ≈ 1 с) */
+const sim = {};
+for (const n of [10, 20]) {
+  const turns = [], mins = [], lizaWins = [];
+  for (let g = 0; g < 5000; g++) {
+    const pos = [0, 0]; let t = 0, turn = 0, sec = 0, guard = 0;
+    while (guard++ < 500) {
+      const r = pathSpin(turn === 1), from = pos[turn]; pos[turn] = Math.min(n, from + r); t++;
+      sec += (turn ? 8 : 14) + (pos[turn] - from) * 1.1;
+      if (pos[turn] >= n) break; turn = 1 - turn;
+    }
+    if (guard >= 500) errs.push('бесконечная партия');
+    turns.push(t); mins.push(sec / 60); lizaWins.push(turn === 0 ? 1 : 0);
+  }
+  const avg = a => Math.round(a.reduce((s, x) => s + x, 0) / a.length * 10) / 10;
+  sim[n] = { ходов: avg(turns), минут: avg(mins), побед_Лизы: Math.round(avg(lizaWins) * 100) + '%' };
+}
+/* 4. Озвучка: у каждой фразы раздела есть запись */
+for (const [w, t] of pathPhrases()) said.add(w + '|' + t);
+for (let k = 1; k <= 20; k++) said.add('zh|' + k);
+const noVoice = [...said].filter(s => { const [w, t] = s.split('|'); return !Voice._clipsOf(t, w); });
+window.TEST = { errs: errs.length, sim, phrases: said.size, noVoice: noVoice.length, ex: errs.slice(0, 5), noVoiceEx: noVoice.slice(0, 8) };
+document.getElementById('out').innerHTML = `<p>Ошибок генерации: <b class="${errs.length ? 'bad' : ''}">${errs.length}</b>. Фраз: ${said.size}, без записи: <b class="${noVoice.length ? 'bad' : ''}">${noVoice.length}</b></p><pre>${JSON.stringify(window.TEST, null, 1)}</pre>`;
+</script></body></html>
