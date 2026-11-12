@@ -5,7 +5,7 @@
    - Обновление: новый sw.js скачивает ВСЕ файлы новой версии одним пакетом, включается сразу,
      а страница (index.html, controllerchange) один раз перезагружается уже целиком новой.
    При обновлении игры поменяйте VERSION. */
-const VERSION = 'oreh-v3.4.2';
+const VERSION = 'oreh-v3.4.3';
 const FILES = [
   './', './index.html', './manifest.webmanifest', './css/style.css',
   './js/core.js', './js/t-fund.js', './js/t-lang.js', './js/t-models.js', './js/t-logic.js', './js/t-div.js',
@@ -87,6 +87,7 @@ self.addEventListener('fetch', e => {
   if (req.method !== 'GET') return;
   const url = new URL(req.url);
   if (url.origin !== location.origin) return;
+  if (url.pathname.startsWith('/preview/')) return;   /* пробная версия нового раздела — всегда из сети, мимо кэша игры */
   if (/\/voice\/[^/]+\/[^/]+\.(ogg|mp3)$/.test(url.pathname)) return e.respondWith(voice(e));
   const isPage = req.mode === 'navigate' || url.pathname.endsWith('/') || url.pathname.endsWith('/index.html');
   e.respondWith(isPage ? page(e) : asset(e));
