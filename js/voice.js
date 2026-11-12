@@ -40,13 +40,18 @@ const Voice = (() => {
   };
   if (tts) { pickV(); try { speechSynthesis.addEventListener('voiceschanged', pickV); } catch (e) { } }
   const browserSay = text => {
-    if (!tts) return;
+    if (!tts) return done();
     try {
       const u = new SpeechSynthesisUtterance(voiceClean(text).replace(/−/g, ' минус ').replace(/\+/g, ' плюс '));
       u.lang = 'ru-RU'; if (bv) u.voice = bv; u.rate = 0.88; u.pitch = 1.1;
+      const mine = finish, end = () => { if (finish === mine) done(); };   /* cancel() прошлой фразы не должен закончить новую */
+      u.onend = end; u.onerror = end;
       speechSynthesis.speak(u);
-    } catch (e) { }
+    } catch (e) { done(); }
   };
+  /* Каждая фраза — Promise, который выполняется, когда она договорена (или прервана) */
+  let finish = null, safety = 0;
+  const done = () => { clearTimeout(safety); const f = finish; finish = null; if (f) f(); };
 
   /* --- записи: одна общая <audio>, файлы берутся через fetch (кэш сервис-воркера) и играются из blob ---
      blob нужен iPhone: Safari не играет звук, отданный сервис-воркером без поддержки Range. */
@@ -66,7 +71,7 @@ const Voice = (() => {
     let i = 0;
     const next = () => {
       if (my !== tok) return;
-      if (i >= list.length) return;
+      if (i >= list.length) return done();
       getBlob(list[i++]).then(src => {
         if (my !== tok) return;
         au.onended = next;
@@ -93,16 +98,19 @@ const Voice = (() => {
   document.addEventListener('keydown', unlock, true);
 
   const on = () => { try { return localStorage.getItem('oreh_voice') !== '0'; } catch (e) { return true; } };
-  const stop = () => { tok++; pending = null; try { au.pause(); } catch (e) { } try { if (tts) speechSynthesis.cancel(); } catch (e) { } };
+  const stop = () => { done(); tok++; pending = null; try { au.pause(); } catch (e) { } try { if (tts) speechSynthesis.cancel(); } catch (e) { } };
   return {
     has: tts || !!D, on, stop,
     toggle() { try { localStorage.setItem('oreh_voice', on() ? '0' : '1'); } catch (e) { } if (!on()) stop(); },
     /* who — кто говорит (по умолчанию Жёлудик) */
     say(text, who = 'zh') {
-      if (!on() || !text) return;
+      if (!on() || !text) return Promise.resolve();
       stop();
+      const p = new Promise(r => { finish = r; });
+      safety = setTimeout(done, 2500 + voiceClean(text).length * 110);   /* на случай, если звук «завис» */
       const list = clipsOf(text, who);
       if (list) playList(list, text, tok); else browserSay(text);
+      return p;
     },
     /* Докачка записей темы заранее: сервис-воркер положит их в кэш, задания потом звучат сразу и без сети */
     prefetch(topic) {

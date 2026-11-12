@@ -11,6 +11,7 @@ import os
 import shutil
 import subprocess
 import sys
+import tempfile
 import urllib.request
 
 BUCKET = 'oreh-patrol'
@@ -66,6 +67,22 @@ def collect(root):
     return out
 
 
+def upload_voice_dir(base, d, yc, only=('ogg', 'mp3')):
+    """Каждый тип — из своей временной папки: --exclude в `yc storage s3 cp` не срабатывает,
+    и второй проход перезаписывал бы тип у всех файлов."""
+    for ext in only:
+        ctype = TYPES['.' + ext]
+        with tempfile.TemporaryDirectory() as tmp:
+            for f in os.listdir(os.path.join(base, d)):
+                if f.endswith('.' + ext):
+                    shutil.copy2(os.path.join(base, d, f), tmp)
+            cmd = [yc, 'storage', 's3', 'cp', tmp, f's3://{BUCKET}/voice/{d}/', '--recursive',
+                   '--content-type', ctype, '--cache-control', VOICE_CACHE, '--no-guess-mime-type', '--only-show-errors']
+            r = subprocess.run(cmd, capture_output=True, text=True, encoding='utf-8', errors='replace')
+            if r.returncode:
+                sys.exit(f'Ошибка при выкладке voice/{d} ({ext}): {r.stderr or r.stdout}')
+
+
 def upload_voice(root, yc, dry):
     """Голоса: тысячи файлов, поэтому папка целиком одной командой и только если её ещё нет в бакете.
     Готовность папки отмечает файл done.json, он выкладывается последним."""
@@ -83,13 +100,7 @@ def upload_voice(root, yc, dry):
         print(f'  voice/{d}: выкладываю {n} файлов')
         if dry:
             continue
-        for ext, ctype in (('ogg', 'audio/ogg'), ('mp3', 'audio/mpeg')):
-            other = 'mp3' if ext == 'ogg' else 'ogg'
-            cmd = [yc, 'storage', 's3', 'cp', os.path.join(base, d), f's3://{BUCKET}/voice/{d}/', '--recursive', '--exclude', f'*.{other}',
-                   '--content-type', ctype, '--cache-control', VOICE_CACHE, '--no-guess-mime-type', '--only-show-errors']
-            r = subprocess.run(cmd, capture_output=True, text=True, encoding='utf-8', errors='replace')
-            if r.returncode:
-                sys.exit(f'Ошибка при выкладке voice/{d}: {r.stderr or r.stdout}')
+        upload_voice_dir(base, d, yc)
         done = os.path.join(root, 'dev', 'deploy', '.done.json')
         with open(done, 'w') as f:
             f.write('{"files": %d}' % n)
