@@ -123,7 +123,7 @@ function showTopic(id) {
   }).join('');
   mount(`<div class="topbar"><button class="iconbtn" data-act="map" aria-label="Назад">←</button><div class="grow"><b>${T.name}</b><div class="small muted">${T.sub}</div></div>
       <span class="pill">${ART.acorn(20)}${S.acorns}</span></div>
-    <div class="loc-head"><div class="big">${T.icon}</div><div class="bubble grow"><b>${T.who}:</b> ${T.intro}</div></div>
+    <div class="loc-head"><div class="big">${T.art ? T.art() : T.icon}</div><div class="bubble grow"><b>${T.who}:</b> ${T.intro}</div></div>
     <div class="row" style="margin-bottom:12px"><button class="btn gold grow" data-act="sheet">📜 Шпаргалка</button></div>
     <div class="small muted" style="margin:0 0 6px 2px">Освоено: <b style="color:${col}">${lbl}</b></div>
     <div class="levels">${lv}</div>${T.extra ? T.extra() : ''}`);

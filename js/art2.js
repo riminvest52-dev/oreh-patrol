@@ -115,3 +115,42 @@ ART.top = function (n = '', cls = '', dots = false) {
 ${n !== '' ? (() => { const cy = dots ? 54 : 80; return `<circle cx="60" cy="${cy}" r="17" fill="#FFFBF3" stroke="${I}" stroke-width="3"/><text x="60" y="${cy + 9}" text-anchor="middle" font-size="26" font-weight="800" fill="${I}" font-family="system-ui, sans-serif">${n}</text>`; })() : ''}
 ${dots && n ? Array.from({ length: n }, (_, i) => `<g transform="translate(${60 + (i - (n - 1) / 2) * 22} 84)"><path d="M-7 1 C-7 9 -3 14 0 15 C3 14 7 9 7 1 Z" fill="#7A3E12" stroke="${I}" stroke-width="2.5" stroke-linejoin="round"/><path d="M-9 1.5 C-9 -7 9 -7 9 1.5 Z" fill="#4A2814" stroke="${I}" stroke-width="2.5" stroke-linejoin="round"/><path d="M0 -6 L1 -10" stroke="${I}" stroke-width="2.5" stroke-linecap="round"/></g>`).join('') : ''}</g></svg>`;
 };
+
+/* ---------- Бобр Тимофей — хозяин Объёмной мастерской (временный портрет до концепта аналитика) ----------
+   Стиль как у Фундука и Миндалинки: сепия-контур, градиент со светом сверху слева, большие глаза с бликами.
+   Карандаш за ухом, рабочий фартук с линейкой, плоский хвост «в клетку» за спиной. */
+ART.bobr = function (cls = '') {
+  const u = 'bo' + (++art2N), I = '#4A2A14';
+  const F = { f1: '#C89462', f2: '#9A6438', f3: '#62391C', light: '#EFD3AC', inner: '#E9A08C' };
+  const s = (d, fill, w = 3.4) => `<path d="${d}" fill="${fill}" stroke="${I}" stroke-width="${w}" stroke-linejoin="round" stroke-linecap="round"/>`;
+  const blink = (3 + Math.random() * 2).toFixed(1);
+  const eye = (x, y) => `<ellipse cx="${x}" cy="${y}" rx="11" ry="13.5" fill="#FFFDF6" stroke="${I}" stroke-width="2.6"/>
+<ellipse cx="${x + 1}" cy="${y}" rx="7.6" ry="9.4" fill="#4A2A14"/><ellipse cx="${x + 1}" cy="${y + 1}" rx="4" ry="5" fill="#1E0F05"/>
+<ellipse cx="${x + 4}" cy="${y - 4}" rx="3" ry="3.5" fill="#fff"/><circle cx="${x - 2}" cy="${y + 4}" r="1.3" fill="#fff"/>`;
+  return `<svg class="chip ch bobr ${cls}" style="--blink:${blink}s" viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Бобр Тимофей"><defs>
+<radialGradient id="f${u}" cx="38%" cy="30%" r="80%"><stop offset="0" stop-color="${F.f1}"/><stop offset=".65" stop-color="${F.f2}"/><stop offset="1" stop-color="${F.f3}"/></radialGradient>
+<linearGradient id="t${u}" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#7A5A48"/><stop offset="1" stop-color="#3E2A20"/></linearGradient>
+<linearGradient id="a${u}" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#5B8FC9"/><stop offset="1" stop-color="#3D6A9E"/></linearGradient></defs>
+<g transform="rotate(-24 160 168)">${s('M136 150 C150 124 192 124 196 150 C200 178 156 196 140 182 C130 174 130 162 136 150 Z', `url(#t${u})`, 3.2)}
+<path d="M146 140 L186 182 M162 132 L196 166 M140 162 L170 192 M150 186 L192 140 M140 168 L180 130 M164 192 L196 158" stroke="#2A1A12" stroke-width="1.6" opacity=".45"/></g>
+${s('M34 200 C34 156 64 134 100 134 C136 134 166 156 166 200 Z', `url(#f${u})`, 3.6)}
+${s('M64 200 L68 160 L132 160 L136 200 Z', `url(#a${u})`, 3)}
+<path d="M68 160 L58 140 M132 160 L142 140" stroke="${I}" stroke-width="8" stroke-linecap="round"/><path d="M68 160 L58 140 M132 160 L142 140" stroke="#5B8FC9" stroke-width="4.5" stroke-linecap="round"/>
+${s('M84 172 L116 172 L116 192 L84 192 Z', '#4F80B8', 2.4)}
+<g transform="rotate(-8 100 176)">${s('M88 168 L112 168 L112 176 L88 176 Z', '#F4C542', 2)}<path d="M92 168 v4 M96 168 v3 M100 168 v4 M104 168 v3 M108 168 v4" stroke="${I}" stroke-width="1.2"/></g>
+${s('M40 54 C34 36 56 28 66 42 Z', `url(#f${u})`, 3)}<path d="M44 48 C42 40 52 36 58 44 Z" fill="${F.inner}"/>
+${s('M160 54 C166 36 144 28 134 42 Z', `url(#f${u})`, 3)}<path d="M156 48 C158 40 148 36 142 44 Z" fill="${F.inner}"/>
+${s('M100 34 C146 34 162 66 158 96 C154 128 130 144 100 144 C70 144 46 128 42 96 C38 66 54 34 100 34 Z', `url(#f${u})`, 3.6)}
+<path d="M56 64 C64 50 80 42 96 42" stroke="#fff" stroke-width="5" fill="none" stroke-linecap="round" opacity=".28"/>
+<g transform="translate(150 34) rotate(35)">${s('M-4 -22 L4 -22 L4 18 L-4 18 Z', '#F2B33D', 2.4)}${s('M-4 18 L4 18 L0 28 Z', '#F6DDB0', 2.2)}<path d="M-1.4 24 L1.4 24 L0 28 Z" fill="${I}"/><path d="M-4 -22 L4 -22 L4 -16 L-4 -16 Z" fill="#E86A6A" stroke="${I}" stroke-width="2"/></g>
+<path d="M64 110 C60 136 84 146 100 142 C116 146 140 136 136 110 C124 118 112 118 100 114 C88 118 76 118 64 110 Z" fill="${F.light}"/>
+<ellipse cx="66" cy="112" rx="9" ry="5.5" fill="#F28C70" opacity=".45"/><ellipse cx="134" cy="112" rx="9" ry="5.5" fill="#F28C70" opacity=".45"/>
+<path d="M68 70 q11 -8 22 -2 M110 68 q11 -6 22 2" stroke="${F.f3}" stroke-width="4.5" fill="none" stroke-linecap="round"/>
+<g class="ch-eyes">${eye(79, 88)}${eye(121, 88)}</g>
+${s('M88 108 C88 100 112 100 112 108 C112 114 104 117 100 117 C96 117 88 114 88 108 Z', '#3A1E0E', 2.2)}<ellipse cx="96" cy="105" rx="3" ry="1.8" fill="#fff" opacity=".7"/>
+<path d="M100 117 L100 121 M88 121 Q94 126 100 121 Q106 126 112 121" stroke="${I}" stroke-width="2.6" fill="none" stroke-linecap="round"/>
+${s('M92 123 L100 123 L100 137 Q96 139 92 137 Z', '#FFF6E2', 2.2)}${s('M100 123 L108 123 L108 137 Q104 139 100 137 Z', '#FFF6E2', 2.2)}
+<g fill="${I}" opacity=".55"><circle cx="78" cy="118" r="1.4"/><circle cx="74" cy="124" r="1.4"/><circle cx="122" cy="118" r="1.4"/><circle cx="126" cy="124" r="1.4"/></g>
+<path d="M70 120 L52 116 M70 125 L52 128 M130 120 L148 116 M130 125 L148 128" stroke="${I}" stroke-width="1.6" stroke-linecap="round" opacity=".6"/>
+</svg>`;
+};

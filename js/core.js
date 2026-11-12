@@ -188,16 +188,32 @@ function longDivSteps(a, b) {
 /* ---------- Реестр генераторов ---------- */
 const GEN = {};
 function reg(topic, id, f) { GEN[id] = { topic, id, f }; }
+/* Значение варианта-выражения («45 − (12 + 6)» → 27). null — если вариант не выражение (слова, буквы, картинки) */
+function optValue(o) {
+  const s = String(o).replace(/<[^>]*>/g, '').replace(/[  ]/g, ' ').trim();
+  if (!/^[\d\s+\-−·:()]+$/.test(s) || !/\d/.test(s)) return null;
+  try { const v = schoolSteps(s).value; return typeof v === 'number' && Number.isFinite(v) ? v : null; } catch (e) { return null; }
+}
+/* Неверный вариант с тем же значением, что и верный (кроме lang_write — там важна запись, а не число) */
+function sameValueOpt(t) {
+  if (t.type !== 'choice' || !Array.isArray(t.options) || t.gen === 'lang_write') return false;
+  const av = optValue(t.answer);
+  return av !== null && t.options.some(o => String(o) !== String(t.answer) && optValue(o) === av);
+}
 function makeTask(id, d) {
-  for (let tries = 0; tries < 30; tries++) {
+  let last = null;
+  for (let tries = 0; tries < 60; tries++) {
     try {
       const t = GEN[id].f(d);
       if (!t) continue;
       t.gen = id; t.topic = GEN[id].topic; t.d = d;
+      /* Два варианта с одним и тем же числом — составляем задание с другими числами */
+      if (sameValueOpt(t)) { last = t; continue; }
       /* Ловушки — типичные неверные ответы с объяснением. Ответ совпасть с ловушкой не может */
       t.traps = (t.traps || []).map(x => Array.isArray(x) ? { v: x[0], msg: x[1] } : x)
         .filter(x => x && x.v !== undefined && x.v !== null && (typeof x.v !== 'number' || (Number.isInteger(x.v) && x.v >= 0)) && String(x.v) !== String(t.answer));
       return t;
-    } catch (err) { if (tries === 29) throw err; }
+    } catch (err) { if (tries === 59) throw err; }
   }
+  return last;
 }
