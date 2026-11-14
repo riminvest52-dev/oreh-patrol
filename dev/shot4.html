@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>4 класс — скриншоты</title>
+<link rel="stylesheet" href="../css/style.css">
+<style>.screen { animation: none !important; } .confetti { display: none; }</style>
+</head>
+<body>
+<!-- Только для проверки раскладки мира «4 класс» и тренажёра: ?scr=map|tree|pic|hint|div|miss|fast|gold|five|parent|family|who.
+     Показательный прогресс: столбик ×2 золотой, ×5 зелёный, ×3 и ×4 учатся, трудные — 7 · 8, 6 · 7, 8 · 6. Озвучка и звуки выключены. -->
+<div id="app"></div>
+<div id="modal" class="modal hidden"></div>
+<div id="toast" class="toast hidden"></div>
+<script src="../js/core.js"></script>
+<script src="../js/t-fund.js"></script><script src="../js/t-lang.js"></script><script src="../js/t-models.js"></script>
+<script src="../js/t-logic.js"></script><script src="../js/t-div.js"></script><script src="../js/topics.js"></script>
+<script src="../js/art.js"></script><script src="../js/art2.js"></script>
+<script src="../js/state.js"></script><script src="../js/cloud.js"></script>
+<script src="../js/ui.js"></script><script>var VOICE_BASE = "../";</script><script src="../js/voice-data.js"></script><script src="../js/voice.js"></script>
+<script src="../js/play.js"></script><script src="../js/t-vol.js"></script><script src="../js/screens.js"></script>
+<script src="../js/vendor/qrcode.js"></script><script src="../js/mult.js"></script><script src="../js/family.js"></script>
+<script src="../js/kid.js"></script><script src="../js/k-path.js"></script>
+<script>
+  try { localStorage.setItem('oreh_voice', '0'); } catch (e) { }
+  Voice.say = () => Promise.resolve();
+  if (!F.profiles.length) { addProfile('five'); S.name = 'Настя'; save(); addProfile('kid'); S.name = 'Лиза'; save(); addProfile('four'); S.name = 'Тёма'; save(); }
+  const demo = st => {
+    const day = n => addDays(today(), -n), add = (a, b, ms, days, err) => {
+      for (let i = days; i >= 1; i--) mulAnswer(st, a, b, true, ms, day(i));
+      for (let e = 0; e < (err || 0); e++) mulAnswer(st, a, b, false, 2000, day(0));
+    };
+    st.mul = {}; st.mulCols = { 2: 1, 3: 1, 4: 1, 5: 1, 7: 1 }; st.mulBest = 23;
+    for (const k of MUL_NUMS) { add(2, k, 2000, 5); add(k, 2, 2500, 5); add(5, k, 3500, 3); add(k, 5, 4000, 3); add(3, k, 3000, k % 2 ? 3 : 1); add(4, k, 3000, 1); add(k, 3, 3000, 2); }
+    add(7, 8, 3000, 1, 3); add(6, 7, 3000, 1, 2); add(8, 6, 3000, 1, 2); add(7, 4, 3000, 1, 1); add(7, 6, 3000, 1);
+    st.acorns = 86; st.earned = 120; st.solved = 240; st.right = 205;
+    for (let i = 0; i < 9; i++) st.history[day(i)] = { n: 15 + i * 3 % 11, ok: 13 };
+    st.streak = { last: today(), count: 4, best: 6 };
+    st.play = {}; for (let i = 0; i < 6; i++) st.play[day(i)] = { [F.device]: 900 + i * 60 };
+  };
+  const four = F.profiles.find(p => p.world === 'four'), five = F.profiles.find(p => p.world === 'five');
+  useProfile(four.id); demo(S); S.sound = false; save();
+  useProfile(five.id); S.mul = {}; S.mulCols = { 6: 1 }; for (const k of MUL_NUMS) mulAnswer(S, 6, k, true, 2000, addDays(today(), -1)); S.sound = false; save();
+  const q = new URLSearchParams(location.search), scr = q.get('scr') || 'map';
+  useProfile((scr === 'five' ? five : four).id);
+  const sc = y => setTimeout(() => { const s = document.querySelector('.screen'); if (s) s.scrollTop = y; }, 50);
+  if (scr === 'map') showMap();
+  else if (scr === 'tree') { showMul(); sc(+q.get('y') || 0); }
+  else if (scr === 'pic') { delete S.mulCols[6]; mulLearn(6); for (let i = 0; i < 3; i++) { MS.i++; } mulNext(); }
+  else if (scr === 'hint') { mulSession('mix', 'Вперемешку', 20, [[7, 8], [3, 6]]); MS.i = 6; MS.queue = Array(20).fill(MS.queue[0]); mulNext(); MS.input = '54'; ACT.mulCheck(); }
+  else if (scr === 'div') { mulSession('div', 'Деление', 20, [[7, 8]]); MS.i = 3; mulNext(); MS.input = '8'; ACT.mulKey({ dataset: { k: 'del' } }); MS.input = ''; ACT.mulKey({ dataset: { k: '8' } }); }
+  else if (scr === 'miss') { mulSession('miss', 'Пропущенный множитель', 20, [[6, 4]]); MS.i = 11; mulNext(); }
+  else if (scr === 'fast') { ACT.mulFast(); MS.end = Date.now() + 37000; MS.ok = 11; document.getElementById('fok').textContent = 11; }
+  else if (scr === 'gold') { showMul(); mulGoldScene(); }
+  else if (scr === 'five') { showTopic('fund'); sc(400); }
+  else if (scr === 'parent') { showParent(); sc(+q.get('y') || 0); }
+  else if (scr === 'family') { showFamily(); sc(+q.get('y') || 0); }
+  else if (scr === 'who') { showWho(); ACT.addWho(); }
+</script>
+</body>
+</html>

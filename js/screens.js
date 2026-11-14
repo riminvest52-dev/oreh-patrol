@@ -30,12 +30,14 @@ function showWho() {
     <div class="who">${tiles}<button class="who-tile" data-act="addWho"><span class="plus">＋</span><b>Добавить</b><span class="small muted">нового игрока</span></button></div>`);
 }
 const isKid = () => (curProfile() || {}).world === 'kid';
+const isFour = () => (curProfile() || {}).world === 'four';
 function enterWorld() { if (isKid()) return S.name ? showKidMap() : showKidWelcome(); if (!S.name) showWelcome(); else showMap(); }
 ACT.who = () => showWho();
 ACT.pickWho = el => { useProfile(el.dataset.id); enterWorld(); };
 ACT.addWho = () => modal(`<h2>Новый игрок</h2><p class="muted">Что будем проходить?</p><div class="stack">
-  <button class="btn green block" data-act="addGo" data-w="five">Математику 5 класса</button>
   <button class="btn gold block" data-act="addGo" data-w="kid">Подготовку к 1 классу 🌱</button>
+  <button class="btn green block" data-act="addGo" data-w="four">Математику 4 класса</button>
+  <button class="btn green block" data-act="addGo" data-w="five">Математику 5 класса</button>
   <button class="btn ghost block" data-act="close">Отмена</button></div>`);
 ACT.addGo = el => { closeModal(); addProfile(el.dataset.w); Cloud.soon(); enterWorld(); };
 
@@ -43,7 +45,7 @@ ACT.addGo = el => { closeModal(); addProfile(el.dataset.w); Cloud.soon(); enterW
 function showWelcome() {
   mount(`<div class="hero">${ART.chip('funduk', 'happy')}${ART.chip('mindal', 'happy')}</div>
     <h1 class="center">Ореховый патруль</h1>
-    <div class="bubble" style="margin:10px 0 16px">Привет! Мы — <b>Фундук</b> и <b>Миндалинка</b>, лесные спасатели. В лесу беда: у Бобра перепутались чертежи, у Совы разбежались высказывания, а на Ореховом складе никто не может разделить орехи поровну! Без математики не справиться. Поможешь нам?</div>
+    <div class="bubble" style="margin:10px 0 16px">${isFour() ? 'Привет! Мы — <b>Фундук</b> и <b>Миндалинка</b>, лесные спасатели. В Беличьей кладовой беда: белки разложили орехи рядами, а сколько всего — сосчитать не могут! Без таблицы умножения не разобраться. Поможешь нам?' : `Привет! Мы — <b>Фундук</b> и <b>Миндалинка</b>, лесные спасатели. В лесу беда: у Бобра перепутались чертежи, у Совы разбежались высказывания, а на Ореховом складе никто не может разделить орехи поровну! Без математики не справиться. Поможешь нам?`}</div>
     <label class="muted small" for="nm">Как тебя зовут?</label>
     <input class="input" id="nm" maxlength="20" autocomplete="off" placeholder="Твоё имя" value="${esc(S.name)}">
     <button class="btn block green" style="margin-top:14px" data-act="join">Вступить в патруль! 🌰</button>`);
@@ -52,6 +54,10 @@ ACT.join = () => {
   const v = document.getElementById('nm').value.trim();
   if (!v) { toast('Напиши своё имя 🙂'); return; }
   S.name = v.slice(0, 20); save();
+  if (isFour()) return mount(`<div class="hero">${ART.chip('mindal', 'happy')}</div>
+    <h2 class="center">Рады знакомству, ${esc(S.name)}!</h2>
+    <div class="bubble" style="margin:10px 0 16px">Начнём с <b>Беличьей кладовой</b> — там живёт таблица умножения. Каждый пример — орешек на дереве. Выучишь все — дерево станет золотым! Остальные уголки леса 4 класса скоро откроются.</div>
+    <button class="btn block green" data-act="mulOpen">В Беличью кладовую 🐿️</button><button class="btn block ghost" style="margin-top:10px" data-act="map">На карту</button>`);
   mount(`<div class="hero">${ART.chip('mindal', 'happy')}</div>
     <h2 class="center">Рады знакомству, ${esc(S.name)}!</h2>
     <div class="bubble" style="margin:10px 0 16px">Давай сначала пройдём <b>Проверку сил</b>: 16 заданий из всех уголков леса, примерно 10–15 минут. Так мы поймём, кому помочь в первую очередь. Ошибаться можно — это не контрольная!</div>
@@ -67,7 +73,9 @@ function showMap() {
   const due = dueMistakes().length, dailyDone = S.daily.date === today() && S.daily.done;
   const weak = S.diag || Object.values(S.mastery).some(m => m.n >= 5) ? weakTopics(2) : [];
   const W = Math.min(window.innerWidth, 560), stepY = 156, top = 70;
-  const all = TOPICS.map(t => ({ t, locked: false })).concat(LOCKED.map(t => ({ t, locked: true })));
+  const four = isFour();
+  const all = four ? FOUR_MAP.map(t => ({ t, locked: !t.act }))
+    : TOPICS.map(t => ({ t, locked: false })).concat(LOCKED.map(t => ({ t, locked: true })));
   const pts = all.map((x, i) => ({ x: i % 2 ? W * 0.7 : W * 0.3, y: top + i * stepY }));
   const H = top + all.length * stepY + 10;
   let path = `M${pts[0].x} ${pts[0].y + 44}`;
@@ -81,6 +89,8 @@ function showMap() {
   const nodes = all.map((x, i) => {
     const p = pts[i], t = x.t;
     if (x.locked) return `<div class="node locked" style="left:${p.x}px;top:${p.y}px"><div class="disc">${t.icon}</div><div class="nm">${t.name}</div><div class="small muted">🔒 ${t.sub}</div></div>`;
+    if (t.act) { const c = mulCount(S); return `<div class="node" data-act="${t.act}" style="left:${p.x}px;top:${p.y}px"><div class="disc">${t.icon}${S.medals.mulgold ? '<span class="medal">🌟</span>' : ''}</div>
+      <div class="nm">${t.name}</div><div class="st">🌳 ${c.know + c.gold}/64</div></div>`; }
     const st = topicStars(t.id), tip = weak.includes(t.id) ? '<div class="tip">Сюда сначала!</div>' : '';
     return `<div class="node" data-act="topic" data-id="${t.id}" style="left:${p.x}px;top:${p.y}px">${tip}<div class="disc">${t.icon}${S.medals[t.id] ? '<span class="medal">🏅</span>' : ''}</div>
       <div class="nm">${t.name}</div><div class="st">★ ${st}/9</div></div>`;
@@ -89,20 +99,20 @@ function showMap() {
   mount(`<div class="topbar"><div class="avatar" data-act="who" role="button" aria-label="Сменить игрока">${ART.chip((curProfile() || {}).hero || 'funduk', 'happy', '', true)}<span class="swap">⇄</span></div>
       <div class="grow"><div class="hello">Привет, ${esc(S.name || 'друг')}!</div><div class="small muted">${sn ? `🔥 ${sn} ${pl(sn, 'день', 'дня', 'дней')} подряд` : 'Ореховый патруль на связи'}</div></div>
       <span class="pill">${ART.acorn(22)}${S.acorns}</span><button class="iconbtn" data-act="parent" aria-label="Для взрослых">⚙️${cloudDot()}</button></div>
-    <div class="quick">
+    ${four ? fourQuick() : `<div class="quick">
       <div class="qcard ${dailyDone || !S.diag ? '' : 'hot'}" data-act="daily">${dailyDone ? '<span class="done">✅</span>' : ''}<div class="qi">☀️</div><div><div class="qt">Задание дня</div><div class="qs">${dailyDone ? 'Выполнено! Можно ещё' : '10 задач · +10 орешков'}</div></div></div>
       <div class="qcard" data-act="review">${due ? `<span class="badge">${due}</span>` : ''}<div class="qi">🧺</div><div><div class="qt">Корзинка ошибок</div><div class="qs">${due ? 'Пора повторить!' : S.mistakes.length ? `${S.mistakes.length} ждут своего дня` : 'Пока пусто'}</div></div></div>
       <div class="qcard ${S.diag ? '' : 'hot first'}" data-act="${S.diag ? 'diagAsk' : 'diag'}">${S.diag ? '' : '<div class="tip">Начни отсюда!</div>'}<div class="qi">🧭</div><div><div class="qt">Проверка сил</div><div class="qs">${S.diag ? 'Пройдена ' + S.diag.date.split('-').reverse().slice(0, 2).join('.') : '16 задач — с чего начать'}</div></div></div>
       <div class="qcard" data-act="album"><div class="qi">📒</div><div><div class="qt">Альбом наклеек</div><div class="qs">${S.stickers.length} из ${STICKERS.length}</div></div></div>
-    </div>
-    <h3 style="margin:4px 0 0">Карта леса</h3>
+    </div>`}
+    <h3 style="margin:4px 0 0">${four ? 'Лес 4 класса' : 'Карта леса'}</h3>
     <div class="forest" style="height:${H}px"><svg class="paths" viewBox="0 0 ${W} ${H}" preserveAspectRatio="none">${deco}
       <path d="${path}" stroke="#E2B47C" stroke-width="22" fill="none" stroke-linecap="round"/><path d="${path}" stroke="#F6D7A6" stroke-width="12" fill="none" stroke-linecap="round" stroke-dasharray="2 18"/></svg>${nodes}</div>`);
-  Praise.hello(); Voice.prefetch('five');
+  Praise.hello(); if (!four) Voice.prefetch('five');
 }
 let resizeT; window.addEventListener('resize', () => { clearTimeout(resizeT); resizeT = setTimeout(() => { if (document.querySelector('.forest')) showMap(); }, 200); });
-ACT.daily = () => startDaily();
-ACT.review = () => startReview();
+ACT.daily = () => isFour() ? fourDaily() : startDaily();
+ACT.review = () => isFour() ? ACT.mulDue() : startReview();
 ACT.diagAsk = () => modal(`<h2>Пройти Проверку сил ещё раз?</h2><p class="muted">Результаты обновят подсказки «Сюда сначала!» на карте. Звёзды и орешки сохранятся.</p>
   <div class="stack"><button class="btn green block" data-act="diagGo">Да, пройти</button><button class="btn ghost block" data-act="close">Не сейчас</button></div>`);
 ACT.diagGo = () => { closeModal(); startDiag(); };
@@ -188,7 +198,8 @@ function showParent() {
   const days = Array.from({ length: 14 }, (_, i) => addDays(today(), i - 13));
   const maxN = Math.max(1, ...days.map(d => (S.history[d] || {}).n || 0));
   const acc = S.solved ? Math.round(S.right / S.solved * 100) : 0;
-  const topics = TOPICS.map(T => {
+  const four = isFour(), hasMul = Object.keys(S.mul || {}).length > 0;
+  const topics = four ? '' : TOPICS.map(T => {
     const M = mast(T.id), [lbl, col] = masteryLabel(M.m), pct = M.m === null || M.m === undefined ? 0 : Math.round(M.m * 100);
     const weak = M.weak && S.skill[M.weak] && S.skill[M.weak].m < 0.8 && SKILL[M.weak] ? `<div class="small muted">слабее всего: ${SKILL[M.weak]}</div>` : '';
     return `<div class="trow"><div style="font-size:22px">${T.icon}</div><div><div class="tn">${T.name} <span class="small" style="color:${col}">· ${lbl}</span></div>${weak}
@@ -205,8 +216,9 @@ function showParent() {
       <div><div style="font-size:26px;font-weight:800">${S.mistakes.length}</div><div class="small muted">в корзинке</div></div></div>
       <div class="days">${days.map(d => { const n = (S.history[d] || {}).n || 0; return `<div class="${n ? '' : 'zero'}" style="height:${Math.max(4, n / maxN * 100)}%" title="${d}: ${n}"></div>`; }).join('')}</div>
       <div class="small muted center" style="margin-top:4px">Задач в день за последние 2 недели</div></div>
-    ${movedCard()}<h3 style="margin-top:18px">Темы</h3><div class="card">${topics}<p class="small muted">Тема оценивается по самому слабому навыку внутри неё. «Уверенно» — 80%+ по последним ответам с учётом сложности, «почти» — 55–80%, «подтянуть» — ниже. Ответ с подсказкой освоенность не повышает, со второй попытки — считается ошибкой.</p></div>
-    ${typeof handsParentCard === 'function' ? handsParentCard() : ''}
+    ${movedCard()}${four || hasMul ? `<h3 style="margin-top:18px">Таблица умножения</h3>${mulParentCard(S)}` : ''}
+    ${four ? '' : `<h3 style="margin-top:18px">Темы</h3><div class="card">${topics}<p class="small muted">Тема оценивается по самому слабому навыку внутри неё. «Уверенно» — 80%+ по последним ответам с учётом сложности, «почти» — 55–80%, «подтянуть» — ниже. Ответ с подсказкой освоенность не повышает, со второй попытки — считается ошибкой.</p></div>`}
+    ${!four && typeof handsParentCard === 'function' ? handsParentCard() : ''}
     <h3 style="margin-top:18px">Последние ошибки</h3><div class="card">${recentBad}</div>
     <h3 style="margin-top:18px">Настройки</h3><div class="card">
       <button class="btn ghost block" style="margin-bottom:12px" data-act="who">👧 Сменить или добавить игрока</button>
@@ -217,7 +229,7 @@ function showParent() {
       <button class="btn ghost block" style="margin-top:12px" data-act="export">📤 Перенести прогресс на другое устройство</button>
       <button class="btn ghost block" style="margin-top:12px" data-act="import">📥 Загрузить прогресс</button>
       <button class="btn ghost block" style="margin-top:12px;color:var(--red)" data-act="reset">Сбросить весь прогресс</button></div>
-    <p class="small muted center" style="margin-top:14px">Ореховый патруль · математика 5 класса по программе Л. Г. Петерсон (1–2 четверть)</p>`);
+    <p class="small muted center" style="margin-top:14px">${four ? 'Ореховый патруль · математика 4 класса (ФГОС, порядок тем — «Школа России», проверка — по образцу ВПР)' : 'Ореховый патруль · математика 5 класса по программе Л. Г. Петерсон (1–2 четверть)'}</p>`);
 }
 /* Код семьи, устройства и копии — в js/family.js (экран «Семья») */
 ACT.saveName = () => { const v = document.getElementById('pn').value.trim(); if (v) { S.name = v.slice(0, 20); save(); toast('Имя сохранено'); } };

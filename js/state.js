@@ -5,14 +5,15 @@
 const STORE_KEY = 'orehpatrol_v1';          /* формат первой версии (один игрок); не удаляем, это страховка */
 const FAMILY_KEY = 'orehpatrol_family_v2';
 const profKey = id => 'orehpatrol_p2_' + id;
-const WORLDS = { five: { title: '5 класс' }, kid: { title: 'Подготовка к 1 классу' } };
+/* Порядок — как при выборе игрока: подготовка → 4 класс → 5 класс */
+const WORLDS = { kid: { title: 'Подготовка к 1 классу' }, four: { title: '4 класс' }, five: { title: '5 класс' } };
 const dstr = d => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 const today = () => dstr(new Date());
 function addDays(s, n) { const d = new Date(s + 'T12:00:00'); d.setDate(d.getDate() + n); return dstr(d); }
 
 const fresh = () => ({ v: 2, name: '', created: today(), acorns: 0, earned: 0, sound: true, stars: {}, medals: {},
   mastery: {}, skill: {}, mistakes: [], history: {}, streak: { last: null, count: 0, best: 0 }, daily: { date: null, done: false },
-  stickers: [], diag: null, recent: [], hands: {}, play: {}, solved: 0, right: 0, _epoch: 0, _ts: 0, _tally: {}, gone: {} });
+  stickers: [], diag: null, recent: [], hands: {}, play: {}, mul: {}, mulCols: {}, mulBest: 0, solved: 0, right: 0, _epoch: 0, _ts: 0, _tally: {}, gone: {} });
 const newId = p => p + Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
 const readJson = k => { try { const v = localStorage.getItem(k); return v ? JSON.parse(v) : null; } catch (e) { return null; } };
 const writeJson = (k, v) => { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) { } };
@@ -266,6 +267,9 @@ function mergeStates(a, b) {
   /* Время игры: секунды по дням и устройствам, берём большее */
   const PA = A.play || {}, PB = B.play || {};
   for (const d of keysOf(PA, PB)) { const x = PA[d] || {}, y = PB[d] || {}; R.play[d] = {}; for (const k of keysOf(x, y)) R.play[d][k] = Math.max(x[k] || 0, y[k] || 0); }
+
+  /* Таблица умножения (js/mult.js): по каждому примеру — более свежая запись */
+  if (typeof mergeMul === 'function') mergeMul(A, B, R);
 
   const seen = new Set();
   R.recent = [...A.recent, ...B.recent].filter(r => { const k = r.ts + '|' + r.q; if (seen.has(k)) return false; seen.add(k); return true; })

@@ -520,3 +520,35 @@ svg.sor-sly .sor-spark { animation: sorspark 1.2s ease-in-out infinite; }
 .qrbox svg { display: block; width: 100%; height: auto; }
 .newdev { margin: 12px 0 4px; padding: 14px 16px; border-radius: var(--r); background: #E8F3FF; border: 2px solid #A9CBEA; font-weight: 700; }
 .newdev .btn { padding: 8px 14px; font-size: 15px; margin-left: 4px; }
+
+/* ---------- Беличья кладовая: тренажёр таблицы умножения (js/mult.js) ---------- */
+.mtree { padding: 12px 10px 10px; }
+.mcrown { background: radial-gradient(ellipse at 50% 45%, #CFE6A8 0%, #A9CF77 60%, #8DB046 100%); border-radius: 46% 46% 40% 40% / 38% 38% 30% 30%; padding: 24px 26px 22px; }
+.mtrunk { width: 46px; height: 26px; margin: -4px auto 0; background: linear-gradient(90deg, #8E5A2E, #B07642 50%, #8E5A2E); border-radius: 0 0 8px 8px; }
+.mgrid { display: grid; grid-template-columns: 22px repeat(8, 1fr); gap: 4px; max-width: 380px; margin: 0 auto; }
+.mgrid.small { grid-template-columns: 16px repeat(8, 1fr); gap: 3px; max-width: 260px; margin: 6px 0; }
+.mh { font-weight: 800; font-size: 13px; color: var(--ink2); display: flex; align-items: center; justify-content: center; }
+.mgrid.small .mh { font-size: 11px; }
+.mc { aspect-ratio: 1; border-radius: 50% 50% 46% 46%; border: 2px solid rgba(74, 40, 20, .35); display: flex; align-items: center; justify-content: center; font-size: 13px; color: #fff; cursor: pointer; }
+.mgrid.small .mc { border-width: 1px; font-size: 9px; cursor: default; }
+.mc.none { background: #E9DFD2; } .mc.learn { background: #F5C94A; } .mc.know { background: #6DB04F; } .mc.gold { background: radial-gradient(circle at 35% 30%, #FFE79A, #E9A21A 70%); border-color: #B27A0E; }
+.mleg { display: flex; justify-content: center; gap: 14px; margin-top: 8px; font-weight: 800; font-size: 14px; }
+.mleg span { display: flex; align-items: center; gap: 5px; } .mleg .mc { width: 18px; height: 18px; display: inline-flex; font-size: 10px; cursor: default; }
+.mcols { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
+.mcol { font: 800 22px var(--font); height: 56px; border-radius: 16px; border: 2px solid var(--line); background: #fff; color: var(--ink); box-shadow: 0 4px 0 var(--line); cursor: pointer; }
+.mcol.learn { background: #FFF1C9; border-color: #E8C35A; } .mcol.know { background: #DDF0CE; border-color: var(--green); color: var(--green-d); } .mcol.gold { background: #FFE79A; border-color: var(--gold-d); }
+.mcol:active, .mmode:active { transform: translateY(3px); box-shadow: 0 1px 0 var(--line); }
+.mmodes { display: grid; gap: 8px; }
+.mmode { display: flex; gap: 12px; align-items: center; text-align: left; font: inherit; color: var(--ink); background: var(--card); border: 2px solid var(--line); border-radius: 18px; padding: 10px 14px; box-shadow: 0 4px 0 var(--line); cursor: pointer; }
+.mmode .qi { font-size: 28px; } .mmode b { display: block; font-size: 17px; } .mmode.off { opacity: .55; cursor: default; }
+.mq { font: 800 44px var(--font); letter-spacing: 1px; margin: 6px 0; white-space: nowrap; }
+.mdisp { font-size: 40px; min-height: 66px; }
+.keypad.big .key { height: 64px; font-size: 30px; }
+.key.ok { background: var(--green); color: #fff; border-color: var(--green-d); box-shadow: 0 4px 0 var(--green-d); }
+.marr { margin: 2px 0 6px; } .marr svg { width: 100%; height: auto; display: block; margin: 0 auto 4px; }
+.fastbar i { background: linear-gradient(90deg, var(--gold), var(--orange)) !important; transition: width .2s linear; }
+.mlink { display: flex; gap: 12px; align-items: center; margin-top: 14px; cursor: pointer; } .mlink .qi { font-size: 32px; }
+.qcard.off { opacity: .55; cursor: default; }
+.kmul { margin-top: 6px; } .kmul summary { cursor: pointer; }
+.goldtree { font-size: 90px; filter: drop-shadow(0 0 14px #F5B43C) sepia(1) saturate(4) hue-rotate(5deg); }
+@media (max-width: 360px) { .mq { font-size: 36px; } .keypad.big .key { height: 56px; } }

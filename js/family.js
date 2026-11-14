@@ -29,7 +29,10 @@ function childInfo(p) {
   const stars = Object.values(st.stars || {}).reduce((s, v) => s + (+v || 0), 0);
   let good = [], weak = [];
   withState(st, () => {
-    if (p.world === 'kid' && typeof KID_TOPICS !== 'undefined') {
+    if (p.world === 'four') {
+      good = MUL_NUMS.filter(n => mulColDone(st, n)).map(n => 'таблица на ' + n);
+      weak = mulHard(st, 3);
+    } else if (p.world === 'kid' && typeof KID_TOPICS !== 'undefined') {
       const ms = KID_TOPICS.map(T => ({ name: T.name, M: st.mastery[T.id] })).filter(x => x.M && x.M.n >= 2);
       good = ms.filter(x => x.M.m >= 0.8).map(x => x.name);
       weak = ms.filter(x => x.M.m < 0.8).sort((a, b) => a.M.m - b.M.m).slice(0, 3).map(x => x.name);
@@ -55,6 +58,7 @@ function childCard(p) {
     <div class="kstat"><span>★ ${stars}</span><span>${ART.acorn(18)} ${st.acorns}</span><span>⏱ ${min} мин за неделю</span></div>
     <div class="small"><b>Освоено:</b> ${good.length ? esc(good.join(', ')) : '<span class="muted">пока нет</span>'}</div>
     <div class="small"><b>Подтянуть:</b> ${weak.length ? esc(weak.join(', ')) : '<span class="muted">пока нечего</span>'}</div>
+    ${p.world === 'four' || Object.keys(st.mul || {}).length ? `<details class="kmul"${p.world === 'four' ? ' open' : ''}><summary class="small"><b>Таблица умножения:</b> знает ${mulCount(st).know + mulCount(st).gold} из 64</summary>${mulGrid(st, true)}${mulLegend(st)}</details>` : ''}
     <div class="krow"><button class="btn ghost" data-act="kidName" data-id="${p.id}">Переименовать</button>
       <button class="btn ghost" data-act="kidReset" data-id="${p.id}">Сбросить</button>
       <button class="btn ghost" style="color:var(--red)" data-act="kidDel" data-id="${p.id}">Удалить</button></div></div></div>`;

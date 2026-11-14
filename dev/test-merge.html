@@ -7,6 +7,8 @@
 <pre id="out"></pre>
 <script src="../js/core.js"></script>
 <script src="../js/state.js"></script>
+<script>const ACT = {};</script>
+<script src="../js/mult.js"></script>
 <script>
 'use strict';
 const log = [], results = { pass: 0, fail: 0 };
@@ -157,6 +159,96 @@ for (let run = 0; run < 400; run++) {
     localStorage.clear(); for (const k in keepLS) localStorage.setItem(k, keepLS[k]);
     F = keepF; S = keepS;
   }
+}
+
+/* ---------- Тренажёр таблицы умножения (js/mult.js) ---------- */
+{
+  const D0 = '2026-03-02', d = n => addDays(D0, n);
+  /* Интервалы повторения: 1, 3, 7, 14 дней; ошибка — снова в ежедневную коробку */
+  let st = fresh(), r;
+  r = mulAnswer(st, 7, 8, true, 2000, d(0));
+  check('первый верный ответ: коробка 1, повтор завтра', r.b === 1 && r.due === d(1), r);
+  r = mulAnswer(st, 7, 8, true, 2000, d(0));
+  check('повторный ответ в тот же день коробку не двигает', r.b === 1 && r.due === d(1), r);
+  r = mulAnswer(st, 7, 8, true, 2000, d(1));
+  check('через 1 день → следующий показ через 3 дня', r.b === 2 && r.due === d(4), r);
+  r = mulAnswer(st, 7, 8, true, 2000, d(4));
+  check('→ через 7 дней', r.b === 3 && r.due === d(11), r);
+  r = mulAnswer(st, 7, 8, true, 2000, d(11));
+  check('→ через 14 дней', r.b === 4 && r.due === d(25), r);
+  r = mulAnswer(st, 7, 8, true, 2000, d(25));
+  check('дальше — каждые 14 дней', r.b === 4 && r.due === d(39), r);
+  r = mulAnswer(st, 7, 8, false, 2000, d(30));
+  check('ошибка → ежедневная коробка, повторить сегодня', r.b === 0 && r.due === d(30) && r.r.length === 0, r);
+  check('ошибка: пример «пора повторить»', mulDue(r, d(30)));
+  r = mulAnswer(st, 7, 8, true, 2000, d(30));
+  check('после ошибки верно → снова через 1 день', r.b === 1 && r.due === d(31), r);
+
+  /* «Выучен» — 3 быстрых верных ответа с первой попытки в разные дни */
+  st = fresh();
+  for (let i = 0; i < 3; i++) mulAnswer(st, 6, 7, true, 1500, d(0));
+  check('3 верных в один день — ещё «учится»', mulStatus(mulRec(st, 6, 7)) === 'learn', mulRec(st, 6, 7));
+  mulAnswer(st, 6, 7, true, 1500, d(1));
+  mulAnswer(st, 6, 7, true, 6500, d(2));
+  check('медленный ответ (больше 5 с) не засчитан', mulStatus(mulRec(st, 6, 7)) === 'learn' && mulRec(st, 6, 7).r.length === 2);
+  mulAnswer(st, 6, 7, true, 4800, d(3));
+  check('3 разных дня, каждый не дольше 5 с → «знает»', mulStatus(mulRec(st, 6, 7)) === 'know', mulRec(st, 6, 7));
+  mulAnswer(st, 6, 7, false, 1000, d(4));
+  check('ошибка — серия начинается заново', mulStatus(mulRec(st, 6, 7)) === 'learn' && mulRec(st, 6, 7).r.length === 0);
+  st = fresh();
+  [2500, 2500, 2500, 2800, 2900].forEach((ms, i) => mulAnswer(st, 9, 9, true, ms, d(i)));
+  check('5 быстрых в разные дни, последние 2 до 3 с → «золотой»', mulStatus(mulRec(st, 9, 9)) === 'gold', mulRec(st, 9, 9));
+  st = fresh();
+  [2500, 2500, 2500, 4000, 2900].forEach((ms, i) => mulAnswer(st, 9, 9, true, ms, d(i)));
+  check('предпоследний 4 с → ещё не золотой', mulStatus(mulRec(st, 9, 9)) === 'know');
+  check('не встречался → серый', mulStatus(mulRec(st, 2, 2)) === 'none');
+
+  /* Подбор примеров: 70% «на подходе» + 30% выученных */
+  st = fresh(); st.mulCols = { 2: 1, 3: 1, 4: 1, 5: 1 };
+  for (const b of MUL_NUMS) for (let i = 0; i < 3; i++) { mulAnswer(st, 2, b, true, 1000, d(i)); mulAnswer(st, 3, b, true, 1000, d(i)); }
+  const pick = mulPick(st, 20, d(3));
+  const nk = pick.filter(([a, b]) => mulKnown(mulRec(st, a, b))).length;
+  check('в тренировке 20 примеров', pick.length === 20, pick.length);
+  check('выученных для повторения — 30% (6 из 20)', nk === 6, nk);
+  check('все примеры — из изученных столбиков', pick.every(([a, b]) => [2, 3, 4, 5].includes(a) || [2, 3, 4, 5].includes(b)));
+  const due = fresh(); due.mulCols = { 7: 1 };
+  mulAnswer(due, 7, 6, false, 1000, d(0));
+  check('ошибочный пример попадает в следующую тренировку первым делом', mulPick(due, 3, d(1)).some(([a, b]) => a === 7 && b === 6));
+  check('нет изученных столбиков — нечего давать', mulPick(fresh(), 20).length === 0);
+
+  /* Подсказки-способы и задания сходятся с ответом */
+  let bad = [];
+  for (let a = 1; a <= 10; a++) for (let b = 1; b <= 10; b++) {
+    const w = mulWay(a, b);
+    if (!new RegExp('(^|\\D)' + a * b + '\\.$').test(w)) bad.push([a, b, w]);
+    for (const k of ['mul', 'div', 'miss']) {
+      const t = mulTask(k, a, b), c = a * b;
+      const okv = k === 'mul' ? t.ans === c : k === 'div' ? t.ans * a === c : t.ans * b === c;
+      if (!okv || !/\?/.test(t.q)) bad.push([k, a, b, t.q, t.ans]);
+    }
+  }
+  check('способ в подсказке приводит к верному ответу (100 примеров × 3 вида)', !bad.length, bad.slice(0, 3));
+  check('×9: от ×10 отнять', mulWay(9, 7).includes('70 − 7 = 63'), mulWay(9, 7));
+  check('×6, ×7, ×8 — через соседний пример', mulWay(7, 8).includes('7 · 7 = 49') && mulWay(7, 8).includes('49 + 7 = 56'), mulWay(7, 8));
+  check('перестановка множителей', mulWay(2, 8).startsWith('Поменяй множители местами'), mulWay(2, 8));
+
+  /* Слияние прогресса таблицы между устройствами */
+  const s0 = fresh(); s0.name = 'Тест';
+  const a = clone(s0), b = clone(s0);
+  A(a, x => { mulAnswer(x, 7, 8, true, 2000, d(0)); x.mulCols[7] = 1; x.mulBest = 12; });
+  B(b, x => { mulAnswer(x, 6, 9, false, 2000, d(0)); x.mulCols[6] = 1; x.mulBest = 15; });
+  const m = mergeStates(a, b);
+  check('примеры с обоих устройств сохранились', !!m.mul['7x8'] && !!m.mul['6x9'], Object.keys(m.mul));
+  check('изученные столбики объединились', m.mulCols[7] && m.mulCols[6]);
+  check('рекорд разминки — лучший', m.mulBest === 15, m.mulBest);
+  const a2 = clone(m), b2 = clone(m);
+  A(a2, x => { x.mul['7x8'].ts = 1000; });
+  B(b2, x => { mulAnswer(x, 7, 8, false, 2000, d(1)); });
+  const m2 = mergeStates(a2, b2);
+  check('по одному примеру побеждает более свежий ответ', m2.mul['7x8'].e === 1 && m2.mul['7x8'].b === 0, m2.mul['7x8']);
+  check('слияние повторно ничего не меняет', synced(mergeStates(m2, m2)) === synced(m2) && synced(mergeStates(m2, a2)) === synced(mergeStates(m2, a2)));
+  check('старое устройство без таблицы не стирает её', Object.keys(mergeStates(m, Object.assign(clone(s0), { mul: undefined })).mul).length === 2);
+  check('мир «4 класс» есть среди миров', WORLDS.four && WORLDS.four.title === '4 класс' && Object.keys(WORLDS).join() === 'kid,four,five');
 }
 
 /* ---------- Облако: та же логика, что в облачной функции (нужен запущенный dev/kv_server.py) ---------- */
