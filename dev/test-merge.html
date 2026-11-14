@@ -189,18 +189,34 @@ for (let run = 0; run < 400; run++) {
   for (let i = 0; i < 3; i++) mulAnswer(st, 6, 7, true, 1500, d(0));
   check('3 верных в один день — ещё «учится»', mulStatus(mulRec(st, 6, 7)) === 'learn', mulRec(st, 6, 7));
   mulAnswer(st, 6, 7, true, 1500, d(1));
-  mulAnswer(st, 6, 7, true, 6500, d(2));
-  check('медленный ответ (больше 5 с) не засчитан', mulStatus(mulRec(st, 6, 7)) === 'learn' && mulRec(st, 6, 7).r.length === 2);
-  mulAnswer(st, 6, 7, true, 4800, d(3));
-  check('3 разных дня, каждый не дольше 5 с → «знает»', mulStatus(mulRec(st, 6, 7)) === 'know', mulRec(st, 6, 7));
+  mulAnswer(st, 6, 7, true, 8500, d(2));
+  check('медленный ответ (дольше 7 с по умолчанию) не засчитан', mulStatus(mulRec(st, 6, 7), st) === 'learn');
+  mulAnswer(st, 6, 7, true, 6800, d(3));
+  check('3 разных дня, каждый не дольше 7 с → «знает»', mulStatus(mulRec(st, 6, 7), st) === 'know', mulRec(st, 6, 7));
+  st.mulT = 5;
+  check('настройка 5 с: ответ за 6,8 с уже не засчитан', mulStatus(mulRec(st, 6, 7), st) === 'learn');
+  st.mulT = 10;
+  check('настройка 10 с: засчитан и ответ за 8,5 с', mulStatus(mulRec(st, 6, 7), st) === 'know' && mulT(st) === 10000);
+  st.mulT = 3;
+  check('неизвестная настройка → 7 с по умолчанию', mulT(st) === 7000 && mulT(fresh()) === 7000);
+  delete st.mulT;
   mulAnswer(st, 6, 7, false, 1000, d(4));
   check('ошибка — серия начинается заново', mulStatus(mulRec(st, 6, 7)) === 'learn' && mulRec(st, 6, 7).r.length === 0);
   st = fresh();
   [2500, 2500, 2500, 2800, 2900].forEach((ms, i) => mulAnswer(st, 9, 9, true, ms, d(i)));
   check('5 быстрых в разные дни, последние 2 до 3 с → «золотой»', mulStatus(mulRec(st, 9, 9)) === 'gold', mulRec(st, 9, 9));
   st = fresh();
-  [2500, 2500, 2500, 4000, 2900].forEach((ms, i) => mulAnswer(st, 9, 9, true, ms, d(i)));
-  check('предпоследний 4 с → ещё не золотой', mulStatus(mulRec(st, 9, 9)) === 'know');
+  [2500, 2500, 2500, 5500, 2900].forEach((ms, i) => mulAnswer(st, 9, 9, true, ms, d(i)));
+  check('«золото» = настройка − 2 с: предпоследний 5,5 с при 7 с → ещё не золотой', mulStatus(mulRec(st, 9, 9), st) === 'know');
+  st.mulT = 10;
+  check('при настройке 10 с «золото» до 8 с → золотой', mulStatus(mulRec(st, 9, 9), st) === 'gold');
+  st.mulT = 5;
+  check('при настройке 5 с «золото» до 3 с, 5,5 с не засчитан → «знает»', mulStatus(mulRec(st, 9, 9), st) === 'know');
+  delete st.mulT;
+  /* ×1 и ×10 — в тренировку попадают, в дерево — нет */
+  let easyOk = true;
+  for (let i = 0; i < 200; i++) { const [a, b] = mulEasy(), t = mulTask('mul', a, b); if (!([1, 10].includes(a) || [1, 10].includes(b)) || t.rec || t.ans !== a * b) easyOk = false; }
+  check('×1 и ×10: верный ответ и не записываются в дерево', easyOk);
   check('не встречался → серый', mulStatus(mulRec(st, 2, 2)) === 'none');
 
   /* Подбор примеров: 70% «на подходе» + 30% выученных */
@@ -247,6 +263,33 @@ for (let run = 0; run < 400; run++) {
   const m2 = mergeStates(a2, b2);
   check('по одному примеру побеждает более свежий ответ', m2.mul['7x8'].e === 1 && m2.mul['7x8'].b === 0, m2.mul['7x8']);
   check('слияние повторно ничего не меняет', synced(mergeStates(m2, m2)) === synced(m2) && synced(mergeStates(m2, a2)) === synced(mergeStates(m2, a2)));
+  /* Объединение ответов по дням с двух устройств */
+  {
+    const base = fresh(); base.name = 'Т';
+    const pa = clone(base), pb = clone(base);
+    A(pa, x => { mulAnswer(x, 8, 7, true, 3000, d(0)); mulAnswer(x, 8, 7, true, 6000, d(1)); });
+    B(pb, x => { mulAnswer(x, 8, 7, true, 2000, d(1)); mulAnswer(x, 8, 7, true, 2500, d(2)); });
+    pb.mul['8x7'].ts = pa.mul['8x7'].ts + 1000;
+    const mm = mergeStates(pa, pb), rr = mm.mul['8x7'];
+    check('ответы по дням с обоих устройств объединились (3 дня)', rr.r.length === 3 && rr.r.map(x => x[0]).join() === [d(0), d(1), d(2)].join(), rr.r);
+    check('за день — лучшее время', rr.r[1][1] === 2000, rr.r);
+    check('после слияния пример стал «знает» (3 разных дня)', mulStatus(rr, mm) === 'know');
+    check('коробка и срок — из более свежей записи', rr.b === pb.mul['8x7'].b && rr.due === pb.mul['8x7'].due, rr);
+    check('слияние в обратном порядке даёт то же', synced(mergeStates(pb, pa).mul) === synced(mm.mul));
+    const many = clone(base), other = clone(base);
+    A(many, x => { for (let i = 0; i < 5; i++) mulAnswer(x, 4, 6, true, 2000, d(i)); });
+    B(other, x => { for (let i = 5; i < 9; i++) mulAnswer(x, 4, 6, true, 2000, d(i)); });
+    const m6 = mergeStates(many, other).mul['4x6'];
+    check('не больше 6 записей — последние дни', m6.r.length === 6 && m6.r[5][0] === d(8) && m6.r[0][0] === d(3), m6.r);
+    const err = clone(mm), ok2 = clone(mm);
+    B(err, x => { mulAnswer(x, 8, 7, false, 2000, d(3)); });
+    A(ok2, x => { mulAnswer(x, 8, 7, true, 2000, d(3)); x.mul['8x7'].ts = 1; });
+    const me = mergeStates(ok2, err).mul['8x7'];
+    check('ошибка на одном устройстве начинает серию заново: старые дни другого не возвращаются', me.r.every(x => x[0] >= d(3)) && me.b === 0, me);
+    const sl = clone(base), sr = clone(base);
+    A(sl, x => { x.mulT = 10; }); B(sr, x => { x.mulT = 5; });
+    check('настройка времени — с более свежего устройства', mergeStates(sl, sr).mulT === sr.mulT || mergeStates(sl, sr).mulT === (sr._ts > sl._ts ? 5 : 10));
+  }
   check('старое устройство без таблицы не стирает её', Object.keys(mergeStates(m, Object.assign(clone(s0), { mul: undefined })).mul).length === 2);
   check('мир «4 класс» есть среди миров', WORLDS.four && WORLDS.four.title === '4 класс' && Object.keys(WORLDS).join() === 'kid,four,five');
 }

@@ -1,27 +1,32 @@
 /* Беличья кладовая — тренажёр таблицы умножения (мир «4 класс», ссылка есть и в «Старом дубе» 5 класса).
    Каждый факт a · b (a, b = 2…9) учится отдельно: интервальное повторение (коробки Лейтнера) и правило
-   «выучен = 3 верных с первой попытки в разные дни, каждый не дольше 5 с». Время меряется тихо, таймер виден только в разминке.
-   Прогресс фактов — S.mul, изученные столбики — S.mulCols, рекорд разминки — S.mulBest. Слияние — в mergeStates (state.js). */
+   «выучен = 3 верных с первой попытки в разные дни, каждый не дольше T с» (T — настройка взрослого: 5, 7 или 10 с, по умолчанию 7;
+   «золотой» — последние два ответа не дольше T − 2 с). Время меряется тихо, таймер виден только в разминке.
+   Прогресс фактов — S.mul, изученные столбики — S.mulCols, рекорд разминки — S.mulBest, порог — S.mulT. Слияние — в mergeStates (state.js). */
 'use strict';
 
 const MUL_NUMS = [2, 3, 4, 5, 6, 7, 8, 9];
 const MUL_BOX_DAYS = [0, 1, 3, 7, 14];   /* коробка 0 — «ежедневная»: факт спрашиваем каждый день, пока не ответит верно */
-const MUL_FAST = 5000, MUL_GOLD_FAST = 3000;
+const MUL_T_OPTS = [5, 7, 10], MUL_T_DEF = 7;
+const MUL_KEEP = 10000;   /* ответы дольше 10 с не запоминаем: при любой настройке они медленные */
+const mulT = st => (MUL_T_OPTS.includes((st || S).mulT) ? (st || S).mulT : MUL_T_DEF) * 1000;
 const mulKey = (a, b) => a + 'x' + b;
 const mulRec = (st, a, b) => ((st || S).mul || {})[mulKey(a, b)] || null;
 
 /* Цвет факта: none — не встречался, learn — учится, know — знает, gold — знает быстро */
-function mulStatus(rec) {
+/* r — лучшее время за день по дням (только верные с первой попытки, не дольше 10 с). Порог применяется здесь,
+   поэтому смена настройки сразу пересчитывает цвета. Медленный (дольше T) день серию не обрывает, но и не считается. */
+function mulStatus(rec, st) {
   if (!rec || !rec.n) return 'none';
-  const r = rec.r || [];
-  if (r.length >= 5 && r.slice(-2).every(x => x[1] <= MUL_GOLD_FAST)) return 'gold';
+  const T = mulT(st), r = (rec.r || []).filter(x => x[1] <= T);
+  if (r.length >= 5 && r.slice(-2).every(x => x[1] <= T - 2000)) return 'gold';
   if (r.length >= 3) return 'know';
   return 'learn';
 }
-const mulKnown = rec => { const s = mulStatus(rec); return s === 'know' || s === 'gold'; };
+const mulKnown = (rec, st) => { const s = mulStatus(rec, st); return s === 'know' || s === 'gold'; };
 function mulCount(st) {
   const c = { none: 0, learn: 0, know: 0, gold: 0 };
-  for (const a of MUL_NUMS) for (const b of MUL_NUMS) c[mulStatus(mulRec(st, a, b))]++;
+  for (const a of MUL_NUMS) for (const b of MUL_NUMS) c[mulStatus(mulRec(st, a, b), st)]++;
   return c;
 }
 const mulDue = (rec, day) => !!rec && rec.n > 0 && (rec.due || '') <= (day || today());
@@ -31,16 +36,16 @@ const mulDueCount = st => { let n = 0; for (const a of MUL_NUMS) for (const b of
    Правила:
    — неверно → коробка 0, серия «выучен» начинается заново;
    — верно с первой попытки → коробка на ступень выше (если факт уже «пора повторить»), следующий показ через 1, 3, 7, 14 дней;
-   — в серию «выучен» идёт только быстрый ответ (не дольше 5 с), не больше одного в день: дни должны быть разными;
-   — медленный верный ответ серию не обрывает, но и не добавляет. */
+   — в серию «выучен» идёт лучшее время дня (дни должны быть разными), порог — при подсчёте цвета (mulStatus);
+   — z — день последней ошибки: при слиянии ответы раньше этого дня с другого устройства не воскрешают серию. */
 function mulAnswer(st, a, b, ok, ms, day) {
   day = day || today();
   st.mul = st.mul || {};
   const k = mulKey(a, b), rec = st.mul[k] || (st.mul[k] = { b: 0, due: day, r: [], n: 0, e: 0 });
   rec.n++; rec.ts = Date.now();
-  if (!ok) { rec.e++; rec.b = 0; rec.due = day; rec.r = []; return rec; }
+  if (!ok) { rec.e++; rec.b = 0; rec.due = day; rec.r = []; rec.z = day; return rec; }
   if ((rec.due || '') <= day) { rec.b = Math.min(4, rec.b + 1); rec.due = addDays(day, MUL_BOX_DAYS[rec.b]); }
-  if (ms <= MUL_FAST) {
+  if (ms <= MUL_KEEP) {
     const last = rec.r[rec.r.length - 1];
     if (last && last[0] === day) last[1] = Math.min(last[1], ms);
     else rec.r.push([day, ms]);
@@ -49,16 +54,28 @@ function mulAnswer(st, a, b, ok, ms, day) {
   return rec;
 }
 
-/* Слияние прогресса фактов с двух устройств: по каждому факту берём более свежую запись */
+/* Слияние прогресса фактов с двух устройств. По каждому примеру:
+   — коробка, срок повтора и счётчики — из более свежей записи;
+   — ответы по дням (r) — из обеих: за день лучшее время, не больше 6 последних дней;
+   — дни раньше последней ошибки (z) не берём: ошибка на любом устройстве начинает серию заново. */
+function mergeMulRec(x, y) {
+  if (!x) return y; if (!y) return x;
+  const nw = (y.ts || 0) > (x.ts || 0) ? y : x, z = [x.z || '', y.z || ''].sort().pop();
+  const days = {};
+  for (const [d, ms] of [...(x.r || []), ...(y.r || [])]) if (d >= z) days[d] = Math.min(days[d] === undefined ? Infinity : days[d], ms);
+  const R = Object.assign({}, nw, { r: Object.keys(days).sort().slice(-6).map(d => [d, days[d]]) });
+  if (z) R.z = z;
+  return R;
+}
 function mergeMul(A, B, R) {
   R.mul = {};
   const ma = A.mul || {}, mb = B.mul || {};
-  for (const k of new Set([...Object.keys(ma), ...Object.keys(mb)])) {
-    const x = ma[k], y = mb[k];
-    R.mul[k] = !x ? y : !y ? x : (y.ts || 0) > (x.ts || 0) ? y : x;
-  }
+  for (const k of new Set([...Object.keys(ma), ...Object.keys(mb)])) R.mul[k] = mergeMulRec(ma[k], mb[k]);
   R.mulCols = Object.assign({}, A.mulCols, B.mulCols);
   R.mulBest = Math.max(A.mulBest || 0, B.mulBest || 0);
+  /* Настройка взрослого — с более свежего устройства */
+  const nw = (B._ts || 0) > (A._ts || 0) ? B : A, old = nw === A ? B : A;
+  if (nw.mulT || old.mulT) R.mulT = nw.mulT || old.mulT;
 }
 
 /* ---------- Подсказки-способы (показываем при ошибке, а не сразу ответ) ---------- */
@@ -104,7 +121,7 @@ function mulPick(st, n, day) {
   const pool = mulPool(st);
   if (!pool.length) return [];
   const known = [], learning = [];
-  for (const f of pool) (mulKnown(mulRec(st, f[0], f[1])) ? known : learning).push(f);
+  for (const f of pool) (mulKnown(mulRec(st, f[0], f[1]), st) ? known : learning).push(f);
   const order = list => R.shuffle(list).sort((x, y) => {
     const rx = mulRec(st, x[0], x[1]), ry = mulRec(st, y[0], y[1]);
     const dx = mulDue(rx, day) ? 0 : !rx ? 1 : 2, dy = mulDue(ry, day) ? 0 : !ry ? 1 : 2;
@@ -128,7 +145,7 @@ function mulGrid(st, small) {
   for (const a of MUL_NUMS) {
     h += `<div class="mh">${a}</div>`;
     for (const b of MUL_NUMS) {
-      const s = mulStatus(mulRec(st, a, b));
+      const s = mulStatus(mulRec(st, a, b), st);
       h += `<div class="mc ${s}" ${small ? '' : `data-act="mulFact" data-a="${a}" data-b="${b}"`} title="${a} · ${b}">${s === 'none' ? '' : s === 'gold' ? '★' : ''}</div>`;
     }
   }
@@ -153,17 +170,20 @@ ACT.mulFact = el => {
 /* Для родителя: самые трудные факты (больше всего ошибок среди невыученных) */
 function mulHard(st, k = 3) {
   const list = [];
-  for (const a of MUL_NUMS) for (const b of MUL_NUMS) { const r = mulRec(st, a, b); if (r && r.e && !mulKnown(r)) list.push([a, b, r.e]); }
+  for (const a of MUL_NUMS) for (const b of MUL_NUMS) { const r = mulRec(st, a, b); if (r && r.e && !mulKnown(r, st)) list.push([a, b, r.e]); }
   return list.sort((x, y) => y[2] - x[2]).slice(0, k).map(([a, b]) => `${a} · ${b}`);
 }
+ACT.mulSetT = el => { S.mulT = +el.dataset.t; save(); toast(`Время на быстрый ответ: ${S.mulT} с`); showParent(); };
 /* Столбик выучен — все его 8 фактов зелёные или золотые */
-const mulColDone = (st, c) => MUL_NUMS.every(k => mulKnown(mulRec(st, c, k)));
+const mulColDone = (st, c) => MUL_NUMS.every(k => mulKnown(mulRec(st, c, k), st));
 function mulParentCard(st) {
   const c = mulCount(st), hard = mulHard(st, 5), cols = MUL_NUMS.filter(n => mulColDone(st, n));
   return `<div class="card">${mulGrid(st, true)}${mulLegend(st)}
     <div class="small" style="margin-top:6px"><b>Выучены столбики:</b> ${cols.length ? cols.map(n => '×' + n).join(', ') : '<span class="muted">пока нет</span>'}</div>
     <div class="small"><b>Трудные примеры:</b> ${hard.length ? hard.join(', ') : '<span class="muted">пока нет</span>'}</div>
-    <div class="small muted" style="margin-top:6px">Пример выучен, когда ребёнок 3 раза в разные дни ответил верно с первой попытки и не дольше 5 секунд (время меряется незаметно). Золотой — 5 таких ответов, последние два быстрее 3 секунд. Рекорд разминки: ${st.mulBest || 0}. Знает ${c.know + c.gold} из 64.</div></div>`;
+    <div class="small muted" style="margin-top:6px">Пример выучен, когда ребёнок 3 раза в разные дни ответил верно с первой попытки и не дольше ${mulT(st) / 1000} секунд (время меряется незаметно). Золотой — 5 таких ответов, последние два не дольше ${mulT(st) / 1000 - 2} секунд. Рекорд разминки: ${st.mulBest || 0}. Знает ${c.know + c.gold} из 64.</div>
+    ${st === S ? `<div class="small" style="margin-top:10px"><b>Время на быстрый ответ:</b></div><div class="row mtset">${MUL_T_OPTS.map(n => `<button class="btn ${mulT(st) === n * 1000 ? 'green' : 'ghost'}" data-act="mulSetT" data-t="${n}">${n} с</button>`).join('')}</div>
+    <div class="small muted">Если ребёнок нажимает медленно (планшет, маленький ребёнок) — поставьте 10 с. Цвета дерева пересчитаются сразу.</div>` : ''}</div></div>`;
 }
 
 /* ---------- Экран кладовой ---------- */
@@ -223,9 +243,12 @@ function mulStart(cfg) {
   mulNext();
 }
 function mulRandKind(kind) { return kind === 'mix' ? 'mul' : kind; }
+/* ×1 и ×10 — лёгкие примеры, в дерево не входят; в «Вперемешку» и «Разминке» — примерно 1 из 10 */
+const mulEasy = () => { const k = R.pick(MUL_NUMS), e = R.pick([1, 10]); return R.chance(0.5) ? [k, e] : [e, k]; };
 function mulSession(kind, title, n = 20, list) {
-  const facts = list || mulPick(S, n);
+  let facts = list || mulPick(S, n);
   if (!facts.length) { toast('Сначала выучи какой-нибудь столбик 🙂'); return; }
+  if (kind === 'mix' && !list) facts = R.shuffle(facts.map((f, i) => i % 10 === 9 ? mulEasy() : f));
   mulStart({ mode: kind, title, queue: facts.map(([a, b]) => mulTask(mulRandKind(kind), a, b)) });
 }
 ACT.mulMix = () => mulSession('mix', 'Вперемешку');
@@ -408,7 +431,7 @@ ACT.mulFast = () => {
   }, 200);
 };
 function mulFastNext() {
-  const [a, b] = R.pick(MS.facts);
+  const [a, b] = R.chance(0.1) ? mulEasy() : R.pick(MS.facts);
   MS.task = mulTask('mul', a, b); MS.input = '';
   const q = document.getElementById('fq'), d = document.getElementById('disp');
   if (q) q.textContent = MS.task.q;
