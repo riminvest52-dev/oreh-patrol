@@ -1,0 +1,122 @@
+/* 5 класс (Петерсон) — весь год одной тропой: 1–4 четверть.
+   Старые 9 локаций остаются (id те же — прогресс сохраняется), новые добавляются в конец тропы.
+   «Сейчас в школе проходим» (S.school) — настройка в разделе для взрослых: подсветка на карте, задание дня 60/40, Проверка сил до неё. */
+'use strict';
+
+Object.assign(SKILL, {
+  n_fact: 'разложение на простые множители', n_gcd: 'НОД', n_lcm: 'НОК', n_coprime: 'взаимно простые числа', n_word: 'задачи на НОД и НОК',
+  p_val: 'значение степени', p_sq: 'квадрат и куб числа', p_order: 'порядок действий со степенями', p_cmp: 'сравнение степеней', p_write: 'запись произведения степенью',
+  q_part: 'дробь от числа', q_whole: 'число по его дроби', q_kind: 'правильные и неправильные дроби', q_tomixed: 'выделение целой части', q_toimp: 'смешанное число → неправильная дробь',
+  k_reduce: 'сокращение дробей', k_equiv: 'основное свойство дроби', k_cmp: 'сравнение дробей', k_common: 'наименьший общий знаменатель', k_tocommon: 'приведение к общему знаменателю',
+  b_same: 'сложение и вычитание с одинаковыми знаменателями', b_diff: 'сложение и вычитание с разными знаменателями', b_mixed: 'действия со смешанными числами', b_one: 'вычитание дроби из целого', b_word: 'задачи на сложение дробей',
+  w_mulnat: 'умножение и деление дроби на число', w_mul: 'умножение дробей', w_div: 'деление дробей', w_mixed: 'умножение и деление смешанных чисел', w_recip: 'взаимно обратные числа',
+  t_part: 'нахождение части от целого', t_whole: 'нахождение целого по части', t_rest: 'задачи на остаток', t_work: 'задачи на совместную работу',
+  r_point: 'дробь на луче', r_where: 'точка на луче по дроби', r_scale: 'цена деления шкалы',
+  a_kind: 'виды углов', a_prot: 'измерение транспортиром', a_split: 'сложение и вычитание углов', a_tri: 'виды треугольников', a_circle: 'окружность и круг',
+  c_bar: 'столбчатые диаграммы', c_pie: 'круговые диаграммы', c_avg: 'среднее арифметическое'
+});
+
+/* Четверти у прежних локаций */
+const Q_OF = { fund: 1, lang: 1, order: 1, models: 1, eq: 1, logic: 2, div: 2, sieve: 2, vol: 2 };
+TOPICS5.forEach(T => { T.q = Q_OF[T.id] || T.q; });
+
+TOPICS5.push(
+  { id: 'nod', q: 3, name: 'Башня НОД и НОК', sub: 'Простые множители, НОД, НОК', icon: '🏰', who: 'Хомяк Запасливый',
+    intro: 'Я раскладываю орехи по мешочкам поровну — без остатка! Для этого нужно знать НОД. А чтобы два обоза встретились у моей башни, нужен НОК. Поднимемся вместе?',
+    gens: ['n_fact', 'n_gcd', 'n_lcm', 'n_coprime', 'n_word'],
+    sheet: [
+      '<b>Разложи на простые множители:</b> дели на 2, пока делится, потом на 3, 5, 7… 60 = 2 · 2 · 3 · 5.',
+      '<b>НОД</b> — наибольший общий делитель: перемножь <b>общие</b> множители. 12 = 2·2·3, 18 = 2·3·3 → НОД = 2 · 3 = 6.',
+      '<b>НОК</b> — наименьшее общее кратное: разложение большего числа + недостающие множители меньшего. НОК(12; 18) = 2·3·3 · 2 = 36.',
+      '<b>Взаимно простые</b> числа — НОД равен 1 (например, 8 и 15). Тогда НОК = их произведение.',
+      '<b>В задачах:</b> «поровну разложить, наибольшее число букетов, наибольший квадрат» → НОД. «Снова встретятся, следы совпадут» → НОК.'
+    ] },
+  { id: 'pow', q: 3, name: 'Лестница степеней', sub: 'Степень, квадрат и куб числа', icon: '🪜', who: 'Летучая мышка Тиша',
+    intro: 'Я живу под самой крышей, на верхней ступеньке! Степень — это лестница: каждая ступенька умножает ещё раз. Шагаем?',
+    gens: ['p_val', 'p_sq', 'p_order', 'p_cmp', 'p_write'],
+    sheet: [
+      '<b>Степень:</b> 2<sup>5</sup> = 2 · 2 · 2 · 2 · 2 = 32. Основание 2 — что умножаем, показатель 5 — сколько раз.',
+      '2<sup>5</sup> — это <b>не</b> 2 · 5! Степень — повторное умножение.',
+      '<b>Квадрат</b> числа: a<sup>2</sup> = a · a. <b>Куб</b>: a<sup>3</sup> = a · a · a. 10<sup>n</sup> — единица и n нулей.',
+      '<b>Порядок действий:</b> скобки → степени → умножение и деление → сложение и вычитание.',
+      '(2 + 3)<sup>2</sup> = 25, а 2<sup>2</sup> + 3<sup>2</sup> = 13 — это разные выражения!'
+    ] },
+  { id: 'pie', q: 3, name: 'Пирог дробей', sub: 'Дробь от числа, правильные и смешанные', icon: '🥧', who: 'Дедушка Ёж',
+    intro: 'Я испёк большой пирог и делю его на всех — поровну! Знаменатель показывает, на сколько частей режем, а числитель — сколько частей взяли. Угощайся!',
+    gens: ['q_part', 'q_whole', 'q_kind', 'q_tomixed', 'q_toimp'],
+    sheet: [
+      'В дроби <span class="fr"><b>3</b><b>4</b></span> знаменатель 4 — на сколько равных частей делим, числитель 3 — сколько частей взяли.',
+      '<b>Дробь от числа:</b> <span class="fr"><b>3</b><b>4</b></span> от 20 = 20 : 4 · 3 = 15 (делим на знаменатель, умножаем на числитель).',
+      '<b>Число по дроби:</b> <span class="fr"><b>3</b><b>4</b></span> числа = 15 → 15 : 3 · 4 = 20 (делим на числитель, умножаем на знаменатель).',
+      '<b>Правильная</b> дробь меньше 1 (числитель меньше знаменателя). <b>Неправильная</b> — больше 1 или равна 1.',
+      '<b>Выделить целую часть:</b> <span class="fr"><b>17</b><b>5</b></span> → 17 : 5 = 3 (ост. 2) → 3<span class="fr"><b>2</b><b>5</b></span>.',
+      '<b>Обратно:</b> 3<span class="fr"><b>2</b><b>5</b></span> = <span class="fr"><b>3 · 5 + 2</b><b>5</b></span> = <span class="fr"><b>17</b><b>5</b></span>.'
+    ] },
+  { id: 'kitchen', q: 3, name: 'Кухня дробей', sub: 'Сокращение, общий знаменатель, сравнение', icon: '🍳', who: 'Мышка-мельник',
+    intro: 'На моей кухне все дроби приводят к порядку: сокращают, подбирают общий знаменатель и сравнивают, какой кусочек больше. Надевай фартук!',
+    gens: ['k_reduce', 'k_equiv', 'k_cmp', 'k_common', 'k_tocommon'],
+    sheet: [
+      '<b>Основное свойство дроби:</b> числитель и знаменатель можно умножить или разделить на одно и то же число — дробь не изменится.',
+      '<b>Сократить</b> — разделить числитель и знаменатель на их НОД: <span class="fr"><b>18</b><b>24</b></span> = <span class="fr"><b>3</b><b>4</b></span> (делили на 6).',
+      '<b>Наименьший общий знаменатель</b> — НОК знаменателей. Для <span class="fr"><b>1</b><b>4</b></span> и <span class="fr"><b>1</b><b>6</b></span> это 12.',
+      '<b>Дополнительный множитель</b> = общий знаменатель : знаменатель. На него умножают и числитель, и знаменатель.',
+      '<b>Сравнение:</b> знаменатели равны — больше та, где числитель больше. Числители равны — больше та, где знаменатель <b>меньше</b>. Иначе — приведи к общему знаменателю.'
+    ] },
+  { id: 'fbridge', q: 3, name: 'Мост дробей', sub: 'Сложение и вычитание, смешанные числа', icon: '🌉', who: 'Бобр Тимофей',
+    intro: 'Мой мост собран из дробных брёвнышек! Чтобы сложить брёвна, они должны быть одной длины — то есть с одинаковым знаменателем. Строим?',
+    gens: ['b_same', 'b_diff', 'b_mixed', 'b_one', 'b_word'],
+    sheet: [
+      '<b>Одинаковые знаменатели:</b> числители складываем (вычитаем), знаменатель оставляем. <span class="fr"><b>2</b><b>7</b></span> + <span class="fr"><b>3</b><b>7</b></span> = <span class="fr"><b>5</b><b>7</b></span>.',
+      '<b>Знаменатели не складывают!</b> <span class="fr"><b>1</b><b>2</b></span> + <span class="fr"><b>1</b><b>3</b></span> ≠ <span class="fr"><b>2</b><b>5</b></span>.',
+      '<b>Разные знаменатели:</b> сначала приведи к общему знаменателю: <span class="fr"><b>1</b><b>2</b></span> + <span class="fr"><b>1</b><b>3</b></span> = <span class="fr"><b>3</b><b>6</b></span> + <span class="fr"><b>2</b><b>6</b></span> = <span class="fr"><b>5</b><b>6</b></span>.',
+      '<b>Смешанные числа:</b> целые — с целыми, дробные части — с дробными. Дробная часть стала больше 1 — выдели целую.',
+      '<b>Не хватает дробной части?</b> Займи 1 у целых: 3<span class="fr"><b>1</b><b>5</b></span> − 1<span class="fr"><b>3</b><b>5</b></span> = 2<span class="fr"><b>6</b><b>5</b></span> − 1<span class="fr"><b>3</b><b>5</b></span> = 1<span class="fr"><b>3</b><b>5</b></span>.',
+      '<b>Ответ всегда сокращай</b> и выделяй целую часть.'
+    ] }
+);
+TOPICS5.forEach(T => { TOPIC[T.id] = T; });
+LOCKED5.splice(0);
+/* Последний узел тропы — Большая проверка года */
+const FINAL5 = { id: 'year', q: 4, name: 'Большая проверка года', sub: 'По задаче из каждой локации', icon: '🏆', act: 'yearCheck' };
+const QNAMES = ['', '1 четверть', '2 четверть', '3 четверть', '4 четверть'];
+
+/* ---------- «Сейчас в школе проходим» ---------- */
+const SCHOOL_DEFAULT = 'nod';   /* по умолчанию — первая локация 3 четверти */
+const isFive = () => TOPICS === TOPICS5 && !(typeof isKid === 'function' && isKid());
+const schoolId = () => { const id = S && S.school && S.school.id; return id && TOPICS5.some(T => T.id === id) ? id : SCHOOL_DEFAULT; };
+const schoolIdx = () => TOPICS5.findIndex(T => T.id === schoolId());
+/* Локации, пройденные в школе (включая текущую). В 4 классе — все */
+const passedTopics = () => isFive() ? TOPICS5.slice(0, schoolIdx() + 1) : TOPICS;
+const isAhead = id => isFive() && TOPICS5.findIndex(T => T.id === id) > schoolIdx();
+function setSchool(id) { if (!TOPIC[id]) return; S.school = { id, ts: Date.now() }; save(); toast(`Отмечено: «${TOPIC[id].name}»`); showParent(); }
+function schoolPicker() {
+  const cur = schoolId();
+  const groups = [1, 2, 3, 4].map(q => `<optgroup label="${QNAMES[q]}">${TOPICS5.filter(T => T.q === q).map(T => `<option value="${T.id}"${T.id === cur ? ' selected' : ''}>${T.icon} ${T.name}</option>`).join('')}</optgroup>`).join('');
+  return `<h3 style="margin-top:18px">Сейчас в школе проходим</h3><div class="card">
+    <select class="input" id="school" onchange="setSchool(this.value)" aria-label="Сейчас в школе проходим">${groups}</select>
+    <p class="small muted" style="margin:8px 0 0">Эта локация подсвечена на карте. Задание дня: 6 задач из неё и 4 — повторение пройденного и корзинка ошибок. Проверка сил — по темам до неё включительно. Локации ниже по тропе открыты, но помечены «В школе ещё впереди».</p></div>`;
+}
+
+/* ---------- Итог Большой проверки года ---------- */
+function yearFinish(s) {
+  const n = s.queue.length, ok = s.ok, byQ = { 1: [0, 0], 2: [0, 0], 3: [0, 0], 4: [0, 0] }, miss = [];
+  s.results.forEach(r => { const T = TOPIC[r.topic]; const q = (T && T.q) || 1; byQ[q][1]++; if (r.ok) byQ[q][0]++; else if (T && !miss.includes(T)) miss.push(T); });
+  const prev = S.year || {}, first = !prev.date;
+  const win = ok >= Math.ceil(n * 0.8), firstMedal = win && !S.medals.year;
+  S.year = { date: today(), ok, total: n, best: Math.max(prev.best || 0, ok), n: (prev.n || 0) + 1, q: byQ };
+  if (firstMedal) S.medals.year = true;
+  const ac = (first ? 10 : 3) + (firstMedal ? 15 : 0); giveAcorns(ac); save();
+  Sound.win(); if (win) { confetti(); setTimeout(() => Praise.say('medal'), 0); }
+  const rows = [1, 2, 3, 4].filter(q => byQ[q][1]).map(q => { const [a, b] = byQ[q], col = a === b ? '#5E9E4A' : a >= b * 0.6 ? '#F5B43C' : '#D9553A';
+    return `<div class="trow"><div style="font-size:20px">📅</div><div><div class="tn">${QNAMES[q]}</div><div class="bar"><i style="width:${a / b * 100}%;background:${col}"></i></div></div><div class="small" style="font-weight:800;color:${col}">${a}/${b}</div></div>`; }).join('');
+  mount(`<div class="result">${ART.chip(heroFor(win ? 'funduk' : 'mindal'), win ? 'cheer' : 'happy')}<h1>${win ? 'Год пройден! 🏆' : 'Большая проверка окончена'}</h1>
+      <p style="font-size:19px">Верно: <b>${ok}</b> из ${n}</p><p><span class="pill">+${ac} ${ART.acorn(18)}</span></p>
+      <p class="muted">${win ? 'Ты получаешь главную медаль года!' : `Для медали года нужно ${Math.ceil(n * 0.8)} верных из ${n}. Повтори локации ниже и попробуй ещё!`}</p></div>
+    <div class="card" style="margin-top:12px">${rows}</div>
+    ${miss.length ? `<div class="bubble" style="margin-top:14px">Стоит повторить: <b>${miss.map(T => T.icon + ' ' + T.name).join('</b>, <b>')}</b>. Ошибки уже лежат в корзинке.</div>` : ''}
+    <div class="stack" style="margin-top:16px"><button class="btn green block" data-act="map">На карту леса 🗺️</button></div>`);
+}
+const ACT5 = () => { ACT.yearCheck = () => modal(`<h2>🏆 Большая проверка года</h2><p class="muted">${TOPICS5.length} заданий — по одному из каждой локации, от 1 до 4 четверти. Подсказок нет, ответ даётся один раз. Это примерно 25–30 минут — лучше решать на черновике.</p>
+  ${S.year ? `<p class="small muted">Прошлый раз: ${S.year.ok} из ${S.year.total} · лучший результат: ${S.year.best}</p>` : ''}
+  <div class="stack"><button class="btn green block" data-act="yearGo">Начать</button><button class="btn ghost block" data-act="close">Не сейчас</button></div>`);
+  ACT.yearGo = () => { closeModal(); startYear(); }; };

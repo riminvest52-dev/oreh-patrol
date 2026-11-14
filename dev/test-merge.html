@@ -97,6 +97,18 @@ function base() {
   const a = base(), b = clone(a); a.sound = false; b.sound = true;
   check('звук не перезаписан', mergeStates(a, b).sound === false);
 }
+{ /* ВПР (4 класс), Большая проверка года и «Сейчас в школе» (5 класс) не теряются при слиянии */
+  const a = base(), b = clone(a);
+  A(a, x => { x.year = { date: '2026-05-10', ok: 15, total: 19, best: 17, n: 3 }; x.school = { id: 'fbridge', ts: 100 }; });
+  B(b, x => { x.year = { date: '2026-05-20', ok: 12, total: 19, best: 12, n: 1 }; x.vpr = { date: '2026-04-01', best: 9, n: 2 }; x.school = { id: 'ray', ts: 200 }; });
+  const m = mergeStates(a, b), m2 = mergeStates(b, a);
+  check('год: свежий результат', m.year.date === '2026-05-20' && m.year.ok === 12 && m2.year.ok === 12, m.year);
+  check('год: лучший с обоих устройств', m.year.best === 17 && m.year.n === 3 && m2.year.best === 17, m.year);
+  check('впр сохранён', m.vpr && m.vpr.best === 9 && m2.vpr && m2.vpr.best === 9, m.vpr);
+  check('сейчас в школе — более поздняя настройка', m.school.id === 'ray' && m2.school.id === 'ray', m.school);
+  const c = clone(a); delete c.school; delete c.year; delete c.vpr;
+  check('старые данные без новых полей', mergeStates(c, b).school.id === 'ray' && mergeStates(b, c).year.ok === 12);
+}
 
 /* Случайная игра на трёх устройствах с синхронизацией через «облако» */
 for (let run = 0; run < 400; run++) {

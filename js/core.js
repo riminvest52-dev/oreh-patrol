@@ -185,6 +185,39 @@ function longDivSteps(a, b) {
   return steps;
 }
 
+/* ---------- Обыкновенные дроби (5 класс): значение — несократимая пара {n, d}, d > 0 ---------- */
+const Q = (n, d = 1) => { if (d < 0) { n = -n; d = -d; } const g = gcd(Math.abs(n), d) || 1; return { n: n / g, d: d / g }; };
+const qAdd = (a, b) => Q(a.n * b.d + b.n * a.d, a.d * b.d);
+const qSub = (a, b) => Q(a.n * b.d - b.n * a.d, a.d * b.d);
+const qMul = (a, b) => Q(a.n * b.n, a.d * b.d);
+const qDiv = (a, b) => Q(a.n * b.d, a.d * b.n);
+const qEq = (a, b) => !!a && !!b && a.n * b.d === b.n * a.d;
+const qCmp = (a, b) => Math.sign(a.n * b.d - b.n * a.d);
+const qMix = (w, n, d) => Q(w * d + n, d);
+/* Текст для записи в истории: «3/4», «2 1/3», «5» (mixed — выделять целую часть) */
+function qText(q, mixed) {
+  if (q.d === 1) return String(q.n);
+  if (mixed && q.n > q.d) return `${Math.floor(q.n / q.d)} ${q.n % q.d}/${q.d}`;
+  return `${q.n}/${q.d}`;
+}
+/* Запись дробной чертой: frH(3, 4) — дробь «как в тетради», mxH(2, 1, 3) — смешанное число */
+const frH = (a, b) => `<span class="fr"><b>${a}</b><b>${b}</b></span>`;
+const mxH = (w, a, b) => `<span class="mx">${w}${frH(a, b)}</span>`;
+function qHtml(q, mixed) {
+  if (q.d === 1) return fmt(q.n);
+  if (mixed && q.n > q.d) return mxH(Math.floor(q.n / q.d), q.n % q.d, q.d);
+  return frH(q.n, q.d);
+}
+/* «3/4», «2 1/3», «5» → значение; иначе null */
+function qParse(s) {
+  const t = String(s).replace(/<span class="fr"><b>(\d+)<\/b><b>(\d+)<\/b><\/span>/g, ' $1/$2').replace(/<[^>]+>/g, '').replace(/[\s  ]+/g, ' ').trim();
+  let m;
+  if ((m = t.match(/^(\d+) (\d+)\/(\d+)$/)) && +m[3]) return qMix(+m[1], +m[2], +m[3]);
+  if ((m = t.match(/^(\d+)\/(\d+)$/)) && +m[2]) return Q(+m[1], +m[2]);
+  if ((m = t.match(/^\d+$/))) return Q(+t, 1);
+  return null;
+}
+
 /* ---------- Реестр генераторов ---------- */
 const GEN = {};
 function reg(topic, id, f) { GEN[id] = { topic, id, f }; }
@@ -197,6 +230,8 @@ function optValue(o) {
 /* Неверный вариант с тем же значением, что и верный (кроме lang_write — там важна запись, а не число) */
 function sameValueOpt(t) {
   if (t.type !== 'choice' || !Array.isArray(t.options) || t.gen === 'lang_write') return false;
+  /* Варианты-дроби и другие варианты со своим «значением»: optVals — значения вариантов, двойников быть не должно */
+  if (t.optVals) return new Set(t.optVals).size !== t.optVals.length;
   const av = optValue(t.answer);
   return av !== null && t.options.some(o => String(o) !== String(t.answer) && optValue(o) === av);
 }
@@ -211,7 +246,8 @@ function makeTask(id, d) {
       if (sameValueOpt(t)) { last = t; continue; }
       /* Ловушки — типичные неверные ответы с объяснением. Ответ совпасть с ловушкой не может */
       t.traps = (t.traps || []).map(x => Array.isArray(x) ? { v: x[0], msg: x[1] } : x)
-        .filter(x => x && x.v !== undefined && x.v !== null && (typeof x.v !== 'number' || (Number.isInteger(x.v) && x.v >= 0)) && String(x.v) !== String(t.answer));
+        .filter(x => x && x.v !== undefined && x.v !== null && (typeof x.v !== 'number' || (Number.isInteger(x.v) && x.v >= 0)) && String(x.v) !== String(t.answer))
+        .filter(x => t.type !== 'frac' || (qParse(x.v) && !qEq(qParse(x.v), t.ans)));
       return t;
     } catch (err) { if (tries === 59) throw err; }
   }

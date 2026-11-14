@@ -3,7 +3,7 @@
 <style>body{font:14px system-ui;margin:16px}pre{white-space:pre-wrap}.bad{color:#b00}.task{border-bottom:1px solid #ddd;padding:6px 0}</style></head>
 <body><h1>Тест генераторов</h1><div id="out"></div>
 <script src="../js/core.js"></script><script src="../js/col.js"></script><script src="../js/t-fund.js"></script><script src="../js/t-lang.js"></script>
-<script src="../js/t-models.js"></script><script src="../js/t-logic.js"></script><script src="../js/t-div.js"></script><script src="../js/t4a.js"></script><script src="../js/t4b.js"></script><script src="../js/topics.js"></script><script src="../js/topics4.js"></script>
+<script src="../js/t-models.js"></script><script src="../js/t-logic.js"></script><script src="../js/t-div.js"></script><script src="../js/t4a.js"></script><script src="../js/t4b.js"></script><script src="../js/t5b.js"></script><script src="../js/topics.js"></script><script src="../js/topics5.js"></script><script src="../js/topics4.js"></script>
 <script>const ACT = {}; const S = {};</script><script src="../js/t-vol.js"></script><script src="../js/mult.js"></script>
 <script>
 const strip = s => String(s).replace(/<[^>]+>/g, '');
@@ -21,12 +21,30 @@ function check(t) {
     if (new Set(t.options).size !== t.options.length) errs.push('dup options');
     if (!t.options.includes(t.answer)) errs.push('answer not in options: ' + t.answer + ' / ' + t.options.join(' ; '));
     /* Ни один неверный вариант не равен ответу по значению (кроме lang_write — там проверяется запись) */
-    if (t.gen !== 'lang_write') {
+    if (t.gen !== 'lang_write' && t.gen !== 'n_fact') {   /* n_fact: все варианты — разные записи одного числа, проверяется разложение */
       const av = exprVal(t.answer);
       if (av !== null) for (const o of t.options) if (o !== t.answer && exprVal(o) === av) {
         errs.push('same value: ' + strip(o) + ' = ' + strip(t.answer) + ' = ' + av);
         VALDUP[t.gen] = (VALDUP[t.gen] || 0) + 1; if (VALDUPEX.length < 12) VALDUPEX.push(t.gen + ' d' + t.d + ': ' + strip(t.answer) + '  ≡  ' + strip(o) + ' = ' + av);
       }
+    }
+    /* Варианты-дроби: ответ среди вариантов, двойников по значению нет (2/4 и 1/2 — двойник) */
+    if (t.optVals) {
+      if (t.optVals.length !== t.options.length) errs.push('optVals length');
+      const qs = t.optVals.map(v => qParse(v));
+      if (qs.every(Boolean)) { const ks = qs.map(q => q.n + '/' + q.d); if (new Set(ks).size !== ks.length) errs.push('frac same value: ' + t.optVals.join(' ; ')); }
+      else if (new Set(t.optVals).size !== t.optVals.length) errs.push('optVals dup');
+    }
+  } else if (t.type === 'frac') {
+    /* Ответ-дробь: значение, текст и картинка ответа согласованы; ловушки не равны ответу по значению */
+    if (!t.ans || !(t.ans.d > 0) || t.ans.n < 0 || !Number.isInteger(t.ans.n)) errs.push('bad frac ans');
+    else {
+      if (!qEq(qParse(t.answer), t.ans)) errs.push('frac answer text ' + t.answer);
+      if (gcd(t.ans.n, t.ans.d) !== 1) errs.push('frac ans not reduced');
+      if (!t.ansHtml) errs.push('no ansHtml');
+      if (t.form === 'mixed' && t.ans.n > t.ans.d && t.ans.d > 1 && !/ /.test(t.answer)) errs.push('mixed answer without whole part ' + t.answer);
+      for (const x of t.traps || []) if (!qParse(x.v) || qEq(qParse(x.v), t.ans)) errs.push('frac trap bad ' + x.v);
+      if (t.ans.n === 0) errs.push('zero answer');
     }
   } else if (t.type === 'multi') {
     if (!t.answer.length) errs.push('empty multi answer');
@@ -81,13 +99,14 @@ for (const top of ALLT) for (const g of top.gens) {
       let t, e;
       try { t = makeTask(g, d); e = check(t); } catch (err) { e = ['throw ' + err.message]; }
       if (e.length) { f++; fails++; if (!ex) ex = e.join('; '); }
-      if (i < 2 && t) samples.push(`[${g} d${d}] ${strip(t.q)}\n  → ${t.type === 'multi' ? t.answer.join(', ') : t.answer}${t.options ? '   {' + t.options.join(' | ') + '}' : ''}${t.items ? '   items: ' + t.items.join(', ') : ''}\n  Разбор: ${t.explain.map(strip).join(' / ')}`);
+      if (i < 2 && t) samples.push(`[${g} d${d}] ${strip(t.q)}\n  → ${t.type === 'multi' ? t.answer.join(', ') : t.answerPlain || t.answer}${t.options ? '   {' + t.options.join(' | ') + '}' : ''}${t.items ? '   items: ' + t.items.join(', ') : ''}\n  Разбор: ${t.explain.map(strip).join(' / ')}`);
     }
     summary[g + ' d' + d] = f ? `FAIL ${f}/400: ${ex}` : 'ok';
   }
 }
 /* Повторы внутри уровня 4 класса: 300 уровней по 10 задач на каждую ступень, как в игре (play.js перегенерирует до 8 раз) */
-for (const top of TOPICS4) if (!top.act) for (let d = 1; d <= 3; d++) {
+const NEW5 = TOPICS5.filter(T => T.q >= 3);
+for (const top of TOPICS4.concat(NEW5)) if (!top.act) for (let d = 1; d <= 3; d++) {
   let bad = 0;
   for (let l = 0; l < 300; l++) {
     const gens = []; while (gens.length < 10) gens.push(...R.shuffle(top.gens));

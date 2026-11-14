@@ -13,7 +13,8 @@ function addDays(s, n) { const d = new Date(s + 'T12:00:00'); d.setDate(d.getDat
 
 const fresh = () => ({ v: 2, name: '', created: today(), acorns: 0, earned: 0, sound: true, stars: {}, medals: {},
   mastery: {}, skill: {}, mistakes: [], history: {}, streak: { last: null, count: 0, best: 0 }, daily: { date: null, done: false },
-  stickers: [], diag: null, recent: [], hands: {}, play: {}, mul: {}, mulCols: {}, mulBest: 0, solved: 0, right: 0, _epoch: 0, _ts: 0, _tally: {}, gone: {} });
+  stickers: [], diag: null, recent: [], hands: {}, play: {}, mul: {}, mulCols: {}, mulBest: 0, solved: 0, right: 0, _epoch: 0, _ts: 0, _tally: {}, gone: {},
+  vpr: null, year: null, school: null });
 const newId = p => p + Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
 const readJson = k => { try { const v = localStorage.getItem(k); return v ? JSON.parse(v) : null; } catch (e) { return null; } };
 const writeJson = (k, v) => { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) { } };
@@ -109,7 +110,7 @@ function masteryLabel(m) {
   return ['подтянуть', '#D9553A'];
 }
 
-const plain = s => String(s).replace(/<br\s*\/?>/g, ' ').replace(/<div[^>]*>/g, ' ').replace(/<svg[\s\S]*?<\/svg>/g, '').replace(/<[^>]+>/g, '').replace(/\s+/g, ' ').trim();
+const plain = s => String(s).replace(/<span class="fr"><b>(\d+)<\/b><b>(\d+)<\/b><\/span>/g, ' $1/$2 ').replace(/<sup>(\d+)<\/sup>/g, '^$1').replace(/<br\s*\/?>/g, ' ').replace(/<div[^>]*>/g, ' ').replace(/<svg[\s\S]*?<\/svg>/g, '').replace(/<[^>]+>/g, '').replace(/\s+/g, ' ').trim();
 
 function recordAnswer(task, ok, given, opts = {}) {
   S.solved++; if (ok) S.right++;
@@ -118,19 +119,19 @@ function recordAnswer(task, ok, given, opts = {}) {
   if (!helped) { updMastery(task.topic, task.d, ok); updSkill(task.gen, task.d, ok); }
   const t = today();
   const H = S.history[t] || { n: 0, ok: 0 }; H.n++; if (ok) H.ok++; S.history[t] = H;
-  S.recent.unshift({ ts: Date.now(), topic: task.topic, q: plain(task.q).slice(0, 220), given: String(given), right: answerText(task), ok });
+  S.recent.unshift({ ts: Date.now(), topic: task.topic, q: plain(task.q).slice(0, 220), given: plain(given), right: answerText(task), ok });
   S.recent = S.recent.slice(0, 40);
   if (opts.mistakeId) { if (!helped) reviewMistake(opts.mistakeId, ok); }
   else if (!ok) addMistake(task, given);
   save();
 }
-function answerText(task) { return task.type === 'multi' ? task.answer.join(', ') : task.type === 'num' || task.type === 'col' ? fmt(task.answer) : task.answer; }
+function answerText(task) { return task.answerPlain ? task.answerPlain : task.type === 'multi' ? task.answer.join(', ') : task.type === 'num' || task.type === 'col' ? fmt(task.answer) : task.answer; }
 
 /* Корзинка ошибок: интервальные повторения 1 → 3 → 7 дней */
 const BOX_DAYS = [0, 1, 3, 7];
 function addMistake(task, given) {
   const ex = S.mistakes.find(m => m.gen === task.gen && m.d === task.d);
-  const rec = { gen: task.gen, d: task.d, topic: task.topic, q: plain(task.q).slice(0, 220), given: String(given), right: answerText(task), box: 1, due: addDays(today(), 1), ts: Date.now() };
+  const rec = { gen: task.gen, d: task.d, topic: task.topic, q: plain(task.q).slice(0, 220), given: plain(given), right: answerText(task), box: 1, due: addDays(today(), 1), ts: Date.now() };
   if (ex) Object.assign(ex, rec); else S.mistakes.push(Object.assign({ id: 'm' + Date.now() + Math.floor(Math.random() * 1000) }, rec));
   if (S.mistakes.length > 60) S.mistakes.splice(0, S.mistakes.length - 60);
 }
@@ -162,7 +163,8 @@ function giveAcorns(n) { S.acorns += n; S.earned += n; }
 
 /* Рекомендация: самые слабые темы */
 function weakTopics(k = 2) {
-  const scored = TOPICS.map(t => { const M = mast(t.id); return { id: t.id, m: M.m === null || M.m === undefined ? 0.5 : M.m, n: M.n }; });
+  const pool = (typeof passedTopics === 'function' ? passedTopics() : TOPICS).filter(t => !t.act);
+  const scored = pool.map(t => { const M = mast(t.id); return { id: t.id, m: M.m === null || M.m === undefined ? 0.5 : M.m, n: M.n }; });
   return scored.sort((a, b) => a.m - b.m || a.n - b.n).slice(0, k).map(x => x.id);
 }
 function topicDifficulty(topic) { const M = mast(topic); const m = M.m === null || M.m === undefined ? 0.5 : M.m; return m < 0.5 ? 1 : m < 0.8 ? 2 : 3; }
@@ -270,6 +272,13 @@ function mergeStates(a, b) {
   const HA = A.hands || {}, HB = B.hands || {};
   for (const k of keysOf(HA, HB)) { const x = HA[k], y = HB[k]; R.hands[k] = !x ? y : !y ? x : y.st === 'ok' && x.st !== 'ok' ? y : x; }
   R.diag = !A.diag ? B.diag : !B.diag ? A.diag : B.diag.date > A.diag.date ? B.diag : A.diag;
+  /* ВПР-тренировка (4 класс) и Большая проверка года (5 класс): свежий результат + лучший с обоих устройств */
+  for (const k of ['vpr', 'year']) {
+    const x = A[k], y = B[k];
+    R[k] = !x ? y : !y ? x : Object.assign({}, (y.date || '') > (x.date || '') ? y : x, { best: Math.max(x.best || 0, y.best || 0), n: Math.max(x.n || 0, y.n || 0) });
+  }
+  /* «Сейчас в школе проходим» — более поздняя настройка */
+  R.school = !A.school ? B.school : !B.school ? A.school : (B.school.ts || 0) > (A.school.ts || 0) ? B.school : A.school;
   /* Время игры: секунды по дням и устройствам, берём большее */
   const PA = A.play || {}, PB = B.play || {};
   for (const d of keysOf(PA, PB)) { const x = PA[d] || {}, y = PB[d] || {}; R.play[d] = {}; for (const k of keysOf(x, y)) R.play[d][k] = Math.max(x[k] || 0, y[k] || 0); }

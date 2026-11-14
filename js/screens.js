@@ -63,7 +63,7 @@ ACT.join = () => {
     <button class="btn block green" data-act="mulOpen">В Беличью кладовую 🐿️</button><button class="btn block ghost" style="margin-top:10px" data-act="map">На карту</button>`);
   mount(`<div class="hero">${ART.chip('mindal', 'happy')}</div>
     <h2 class="center">Рады знакомству, ${esc(S.name)}!</h2>
-    <div class="bubble" style="margin:10px 0 16px">Давай сначала пройдём <b>Проверку сил</b>: 16 заданий из всех уголков леса, примерно 10–15 минут. Так мы поймём, кому помочь в первую очередь. Ошибаться можно — это не контрольная!</div>
+    <div class="bubble" style="margin:10px 0 16px">Давай сначала пройдём <b>Проверку сил</b>: ${diagCount()} заданий из всех уголков леса, которые уже прошли в школе, примерно 10–15 минут. Так мы поймём, кому помочь в первую очередь. Ошибаться можно — это не контрольная!</div>
     <div class="stack"><button class="btn block green" data-act="diag">Начать Проверку сил</button><button class="btn block ghost" data-act="map">Позже — сразу на карту</button></div>`);
 };
 ACT.diag = () => startDiag();
@@ -76,26 +76,34 @@ function showMap() {
   const due = dueMistakes().length, dailyDone = S.daily.date === today() && S.daily.done;
   const weak = S.diag || Object.values(S.mastery).some(m => m.n >= 5) ? weakTopics(2) : [];
   const W = Math.min(window.innerWidth, 560), stepY = 156, top = 70;
-  const four = isFour();
-  const all = TOPICS.map(t => ({ t, locked: false })).concat(LOCKED.map(t => ({ t, locked: true })));
-  const pts = all.map((x, i) => ({ x: i % 2 ? W * 0.7 : W * 0.3, y: top + i * stepY }));
-  const H = top + all.length * stepY + 10;
+  const four = isFour(), five = isFive(), cur = five ? schoolId() : null;
+  const all = TOPICS.map(t => ({ t, locked: false })).concat(LOCKED.map(t => ({ t, locked: true }))).concat(five ? [{ t: FINAL5, locked: false }] : []);
+  /* 5 класс: перед первой локацией каждой четверти — указатель, для него лишние 64 px */
+  let yy = top - (five ? 0 : 0), signs = '';
+  const pts = all.map((x, i) => {
+    if (five && x.t.q && (i === 0 || all[i - 1].t.q !== x.t.q)) { yy += i ? 64 : 40; signs += `<div class="qsign" style="top:${yy - 92}px">📍 ${QNAMES[x.t.q]}</div>`; }
+    const p = { x: i % 2 ? W * 0.7 : W * 0.3, y: yy }; yy += stepY; return p;
+  });
+  const H = yy + 10;
   let path = `M${pts[0].x} ${pts[0].y + 44}`;
   for (let i = 1; i < pts.length; i++) { const a = pts[i - 1], b = pts[i]; path += ` C${a.x} ${a.y + 110} ${b.x} ${b.y - 70} ${b.x} ${b.y + 44}`; }
   let deco = '';
   for (let i = 0; i < all.length; i++) {
-    const y = top + i * stepY + 40, side = i % 2 ? W * 0.16 : W * 0.86;
+    const y = pts[i].y + 40, side = i % 2 ? W * 0.16 : W * 0.86;
     deco += ART.tree(side + (i % 3 - 1) * 10, y, 0.75 + (i % 3) * 0.12, i);
     deco += ART.leaf(W * (i % 2 ? 0.45 : 0.55), y + 70, i * 47, ['#E8833A', '#F2B33D', '#C9532A'][i % 3]);
   }
   const nodes = all.map((x, i) => {
     const p = pts[i], t = x.t;
     if (x.locked) return `<div class="node locked" style="left:${p.x}px;top:${p.y}px"><div class="disc">${t.icon}</div><div class="nm">${t.name}</div><div class="small muted">🔒 ${t.sub}</div></div>`;
+    if (t.id === 'year') return `<div class="node final" data-act="yearCheck" style="left:${p.x}px;top:${p.y}px"><div class="disc">${t.icon}${S.medals.year ? '<span class="medal">🏅</span>' : ''}</div>
+      <div class="nm">${t.name}</div><div class="st">${S.year ? `лучший: ${S.year.best}/${S.year.total}` : t.sub}</div></div>`;
     if (t.act) { const c = mulCount(S); return `<div class="node" data-act="${t.act}" style="left:${p.x}px;top:${p.y}px"><div class="disc">${t.icon}${S.medals.mulgold ? '<span class="medal">🌟</span>' : ''}</div>
       <div class="nm">${t.name}</div><div class="st">🌳 ${c.know + c.gold}/64</div></div>`; }
-    const st = topicStars(t.id), tip = weak.includes(t.id) ? '<div class="tip">Сюда сначала!</div>' : '';
-    return `<div class="node" data-act="topic" data-id="${t.id}" style="left:${p.x}px;top:${p.y}px">${tip}<div class="disc">${t.icon}${S.medals[t.id] ? '<span class="medal">🏅</span>' : ''}</div>
-      <div class="nm">${t.name}</div><div class="st">★ ${st}/9</div></div>`;
+    const st = topicStars(t.id), now = t.id === cur, ahead = five && isAhead(t.id);
+    const tip = now ? '<div class="tip now">Сейчас в школе</div>' : weak.includes(t.id) ? '<div class="tip">Сюда сначала!</div>' : '';
+    return `<div class="node${now ? ' now' : ''}${ahead ? ' ahead' : ''}" data-act="topic" data-id="${t.id}" style="left:${p.x}px;top:${p.y}px">${tip}<div class="disc">${t.icon}${S.medals[t.id] ? '<span class="medal">🏅</span>' : ''}</div>
+      <div class="nm">${t.name}</div><div class="st">★ ${st}/9</div>${ahead ? '<div class="ahd">В школе ещё впереди</div>' : ''}</div>`;
   }).join('');
   const sn = streakNow();
   mount(`<div class="topbar"><div class="avatar" data-act="who" role="button" aria-label="Сменить игрока">${ART.chip(curProfile() ? heroOf(curProfile()) : 'funduk', 'happy', '', true)}<span class="swap">⇄</span></div>
@@ -104,12 +112,12 @@ function showMap() {
     ${four ? fourQuick() : `<div class="quick">
       <div class="qcard ${dailyDone || !S.diag ? '' : 'hot'}" data-act="daily">${dailyDone ? '<span class="done">✅</span>' : ''}<div class="qi">☀️</div><div><div class="qt">Задание дня</div><div class="qs">${dailyDone ? 'Выполнено! Можно ещё' : '10 задач · +10 орешков'}</div></div></div>
       <div class="qcard" data-act="review">${due ? `<span class="badge">${due}</span>` : ''}<div class="qi">🧺</div><div><div class="qt">Корзинка ошибок</div><div class="qs">${due ? 'Пора повторить!' : S.mistakes.length ? `${S.mistakes.length} ждут своего дня` : 'Пока пусто'}</div></div></div>
-      <div class="qcard ${S.diag ? '' : 'hot first'}" data-act="${S.diag ? 'diagAsk' : 'diag'}">${S.diag ? '' : '<div class="tip">Начни отсюда!</div>'}<div class="qi">🧭</div><div><div class="qt">Проверка сил</div><div class="qs">${S.diag ? 'Пройдена ' + S.diag.date.split('-').reverse().slice(0, 2).join('.') : '16 задач — с чего начать'}</div></div></div>
+      <div class="qcard ${S.diag ? '' : 'hot first'}" data-act="${S.diag ? 'diagAsk' : 'diag'}">${S.diag ? '' : '<div class="tip">Начни отсюда!</div>'}<div class="qi">🧭</div><div><div class="qt">Проверка сил</div><div class="qs">${S.diag ? 'Пройдена ' + S.diag.date.split('-').reverse().slice(0, 2).join('.') : diagCount() + ' задач — с чего начать'}</div></div></div>
       <div class="qcard" data-act="album"><div class="qi">📒</div><div><div class="qt">Альбом наклеек</div><div class="qs">${S.stickers.length} из ${STICKERS.length}</div></div></div>
     </div>`}
-    <h3 style="margin:4px 0 0">${four ? 'Лес 4 класса' : 'Карта леса'}</h3>
+    <h3 style="margin:4px 0 0">${four ? 'Лес 4 класса' : 'Тропа 5 класса'}</h3>
     <div class="forest" style="height:${H}px"><svg class="paths" viewBox="0 0 ${W} ${H}" preserveAspectRatio="none">${deco}
-      <path d="${path}" stroke="#E2B47C" stroke-width="22" fill="none" stroke-linecap="round"/><path d="${path}" stroke="#F6D7A6" stroke-width="12" fill="none" stroke-linecap="round" stroke-dasharray="2 18"/></svg>${nodes}</div>`);
+      <path d="${path}" stroke="#E2B47C" stroke-width="22" fill="none" stroke-linecap="round"/><path d="${path}" stroke="#F6D7A6" stroke-width="12" fill="none" stroke-linecap="round" stroke-dasharray="2 18"/></svg>${signs}${nodes}</div>`);
   Praise.hello(); if (!four) Voice.prefetch('five');
 }
 let resizeT; window.addEventListener('resize', () => { clearTimeout(resizeT); resizeT = setTimeout(() => { if (document.querySelector('.forest')) showMap(); }, 200); });
@@ -135,14 +143,15 @@ function showTopic(id) {
   mount(`<div class="topbar"><button class="iconbtn" data-act="map" aria-label="Назад">←</button><div class="grow"><b>${T.name}</b><div class="small muted">${T.sub}</div></div>
       <span class="pill">${ART.acorn(20)}${S.acorns}</span></div>
     <div class="loc-head"><div class="big">${T.art ? T.art() : T.icon}</div><div class="bubble grow"><b>${T.who}:</b> ${T.intro}</div></div>
-    <div class="row" style="margin-bottom:12px"><button class="btn gold grow" data-act="sheet">📜 Шпаргалка</button></div>
+    ${isAhead(id) ? '<div class="small muted" style="margin:-4px 0 10px 2px">🌱 В школе эта тема ещё впереди — но заглянуть можно уже сейчас.</div>' : id === (isFive() ? schoolId() : '') ? '<div class="small" style="margin:-4px 0 10px 2px;color:var(--green-d);font-weight:800">📍 Эту тему сейчас проходят в школе</div>' : ''}
+    <div class="row" style="margin-bottom:12px"><button class="btn gold grow" data-act="sheet">📜 Как решать</button></div>
     <div class="small muted" style="margin:0 0 6px 2px">Освоено: <b style="color:${col}">${lbl}</b></div>
     <div class="levels">${lv}</div>${T.extra ? T.extra() : ''}`);
 }
 ACT.topic = el => showTopic(el.dataset.id);
 ACT.toTopic = () => showTopic(curTopic);
 ACT.level = el => startLevel(curTopic, +el.dataset.n);
-ACT.sheet = () => { const T = TOPIC[curTopic]; modal(`<h2>📜 Шпаргалка: ${T.name}</h2><ul style="padding-left:20px">${T.sheet.map(s => `<li>${s}</li>`).join('')}</ul><button class="btn block green" data-act="close">Понятно!</button>`); };
+ACT.sheet = () => { const T = TOPIC[curTopic]; modal(`<h2>📜 Как решать: ${T.name}</h2><ul style="padding-left:20px">${T.sheet.map(s => `<li>${s}</li>`).join('')}</ul><button class="btn block green" data-act="close">Понятно!</button>`); };
 
 /* ---------- Результаты ---------- */
 let LASTRES = null;
@@ -158,7 +167,7 @@ function showResult(r) {
 ACT.again = () => startLevel(LASTRES.again[0], LASTRES.again[1]);
 ACT.nextLevel = () => startLevel(LASTRES.again[0], LASTRES.again[1] + 1);
 function showDiagResult(scores, ok, n) {
-  const rows = TOPICS.filter(T => !T.noDiag).map(T => {
+  const rows = TOPICS.filter(T => scores[T.id] !== undefined).map(T => {
     const sc = scores[T.id], col = ['#D9553A', '#F5B43C', '#5E9E4A'][sc];
     return `<div class="trow"><div style="font-size:22px">${T.icon}</div><div><div class="tn">${T.name}</div><div class="bar"><i style="width:${(sc / 2) * 100}%;background:${col}"></i></div></div><div class="small" style="font-weight:800;color:${col}">${sc}/2</div></div>`;
   }).join('');
@@ -220,6 +229,7 @@ function showParent() {
       <div class="small muted center" style="margin-top:4px">Задач в день за последние 2 недели</div></div>
     ${movedCard()}${four || hasMul ? `<h3 style="margin-top:18px">Таблица умножения</h3>${mulParentCard(S)}` : ''}
     ${`<h3 style="margin-top:18px">Темы</h3><div class="card">${topics}<p class="small muted">Тема оценивается по самому слабому навыку внутри неё. «Уверенно» — 80%+ по последним ответам с учётом сложности, «почти» — 55–80%, «подтянуть» — ниже. Ответ с подсказкой освоенность не повышает, со второй попытки — считается ошибкой.</p></div>`}
+    ${isFive() ? schoolPicker() : ''}
     ${!four && typeof handsParentCard === 'function' ? handsParentCard() : ''}
     <h3 style="margin-top:18px">Последние ошибки</h3><div class="card">${recentBad}</div>
     <h3 style="margin-top:18px">Настройки</h3><div class="card">
@@ -231,7 +241,7 @@ function showParent() {
       <button class="btn ghost block" style="margin-top:12px" data-act="export">📤 Перенести прогресс на другое устройство</button>
       <button class="btn ghost block" style="margin-top:12px" data-act="import">📥 Загрузить прогресс</button>
       <button class="btn ghost block" style="margin-top:12px;color:var(--red)" data-act="reset">Сбросить весь прогресс</button></div>
-    <p class="small muted center" style="margin-top:14px">${four ? 'Ореховый патруль · математика 4 класса (ФГОС, порядок тем — «Школа России», проверка — по образцу ВПР)' : 'Ореховый патруль · математика 5 класса по программе Л. Г. Петерсон (1–2 четверть)'}</p>`);
+    <p class="small muted center" style="margin-top:14px">${four ? 'Ореховый патруль · математика 4 класса (ФГОС, порядок тем — «Школа России», проверка — по образцу ВПР)' : 'Ореховый патруль · математика 5 класса по программе Л. Г. Петерсон (весь год: 1–4 четверть)'}</p>`);
 }
 /* Код семьи, устройства и копии — в js/family.js (экран «Семья») */
 ACT.saveName = () => { const v = document.getElementById('pn').value.trim(); if (v) { S.name = v.slice(0, 20); save(); toast('Имя сохранено'); } };
@@ -256,6 +266,10 @@ ACT.importGo = () => { try { const n = importCode(document.getElementById('impc'
 ACT.reset = () => modal(`<h2>Сбросить весь прогресс?</h2><p class="muted">Звёзды, орешки, наклейки и статистика игрока ${esc(S.name)} удалятся ${CLOUD_URL ? 'на всех устройствах семьи' : 'с этого устройства'}. Отменить нельзя.</p>
   <div class="stack"><button class="btn block" style="background:var(--red);box-shadow:0 5px 0 var(--red-d)" data-act="resetGo">Да, сбросить</button><button class="btn ghost block" data-act="close">Отмена</button></div>`);
 ACT.resetGo = () => { resetAll(); closeModal(); showMap(); };
+
+ACT5();
+/* Сколько задач в Проверке сил: по 2 из каждой пройденной в школе локации */
+const diagCount = () => passedTopics().filter(T => !T.noDiag && !T.act).length * 2;
 
 /* ---------- Старт ---------- */
 function boot() {

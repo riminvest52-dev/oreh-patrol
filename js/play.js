@@ -15,7 +15,7 @@ function startLevel(topicId, n) {
 }
 function startDiag() {
   const queue = [];
-  for (const T of TOPICS) {
+  for (const T of passedTopics()) {
     if (T.noDiag) continue;
     if (T.id === 'fund') { queue.push({ gen: 'f_div0', d: 2 }, { gen: 'f_units', d: 2 }); continue; }
     const [a, b] = R.shuffle(T.gens);
@@ -24,6 +24,7 @@ function startDiag() {
   begin({ mode: 'diag', title: 'Проверка сил', queue });
 }
 function startDaily() {
+  if (isFive()) return startDaily5();
   const due = R.shuffle(dueMistakes()).slice(0, 4).map(m => ({ gen: m.gen, d: m.d, mistakeId: m.id }));
   const weak = weakTopics(3), rest = [];
   for (let i = 0; due.length + rest.length < 10; i++) {
@@ -31,6 +32,23 @@ function startDaily() {
     rest.push({ gen: weakGen(tid), d: topicDifficulty(tid) });
   }
   begin({ mode: 'daily', title: 'Задание дня', queue: R.shuffle(due.concat(rest)) });
+}
+/* 5 класс: 6 задач из локации «Сейчас в школе», 4 — корзинка ошибок и повторение пройденного выше по тропе */
+function startDaily5() {
+  const cur = schoolId(), before = passedTopics().filter(T => T.id !== cur && !T.noDiag).map(T => T.id);
+  const main = Array.from({ length: 6 }, () => ({ gen: weakGen(cur), d: topicDifficulty(cur) }));
+  const rep = R.shuffle(dueMistakes()).slice(0, 4).map(m => ({ gen: m.gen, d: m.d, mistakeId: m.id }));
+  const weak = weakTopics(3).filter(id => id !== cur);
+  for (let i = 0; rep.length < 4; i++) {
+    const tid = before.length ? (i < 2 && weak.length ? weak[i % weak.length] : R.pick(before)) : cur;
+    rep.push({ gen: weakGen(tid), d: topicDifficulty(tid) });
+  }
+  begin({ mode: 'daily', title: 'Задание дня', queue: R.shuffle(main.concat(rep)) });
+}
+/* Большая проверка года (5 класс): по одной задаче из каждой локации, без подсказок и второй попытки */
+function startYear() {
+  const queue = TOPICS5.map(T => ({ gen: T.id === 'vol' ? R.pick(['vol_calc', 'vol_units', 'vol_count']) : R.pick(T.gens), d: 2 }));
+  begin({ mode: 'year', title: 'Большая проверка года', queue });
 }
 function startReview() {
   let list = dueMistakes(); const early = !list.length;
@@ -46,9 +64,11 @@ function begin(cfg) {
 }
 /* Вторая попытка: везде, кроме проверки сил и выбора из двух */
 const is5050 = t => t.type === 'choice' && t.options.length <= 2;
-const canRetry = t => SES.mode !== 'diag' && SES.mode !== 'vpr' && !is5050(t);
+const canRetry = t => SES.mode !== 'diag' && SES.mode !== 'vpr' && SES.mode !== 'year' && !is5050(t);
+const noHelp = () => SES.mode === 'diag' || SES.mode === 'vpr' || SES.mode === 'year';
 function findTrap(t, given) {
   if (!t.traps || !t.traps.length || given === null || given === undefined) return null;
+  if (t.type === 'frac') { const g = qParse(given); return g ? t.traps.find(x => qEq(qParse(x.v), g)) || null : null; }
   return t.traps.find(x => t.type === 'num' || t.type === 'col' ? +x.v === +String(given).replace(/\s/g, '') : String(x.v) === String(given)) || null;
 }
 
@@ -66,11 +86,12 @@ function nextTask() {
   let task = makeTask(item.gen, d);
   for (let k = 0; k < 8 && SES.seen.has(qkey(task)); k++) task = makeTask(item.gen, d);
   SES.seen.add(qkey(task));
-  Object.assign(SES, { task, item, easier, star, answered: false, hint: false, tries: 0, firstGiven: null, firstTrap: null, input: '', sel: new Set(), colv: {}, colSel: null, colNum: false });
+  Object.assign(SES, { task, item, easier, star, answered: false, hint: false, tries: 0, firstGiven: null, firstTrap: null, input: '', sel: new Set(), colv: {}, colSel: null, colNum: false, fr: { w: '', n: '', d: '' }, fsel: 'n', formNote: '' });
   if (item.colOnly && SES.task.type === 'col') SES.task.colOnly = true;
   if (SES.mode === 'vpr') { SES.colNum = true; SES.task.q = SES.task.q.replace('Вычисли в столбик:', 'Вычисли:'); }   /* в ВПР ответ «в столбик» — одним числом, как в бланке */
   renderTask();
   if (SES.task.type === 'col') { SES.colSel = colOrder(SES.task)[0]; colPaint(); }
+  if (SES.task.type === 'frac') { SES.fsel = 'n'; frPaint(); }
 }
 
 function answerUI(t) {
@@ -80,6 +101,13 @@ function answerUI(t) {
     <button class="key del" data-act="key" data-k="del">⌫</button><button class="key" data-act="key" data-k="0">0</button>
     <button class="key ok" data-act="check" aria-label="Проверить">✓</button></div>
     ${t.colOnly ? '<div class="small muted center" style="margin-top:6px">В Испытании эту задачу решаем только в столбик.</div>' : '<button class="btn ghost block" style="margin-top:10px" data-act="colNum">Решу на черновике — введу только ответ</button>'}`;
+  if (t.type === 'frac') return `<div class="fin" id="fin"><button class="fbox fw" data-act="fsel" data-f="w" aria-label="Целая часть"></button>
+      <div class="fcol"><button class="fbox" data-act="fsel" data-f="n" aria-label="Числитель"></button><i class="fline"></i><button class="fbox" data-act="fsel" data-f="d" aria-label="Знаменатель"></button></div></div>
+    <div class="small muted center" style="margin:4px 0 2px">Нажми на клетку: слева — целая часть (если есть), справа — числитель и знаменатель.</div>
+    <div class="keypad">${[1, 2, 3, 4, 5, 6, 7, 8, 9].map(k => `<button class="key" data-act="key" data-k="${k}">${k}</button>`).join('')}
+    <button class="key del" data-act="key" data-k="del">⌫</button><button class="key" data-act="key" data-k="0">0</button>
+    <button class="key ok" data-act="check" aria-label="Проверить">✓</button></div>
+    <button class="btn ghost block" style="margin-top:10px" data-act="fnext">Следующая клетка ⇥</button>`;
   if (t.type === 'num' || t.type === 'col') return `<div class="display empty" id="disp">?</div>
     <div class="keypad">${[1, 2, 3, 4, 5, 6, 7, 8, 9].map(k => `<button class="key" data-act="key" data-k="${k}">${k}</button>`).join('')}
     <button class="key del" data-act="key" data-k="del">⌫</button><button class="key" data-act="key" data-k="0">0</button>
@@ -105,7 +133,7 @@ function renderTask() {
     <div class="answer" id="ans">${answerUI(t)}</div>
     <div id="fb"></div>
     <div class="helper" id="helper">${ART.chip(heroFor('mindal'), 'happy')}<div class="bubble">
-      ${SES.mode === 'diag' ? 'Это проверка сил — просто реши как умеешь. Подсказок тут нет 🙂' : SES.mode === 'vpr' ? 'Как на ВПР: подсказок нет, ответ даётся один раз. Решай на черновике 📝' : `Не спеши, подумай! <button class="btn ghost" style="min-height:40px;padding:6px 12px;font-size:15px;margin-top:6px" data-act="hint">💡 Подсказка</button>`}
+      ${SES.mode === 'diag' ? 'Это проверка сил — просто реши как умеешь. Подсказок тут нет 🙂' : SES.mode === 'year' ? 'Большая проверка года: подсказок нет, ответ даётся один раз. Решай на черновике 📝' : SES.mode === 'vpr' ? 'Как на ВПР: подсказок нет, ответ даётся один раз. Решай на черновике 📝' : `Не спеши, подумай! <button class="btn ghost" style="min-height:40px;padding:6px 12px;font-size:15px;margin-top:6px" data-act="hint">💡 Подсказка</button>`}
     </div></div></div>`);
 }
 
@@ -134,9 +162,32 @@ function colKey(k) {
   }
   colPaint();
 }
+/* ---------- Ответ-дробь: целая часть, числитель, знаменатель ---------- */
+const FORDER = ['w', 'n', 'd'];
+function frPaint() {
+  document.querySelectorAll('.fbox').forEach(b => { const f = b.dataset.f; b.textContent = SES.fr[f]; b.classList.toggle('sel', f === SES.fsel && !SES.answered); b.classList.toggle('bad', false); });
+}
+ACT.fsel = el => { if (SES.answered) return; SES.fsel = el.dataset.f; frPaint(); };
+ACT.fnext = () => { if (SES.answered) return; SES.fsel = FORDER[(FORDER.indexOf(SES.fsel) + 1) % 3]; frPaint(); };
+function frKey(k) {
+  const f = SES.fsel, v = SES.fr[f];
+  if (k === 'del') { if (v) SES.fr[f] = v.slice(0, -1); else if (f !== 'w') { SES.fsel = FORDER[FORDER.indexOf(f) - 1]; } }
+  else if (v.length < 4) SES.fr[f] = (v === '0' ? '' : v) + k;
+  frPaint();
+}
+/* Что ввели: значение и текст «как набрано» (без сокращения) */
+function frRead() {
+  const { w, n, d } = SES.fr;
+  if (!w && !n && !d) return { err: 'Сначала введи ответ 🙂' };
+  if ((n && !d) || (!n && d)) return { err: 'Заполни и числитель, и знаменатель 🙂' };
+  if (d && +d === 0) return { err: 'Знаменатель не может быть нулём 🙂' };
+  const W = +w || 0, N = +n || 0, D = +d || 1;
+  return { val: Q(W * D + N, D), text: (w ? (+w) + (n ? ' ' : '') : '') + (n ? `${+n}/${+d}` : ''), W, N, D, hasFr: !!n };
+}
 ACT.key = el => {
   if (SES.answered) return;
   const k = el.dataset.k;
+  if (SES.task.type === 'frac') return frKey(k);
   if (SES.task.type === 'col' && !SES.colNum) return colKey(k);
   if (k === 'del') SES.input = SES.input.slice(0, -1);
   else if (SES.input.length < 7) SES.input = (SES.input === '0' ? '' : SES.input) + k;
@@ -146,6 +197,14 @@ ACT.key = el => {
 };
 document.addEventListener('keydown', e => {
   if (!SES || SES.answered || !SES.task || !document.getElementById('ans')) return;
+  if (SES.task.type === 'frac') {
+    if (/^\d$/.test(e.key)) ACT.key({ dataset: { k: e.key } });
+    else if (e.key === 'Backspace') ACT.key({ dataset: { k: 'del' } });
+    else if (e.key === 'Enter') ACT.check();
+    else if (e.key === 'Tab' || e.key === 'ArrowRight' || e.key === 'ArrowDown' || e.key === '/' || e.key === ' ') { e.preventDefault(); SES.fsel = e.key === 'ArrowDown' || e.key === '/' ? 'd' : FORDER[(FORDER.indexOf(SES.fsel) + 1) % 3]; frPaint(); }
+    else if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') { e.preventDefault(); SES.fsel = e.key === 'ArrowUp' ? 'n' : FORDER[(FORDER.indexOf(SES.fsel) + 2) % 3]; frPaint(); }
+    return;
+  }
   if (SES.task.type === 'num' || SES.task.type === 'col') {
     if (/^\d$/.test(e.key)) ACT.key({ dataset: { k: e.key } });
     else if (e.key === 'Backspace') ACT.key({ dataset: { k: 'del' } });
@@ -184,6 +243,30 @@ ACT.check = () => {
     document.querySelectorAll('.cc.inp').forEach(b => { const i = +b.dataset.i; if ((SES.colv[i] || '') !== (sol[i] || '') && !t.lay.cells[i].opt) { b.textContent = sol[i] || ''; b.classList.remove('bad'); b.classList.add('fix'); } b.classList.remove('sel'); });
     document.querySelector('#ans .keypad').classList.add('hidden');
     return answered(res.ok, gtxt);
+  }
+  if (t.type === 'frac') {
+    const r = frRead();
+    if (r.err) { toast(r.err); return; }
+    const same = qEq(r.val, t.ans);
+    /* Значение верное, но запись не до конца: дробь можно сократить или из неправильной дроби выделить целую часть */
+    let form = '';
+    if (same && r.hasFr && gcd(r.N, r.D) > 1) form = `Дробь ${frH(r.N, r.D)} можно сократить: ${frH(r.N, r.D)} = ${frH(r.N / gcd(r.N, r.D), r.D / gcd(r.N, r.D))}.`;
+    else if (same && r.hasFr && r.N >= r.D && (t.form === 'mixed' || r.W)) form = r.N % r.D === 0 ? `Здесь получается целое число: ${qHtml(t.ans, true)}.` : `Из неправильной дроби ${frH(r.N, r.D)} выдели целую часть: ответ ${qHtml(t.ans, true)}.`;
+    const strict = t.strict || t.d >= 3;
+    const ok = same && (!form || !strict);
+    const box = document.getElementById('fin');
+    if (!ok && SES.tries === 0 && canRetry(t)) {
+      SES.fr = { w: '', n: '', d: '' }; SES.fsel = 'n';
+      box.classList.add('bad'); setTimeout(() => { if (box) box.classList.remove('bad'); frPaint(); }, 700);
+      return retry(r.text, form ? (strict ? form + ' На этом уровне ответ нужно записать до конца.' : form) : null);
+    }
+    if (!ok && form) SES.firstTrap = { msg: form + ' На этом уровне ответ нужно записать до конца.' };
+    if (ok && form) SES.formNote = form;
+    SES.answered = true; frPaint();
+    box.classList.add(ok ? 'good' : 'bad');
+    document.querySelector('#ans .keypad').classList.add('hidden');
+    const nx = document.querySelector('[data-act="fnext"]'); if (nx) nx.classList.add('hidden');
+    return answered(ok, r.text);
   }
   if (t.type === 'num' || t.type === 'col') {
     if (!SES.input) { toast('Сначала введи ответ 🙂'); return; }
@@ -263,11 +346,11 @@ function answered(ok, given) {
     + (t.note ? `<div class="tetrad"><div class="small"><b>📓 Запиши в тетрадь:</b></div><div class="tline">${t.note}</div></div>` : '') + (t.after || '');
   const trap = ok ? null : (findTrap(t, given) || SES.firstTrap);
   const okHead = second ? '👍 Получилось со второй попытки!' : `✅ ${phrase(PH_OK)} ${ac ? `+${ac} ${ART.acorn(20)}` : ''}`;
-  const okNote = second ? 'В следующий раз постарайся с первой — тогда будет орешек.' : SES.hint ? 'С подсказкой ответ идёт в счёт звёзд половинкой.' : (credit === 1 && !ac && SES.cheap ? 'Этот уровень уже пройден на 3★ — здесь орешек за каждый второй ответ.' : '');
+  const okNote = SES.formNote ? '✂️ ' + SES.formNote : second ? 'В следующий раз постарайся с первой — тогда будет орешек.' : SES.hint ? 'С подсказкой ответ идёт в счёт звёзд половинкой.' : (credit === 1 && !ac && SES.cheap ? 'Этот уровень уже пройден на 3★ — здесь орешек за каждый второй ответ.' : '');
   document.getElementById('fb').innerHTML = ok
     ? `<div class="feedback ok"><div class="fh">${okHead}</div>${okNote ? `<div class="small muted">${okNote}</div>` : ''}
        <details${second || t.after || t.note ? ' open' : ''}><summary class="small muted">Как решать?</summary>${steps}</details></div>`
-    : `<div class="feedback bad"><div class="fh">🤔 ${phrase(PH_BAD)}</div>${trap ? `<div class="trapline">🔎 ${nb(trap.msg)}</div>` : ''}<div>Правильный ответ: <b>${esc(answerText(t))}</b></div>${steps}</div>`;
+    : `<div class="feedback bad"><div class="fh">🤔 ${phrase(PH_BAD)}</div>${trap ? `<div class="trapline">🔎 ${nb(trap.msg)}</div>` : ''}<div>Правильный ответ: <b>${t.ansHtml || esc(answerText(t))}</b></div>${steps}</div>`;
   document.getElementById('fb').insertAdjacentHTML('beforeend', `<button class="btn ${ok ? 'green' : ''} block" style="margin-top:14px" data-act="next">${last ? 'Готово 🏁' : ok ? 'Дальше →' : 'Понятно, дальше →'}</button>`);
   /* Похвала голосом (js/voice.js): со второй попытки, звёздочка, 3 и 5 подряд — всегда, обычный верный ответ — примерно 1 из 3 */
   SES.run = first ? SES.run + 1 : 0;
@@ -289,6 +372,7 @@ function finish() {
   const s = SES; SES = null;
   markActive();
   if (s.mode === 'vpr') return vprFinish(s);
+  if (s.mode === 'year') return yearFinish(s);
   const n = s.queue.length, ok = s.ok, sc = Math.max(0, s.score), scTxt = String(sc).replace('.', ',');
   if (s.mode === 'level') {
     const T = TOPIC[s.topic];
@@ -324,9 +408,9 @@ function finish() {
   }
   if (s.mode === 'diag') {
     const scores = {};
-    TOPICS.forEach(T => { if (!T.noDiag) scores[T.id] = 0; });
+    s.queue.forEach(q => { scores[GEN[q.gen].topic] = 0; });
     s.results.forEach(r => { if (r.ok) scores[r.topic]++; });
-    TOPICS.forEach(T => { if (T.noDiag) return; const sc = scores[T.id]; S.mastery[T.id] = { m: [0.3, 0.6, 0.85][sc], n: 2, ok: sc, ts: Date.now() }; });
+    Object.keys(scores).forEach(id => { const sc = Math.min(2, scores[id]); S.mastery[id] = { m: [0.3, 0.6, 0.85][sc], n: 2, ok: sc, ts: Date.now() }; });
     S.diag = { date: today(), scores }; giveAcorns(5); save(); Sound.win();
     return showDiagResult(scores, ok, n);
   }
