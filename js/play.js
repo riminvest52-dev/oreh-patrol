@@ -46,7 +46,7 @@ function begin(cfg) {
 }
 /* Вторая попытка: везде, кроме проверки сил и выбора из двух */
 const is5050 = t => t.type === 'choice' && t.options.length <= 2;
-const canRetry = t => SES.mode !== 'diag' && !is5050(t);
+const canRetry = t => SES.mode !== 'diag' && SES.mode !== 'vpr' && !is5050(t);
 function findTrap(t, given) {
   if (!t.traps || !t.traps.length || given === null || given === undefined) return null;
   return t.traps.find(x => t.type === 'num' || t.type === 'col' ? +x.v === +String(given).replace(/\s/g, '') : String(x.v) === String(given)) || null;
@@ -61,13 +61,14 @@ function nextTask() {
   /* После 4 чистых ответов подряд — задача на ступень выше */
   else if (SES.mode === 'level' && !SES.boss && SES.cleanRun >= 4 && d < 3) { d++; star = true; SES.cleanRun = 0; }
   /* Без повторов внутри одного захода: такое же условие — составляем заново (до 8 раз) */
-  const qkey = t => t ? t.q + '|' + (t.options || t.items || []).join() : '';
+  const qkey = t => t ? t.q + (t.fig || '') + '|' + (t.options || t.items || []).join() : '';
   SES.seen = SES.seen || new Set();
   let task = makeTask(item.gen, d);
   for (let k = 0; k < 8 && SES.seen.has(qkey(task)); k++) task = makeTask(item.gen, d);
   SES.seen.add(qkey(task));
   Object.assign(SES, { task, item, easier, star, answered: false, hint: false, tries: 0, firstGiven: null, firstTrap: null, input: '', sel: new Set(), colv: {}, colSel: null, colNum: false });
   if (item.colOnly && SES.task.type === 'col') SES.task.colOnly = true;
+  if (SES.mode === 'vpr') { SES.colNum = true; SES.task.q = SES.task.q.replace('Вычисли в столбик:', 'Вычисли:'); }   /* в ВПР ответ «в столбик» — одним числом, как в бланке */
   renderTask();
   if (SES.task.type === 'col') { SES.colSel = colOrder(SES.task)[0]; colPaint(); }
 }
@@ -104,7 +105,7 @@ function renderTask() {
     <div class="answer" id="ans">${answerUI(t)}</div>
     <div id="fb"></div>
     <div class="helper" id="helper">${ART.chip('mindal', 'happy')}<div class="bubble">
-      ${SES.mode === 'diag' ? 'Это проверка сил — просто реши как умеешь. Подсказок тут нет 🙂' : `Не спеши, подумай! <button class="btn ghost" style="min-height:40px;padding:6px 12px;font-size:15px;margin-top:6px" data-act="hint">💡 Подсказка</button>`}
+      ${SES.mode === 'diag' ? 'Это проверка сил — просто реши как умеешь. Подсказок тут нет 🙂' : SES.mode === 'vpr' ? 'Как на ВПР: подсказок нет, ответ даётся один раз. Решай на черновике 📝' : `Не спеши, подумай! <button class="btn ghost" style="min-height:40px;padding:6px 12px;font-size:15px;margin-top:6px" data-act="hint">💡 Подсказка</button>`}
     </div></div></div>`);
 }
 
@@ -235,6 +236,7 @@ function retry(given, msg) {
 }
 
 function answered(ok, given) {
+  if (SES.mode === 'vpr') return vprAnswered(ok, given);
   const t = SES.task, second = SES.tries > 0;
   SES.answered = true;
   const first = ok && !second;                         /* верно с первой попытки */
@@ -286,6 +288,7 @@ ACT.quitYes = () => { closeModal(); SES = null; showMap(); };
 function finish() {
   const s = SES; SES = null;
   markActive();
+  if (s.mode === 'vpr') return vprFinish(s);
   const n = s.queue.length, ok = s.ok, sc = Math.max(0, s.score), scTxt = String(sc).replace('.', ',');
   if (s.mode === 'level') {
     const T = TOPIC[s.topic];

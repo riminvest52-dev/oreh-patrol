@@ -568,3 +568,18 @@ svg.sor-sly .sor-spark { animation: sorspark 1.2s ease-in-out infinite; }
 .cc.inp.fix { border: 2px solid var(--green); background: #E6F3DE; color: var(--green-d); pointer-events: none; }
 .cline { position: absolute; height: 3px; background: var(--ink); border-radius: 2px; }
 .cvbar { position: absolute; width: 3px; background: var(--ink); border-radius: 2px; }
+
+/* ---------- 4 класс: доли, таблицы, рисунки, ВПР ---------- */
+.fr { display: inline-flex; flex-direction: column; align-items: center; vertical-align: middle; line-height: 1.05; margin: 0 2px; font-weight: 800; }
+.fr b:first-child { border-bottom: 2px solid currentColor; padding: 0 3px; }
+.fr b { font-size: .92em; }
+table.dt { border-collapse: collapse; margin: 10px 0 4px; background: #fff; font-size: 16px; max-width: 100%; }
+table.dt th, table.dt td { border: 2px solid var(--line); padding: 6px 9px; text-align: center; }
+table.dt th { background: #FFF0D6; }
+.gfig { display: block; max-width: 100%; height: auto; margin: 10px auto 0; }
+.vlist { display: flex; flex-direction: column; gap: 8px; margin-top: 12px; }
+.vrow { background: var(--card); border: 2px solid var(--line); border-radius: 16px; padding: 10px 12px; }
+.vrow.bad { border-color: #F0B3A3; }
+.vrow summary { cursor: pointer; font-size: 17px; }
+.vrow .vq { margin: 8px 0; }
+.vrow ol { padding-left: 20px; margin: 6px 0 0; }

@@ -9,7 +9,7 @@ const VERSION = 'oreh-v3.9';
 const FILES = [
   './', './index.html', './manifest.webmanifest', './css/style.css',
   './js/core.js', './js/t-fund.js', './js/t-lang.js', './js/t-models.js', './js/t-logic.js', './js/t-div.js',
-  './js/topics.js', './js/art.js', './js/art2.js', './js/state.js', './js/cloud.js', './js/ui.js', './js/voice-data.js', './js/voice.js', './js/play.js', './js/t-vol.js', './js/screens.js', './js/vendor/qrcode.js', './js/mult.js', './js/col.js', './js/t4a.js', './js/topics4.js', './js/family.js', './js/kid.js', './js/k-path.js',
+  './js/topics.js', './js/art.js', './js/art2.js', './js/state.js', './js/cloud.js', './js/ui.js', './js/voice-data.js', './js/voice.js', './js/play.js', './js/t-vol.js', './js/screens.js', './js/vendor/qrcode.js', './js/mult.js', './js/col.js', './js/t4a.js', './js/t4b.js', './js/vpr4.js', './js/topics4.js', './js/family.js', './js/kid.js', './js/k-path.js',
   './icons/icon-180.png', './icons/icon-192.png', './icons/icon-512.png'
 ];
 const PAGE_TIMEOUT = 3000;

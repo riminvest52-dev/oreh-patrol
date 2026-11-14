@@ -8,23 +8,30 @@
 <style>.screen { animation: none !important; } .confetti { display: none; }</style>
 </head>
 <body>
-<!-- Только для проверки раскладки мира «4 класс» и тренажёра: ?scr=map|tree|pic|hint|div|miss|fast|gold|five|parent|family|who.
+<!-- Только для проверки раскладки мира «4 класс» и тренажёра: ?scr=map|tree|pic|hint|div|miss|fast|gold|five|parent|family|who|topic&id=…|task&g=…&d=…&a=ok|bad|half|vpr|vprres|diag.
      Показательный прогресс: столбик ×2 золотой, ×5 зелёный, ×3 и ×4 учатся, трудные — 7 · 8, 6 · 7, 8 · 6. Озвучка и звуки выключены. -->
+<script>
+  /* ?w=390 — узкий «телефонный» экран без рамки (фоновый Chrome не делает окно уже ~500 px) */
+  const NW = +new URLSearchParams(location.search).get('w');
+  if (NW) { document.write(`<style>.screen, .modal, .toast { right: auto !important; width: ${NW}px !important; } html, body { overflow: hidden; }</style>`); Object.defineProperty(window, 'innerWidth', { get: () => NW }); }
+</script>
 <div id="app"></div>
 <div id="modal" class="modal hidden"></div>
 <div id="toast" class="toast hidden"></div>
-<script src="../js/core.js"></script>
+<script src="../js/core.js"></script><script src="../js/col.js"></script>
 <script src="../js/t-fund.js"></script><script src="../js/t-lang.js"></script><script src="../js/t-models.js"></script>
-<script src="../js/t-logic.js"></script><script src="../js/t-div.js"></script><script src="../js/topics.js"></script>
+<script src="../js/t-logic.js"></script><script src="../js/t-div.js"></script><script src="../js/t4a.js"></script><script src="../js/t4b.js"></script><script src="../js/topics.js"></script><script src="../js/topics4.js"></script>
 <script src="../js/art.js"></script><script src="../js/art2.js"></script>
 <script src="../js/state.js"></script><script src="../js/cloud.js"></script>
 <script src="../js/ui.js"></script><script>var VOICE_BASE = "../";</script><script src="../js/voice-data.js"></script><script src="../js/voice.js"></script>
 <script src="../js/play.js"></script><script src="../js/t-vol.js"></script><script src="../js/screens.js"></script>
-<script src="../js/vendor/qrcode.js"></script><script src="../js/mult.js"></script><script src="../js/family.js"></script>
+<script src="../js/vendor/qrcode.js"></script><script src="../js/mult.js"></script><script src="../js/vpr4.js"></script><script src="../js/family.js"></script>
 <script src="../js/kid.js"></script><script src="../js/k-path.js"></script>
 <script>
+  window.onerror = (m, s, l, c, e) => document.body.insertAdjacentHTML("beforeend", `<pre id="err">${m} ${l}:${c} ${e && e.stack}</pre>`);
   try { localStorage.setItem('oreh_voice', '0'); } catch (e) { }
   Voice.say = () => Promise.resolve();
+  Element.prototype.scrollIntoView = function () { };   /* в рамке (frame.html) прокрутка уводила кадр */
   if (!F.profiles.length) { addProfile('five'); S.name = 'Настя'; save(); addProfile('kid'); S.name = 'Лиза'; save(); addProfile('four'); S.name = 'Тёма'; save(); }
   const demo = st => {
     const day = n => addDays(today(), -n), add = (a, b, ms, days, err) => {
@@ -38,6 +45,14 @@
     for (let i = 0; i < 9; i++) st.history[day(i)] = { n: 15 + i * 3 % 11, ok: 13 };
     st.streak = { last: today(), count: 4, best: 6 };
     st.play = {}; for (let i = 0; i < 6; i++) st.play[day(i)] = { [F.device]: 900 + i * 60 };
+    /* 4 класс: Проверка сил пройдена, есть звёзды и оценки по темам */
+    if (st === S && isFour()) {
+      const sc = { tab: 2, big: 2, colb: 1, mill: 0, ord4: 1, units4: 1, road: 2, frac4: 0, eq4: 2, geo4: 1, data4: 2 };
+      st.diag = { date: day(3), scores: sc };
+      for (const [k, v] of Object.entries(sc)) st.mastery[k] = { m: [0.3, 0.6, 0.85][v], n: 4, ok: v + 1, ts: Date.now() };
+      Object.assign(st.stars, { 'big:1': 3, 'big:2': 2, 'big:3': 1, 'colb:1': 2, 'eq4:1': 3, 'eq4:2': 2, 'road:1': 1 }); st.medals.big = false;
+      st.skill = { m_div1: { m: 0.35, n: 4, ok: 1 }, f_whole: { m: 0.4, n: 3, ok: 1 }, u_conv: { m: 0.55, n: 5, ok: 3 } };
+    }
   };
   const four = F.profiles.find(p => p.world === 'four'), five = F.profiles.find(p => p.world === 'five');
   useProfile(four.id); demo(S); S.sound = false; save();
@@ -57,6 +72,26 @@
   else if (scr === 'parent') { showParent(); sc(+q.get('y') || 0); }
   else if (scr === 'family') { showFamily(); sc(+q.get('y') || 0); }
   else if (scr === 'who') { showWho(); ACT.addWho(); }
+  else if (scr === 'topic') { showTopic(q.get('id')); sc(+q.get('y') || 0); }
+  else if (scr === 'diag') { const sc2 = S.diag.scores; showDiagResult(sc2, 15, 22); sc(+q.get('y') || 0); }
+  else if (scr === 'vpr') { ACT.vpr(); }
+  else if (scr === 'vprres') { startVpr(); for (let i = 0; i < 12; i++) { const t = SES.task, ok = ![2, 7, 10].includes(i); vprAnswered(ok, ok ? answerText(t) : (t.type === 'num' || t.type === 'col' ? fmt(t.answer + 10) : (t.options || t.items || ['—']).find(o => o !== t.answer) || '—')); } sc(+q.get('y') || 0); }
+  else if (scr === 'task') {
+    const g = q.get('g'), d = +q.get('d') || 2, T = TOPIC[GEN[g].topic], boss = q.get('boss');
+    begin({ mode: 'level', topic: T.id, level: boss ? 4 : d, boss: !!boss, title: `${T.name} · ${LEVELS[(boss ? 4 : d) - 1].name}`, queue: [{ gen: g, d, colOnly: !!boss }] });
+    const t = SES.task, a = q.get('a');
+    if (t.type === 'col' && a) {
+      const sol = colSolution(t), ord = colOrder(t), n = a === 'half' ? Math.ceil(ord.length / 2) : ord.length;
+      ord.slice(0, n).forEach((i, k) => { SES.colv[i] = a === 'bad' && k === Math.min(3, n - 1) ? String((+sol[i] + 3) % 10) : sol[i]; });
+      SES.colSel = ord[Math.min(n, ord.length - 1)]; colPaint();
+      if (a !== 'half') ACT.check();
+    } else if (a === 'ok' || a === 'bad') {
+      if (t.type === 'num' || t.type === 'col') { SES.input = String(a === 'ok' ? t.answer : (t.traps && t.traps[0] ? t.traps[0].v : t.answer + 1)); ACT.check(); }
+      else if (t.type === 'choice') { const i = t.options.findIndex(o => a === 'ok' ? o === t.answer : o !== t.answer); ACT.pick(document.querySelectorAll('.opt')[i]); }
+      else if (t.type === 'multi') { t.items.forEach((o, i) => { if (t.answer.includes(o)) ACT.tog(document.querySelectorAll('.chipb')[i]); }); ACT.check(); }
+    }
+    sc(+q.get('y') || 0);
+  }
 </script>
 </body>
 </html>

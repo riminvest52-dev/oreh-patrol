@@ -3,7 +3,7 @@
 <style>body{font:14px system-ui;margin:16px}pre{white-space:pre-wrap}.bad{color:#b00}.task{border-bottom:1px solid #ddd;padding:6px 0}</style></head>
 <body><h1>Тест генераторов</h1><div id="out"></div>
 <script src="../js/core.js"></script><script src="../js/col.js"></script><script src="../js/t-fund.js"></script><script src="../js/t-lang.js"></script>
-<script src="../js/t-models.js"></script><script src="../js/t-logic.js"></script><script src="../js/t-div.js"></script><script src="../js/t4a.js"></script><script src="../js/topics.js"></script><script src="../js/topics4.js"></script>
+<script src="../js/t-models.js"></script><script src="../js/t-logic.js"></script><script src="../js/t-div.js"></script><script src="../js/t4a.js"></script><script src="../js/t4b.js"></script><script src="../js/topics.js"></script><script src="../js/topics4.js"></script>
 <script>const ACT = {}; const S = {};</script><script src="../js/t-vol.js"></script><script src="../js/mult.js"></script>
 <script>
 const strip = s => String(s).replace(/<[^>]+>/g, '');
@@ -91,7 +91,7 @@ for (const top of TOPICS4) if (!top.act) for (let d = 1; d <= 3; d++) {
   let bad = 0;
   for (let l = 0; l < 300; l++) {
     const gens = []; while (gens.length < 10) gens.push(...R.shuffle(top.gens));
-    const seen = new Set(), key = t => t.q + '|' + (t.options || []).join();
+    const seen = new Set(), key = t => t.q + (t.fig || '') + '|' + (t.options || t.items || []).join();
     for (const g of gens.slice(0, 10)) { let t = makeTask(g, d); for (let k = 0; k < 8 && seen.has(key(t)); k++) t = makeTask(g, d); if (seen.has(key(t))) { bad++; break; } seen.add(key(t)); }
   }
   if (bad) REPEAT[top.id + ' d' + d] = bad + '/300';

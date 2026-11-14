@@ -57,7 +57,7 @@ reg('big', 'b_read', d => {
   if (R.chance(0.5)) {
     return { q: `Запиши цифрами: «${w}»`, type: 'num', answer: n,
       hint: 'Раздели число на классы по три цифры: миллионы, тысячи, единицы. В каждом классе (кроме первого слева) ровно три цифры — пустые разряды заполняем нулями.',
-      explain: [`Классы: ${fmt(n).split(' ').map((c, i, a) => `${['единиц', 'тысяч', 'миллионов'][a.length - 1 - i]} — ${c}`).join(', ')}.`, `Число: ${fmt(n)}.`],
+      explain: [`Классы: ${fmt(n).split(/\s/).map((c, i, a) => `${['единиц', 'тысяч', 'миллионов'][a.length - 1 - i]} — ${c}`).join(', ')}.`, `Число: ${fmt(n)}.`],
       traps: [[noPad(n), 'В каждом классе три цифры: если десятков или сотен нет, пишем нули. Например, «пятьдесят шесть» в классе единиц — это 056.']] };
   }
   const swap = s => { const i = R.int(1, s.length - 2); return s.slice(0, i) + s[i + 1] + s[i] + s.slice(i + 2); };
@@ -81,11 +81,11 @@ reg('big', 'b_place', d => {
       explain: [String(n).split('').map((c, i) => `${c} — ${PLACE[L - 1 - i]}`).join(', ') + '.', `В разряде ${PLACE[k]} стоит ${digit}.`] };
   }
   const opts = [[1, 'десятков', 10], [2, 'сотен', 100], [3, 'тысяч', 1000]].filter(x => x[0] < L - 1);
-  const [k, name, m] = R.pick(opts), total = Math.floor(n / m);
+  const [k, name, m] = R.pick(opts), total = Math.floor(n / m), nameN = x => pl(x, ...{ 'десятков': ['десяток', 'десятка', 'десятков'], 'сотен': ['сотня', 'сотни', 'сотен'], 'тысяч': ['тысяча', 'тысячи', 'тысяч'] }[name]);
   return { q: `Сколько всего <b>${name}</b> в числе <span class="ex">${fmt(n)}</span>?`, type: 'num', answer: total,
     traps: [[dig(n, k), `${dig(n, k)} — это цифра в разряде ${name}. А всего ${name} — это число без последних ${k} ${pl(k, 'цифры', 'цифр', 'цифр')}: ${fmt(total)}.`]],
     hint: `Закрой последние ${k} ${pl(k, 'цифру', 'цифры', 'цифр')} — оставшееся число и есть количество ${name}.`,
-    explain: [`В ${fmt(n)} всего ${fmt(total)} ${name}: отбрасываем ${k} ${pl(k, 'последнюю цифру', 'последние цифры', 'последних цифр')}.`, `Проверка: ${fmt(total)} ${name} = ${fmt(total * m)}, и ещё остаток ${n % m}.`] };
+    explain: [`В ${fmt(n)} всего ${fmt(total)} ${nameN(total)}: отбрасываем ${k} ${pl(k, 'последнюю цифру', 'последние цифры', 'последних цифр')}.`, `Проверка: ${fmt(total)} ${nameN(total)} = ${fmt(total * m)}${n % m ? `, и ещё остаток ${n % m}` : ''}.`] };
 });
 reg('big', 'b_sum', d => {
   const n = numZ(bigLen(d) - (d === 3 ? 1 : 0), 0.35), parts = String(n).split('').map((c, i, a) => +c * Math.pow(10, a.length - 1 - i)).filter(x => x);
@@ -204,14 +204,14 @@ reg('colb', 'c_word', d => {
     return { q: `В первый день по мосту проехало ${fmt(A)} машин, а во второй — на ${fmt(B)} больше. Сколько машин проехало по мосту за два дня?`, type: 'num', answer: A + A + B, draft: true,
       traps: [[A + B, `${fmt(A + B)} — это только второй день. Спрашивают про два дня вместе.`]],
       hint: 'Сначала узнай, сколько машин было во второй день, потом сложи оба дня.',
-      explain: [`1) ${fmt(A)} + ${fmt(B)} = ${fmt(A + B)} (м.) — во второй день.`, `2) ${fmt(A)} + ${fmt(A + B)} = ${fmt(2 * A + B)} (м.) — за два дня.`, `Ответ: ${fmt(2 * A + B)} машин.`] };
+      explain: [`1) ${fmt(A)} + ${fmt(B)} = ${fmt(A + B)} (м.) — во второй день.`, `2) ${fmt(A)} + ${fmt(A + B)} = ${fmt(2 * A + B)} (м.) — за два дня.`, `Ответ: ${fmt(2 * A + B)} ${pl(2 * A + B, 'машина', 'машины', 'машин')}.`] };
   }
   if (v === 3) {
     const A = big(), B = Math.round(A / R.int(3, 8));
     return { q: `В городе ${fmt(A)} жителей, а в соседнем посёлке — на ${fmt(B)} меньше. Сколько жителей в городе и посёлке вместе?`, type: 'num', answer: A + A - B, draft: true,
       traps: [[A - B, `${fmt(A - B)} — это только посёлок. Спрашивают, сколько вместе.`], [A + A + B, '«На … меньше» — значит, вычитаем.']],
       hint: 'Сначала найди, сколько жителей в посёлке («на … меньше» — вычитание), потом сложи.',
-      explain: [`1) ${fmt(A)} − ${fmt(B)} = ${fmt(A - B)} (ж.) — в посёлке.`, `2) ${fmt(A)} + ${fmt(A - B)} = ${fmt(2 * A - B)} (ж.) — вместе.`, `Ответ: ${fmt(2 * A - B)} жителей.`] };
+      explain: [`1) ${fmt(A)} − ${fmt(B)} = ${fmt(A - B)} (ж.) — в посёлке.`, `2) ${fmt(A)} + ${fmt(A - B)} = ${fmt(2 * A - B)} (ж.) — вместе.`, `Ответ: ${fmt(2 * A - B)} ${pl(2 * A - B, 'житель', 'жителя', 'жителей')}.`] };
   }
   const total = R.pick(d === 1 ? [10000, 20000] : d === 2 ? [50000, 80000, 100000] : [300000, 500000]);
   const A = Math.round(total * R.int(25, 45) / 100 / 10) * 10 + R.int(1, 9) * 10, B = Math.round(total * R.int(15, 35) / 100 / 10) * 10 + R.int(1, 9);
@@ -317,24 +317,30 @@ reg('ord4', 'o4_value', d => {
 });
 reg('ord4', 'o4_order', d => {
   const x = expr4(d); if (!x) return null;
+  const askLast = R.chance(0.5);
+  /* «Первым» спрашиваем, только когда ответ один: не больше одной пары скобок */
+  if (!askLast && (x.s.match(/\(/g) || []).length > 1) return null;
   const firstOp = (x.r.steps[0].match(/ ([+−·:]) /) || [])[1], lastOp = x.e.op;
   const symToOp = { '+': '+', '−': '-', '·': '*', ':': ':' };
-  const askLast = R.chance(0.5), ans = askLast ? OPW[lastOp] : OPW[symToOp[firstOp]];
+  const ans = askLast ? OPW[lastOp] : OPW[symToOp[firstOp]];
   return { q: `Какое действие выполняется <b>${askLast ? 'последним' : 'первым'}</b>?<div class="ex big">${x.s}</div>`, type: 'choice',
     options: ['сложение', 'вычитание', 'умножение', 'деление'], answer: ans, cols2: true,
     hint: 'Сначала скобки, потом умножение и деление, потом сложение и вычитание. Действия одной ступени — слева направо.',
     explain: x.r.steps.map((st, i) => `${i + 1}) ${st}`).concat([`${askLast ? 'Последнее' : 'Первое'} действие — ${ans}.`]) };
 });
-/* Все расстановки скобок для a ○ b ○ c ○ d */
+/* Все расстановки скобок для a ○ b ○ c ○ d — как пишут в школе: только нужные скобки */
 function bracketings(n, o) {
+  const P = { '+': 1, '-': 1, '*': 2, ':': 2 };
   const f = (i, j) => {
-    if (i === j) return [{ s: fmt(n[i]), atom: true }];
+    if (i === j) return [{ s: fmt(n[i]) }];
     const out = [];
-    for (let k = i; k < j; k++) for (const L of f(i, k)) for (const Rr of f(k + 1, j))
-      out.push({ s: `${L.atom || i === 0 && k === i ? L.s : '(' + L.s + ')'} ${SYM[o[k]]} ${Rr.atom ? Rr.s : '(' + Rr.s + ')'}` });
+    for (let k = i; k < j; k++) for (const L of f(i, k)) for (const Rr of f(k + 1, j)) {
+      const op = o[k], lp = L.op && P[L.op] < P[op], rp = Rr.op && (P[Rr.op] < P[op] || (P[Rr.op] === P[op] && (op === '-' || op === ':')));
+      out.push({ s: `${lp ? '(' + L.s + ')' : L.s} ${SYM[op]} ${rp ? '(' + Rr.s + ')' : Rr.s}`, op });
+    }
     return out;
   };
-  return f(0, n.length - 1).map(x => x.s);
+  return [...new Set(f(0, n.length - 1).map(x => x.s))].filter(x => /\(/.test(x));
 }
 reg('ord4', 'o4_brackets', d => {
   const cnt = 4;

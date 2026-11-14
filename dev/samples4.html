@@ -1,0 +1,22 @@
+<!doctype html><meta charset="utf-8"><title>Образцы 4 класс</title><pre id="o"></pre>
+<script src="../js/core.js"></script><script src="../js/col.js"></script><script src="../js/t4a.js"></script><script src="../js/t4b.js"></script>
+<script>const ACT = {}; const S = {};</script><script src="../js/mult.js"></script><script src="../js/topics.js"></script><script src="../js/topics4.js"></script>
+<script>
+/* По 30 случайных заданий каждой локации 4 класса (по 10 на ступень) — текстом для отчёта */
+const strip = s => String(s).replace(/<span class="fr"><b>(\d+)<\/b><b>(\d+)<\/b><\/span>/g, '$1/$2').replace(/<tr>/g, '\n    | ').replace(/<\/t[hd]>/g, ' | ').replace(/<text[^>]*>([^<]*)<\/text>/g, '').replace(/<[^>]+>/g, ' ').replace(/[ \t]+/g, ' ').trim();
+const ans = t => t.type === 'multi' ? t.answer.join(' ; ') : t.type === 'num' || t.type === 'col' ? fmt(t.answer) : t.answer;
+const out = [];
+for (const T of TOPICS4) {
+  out.push(`\n### ${T.name}\n`);
+  let k = 0;
+  for (let d = 1; d <= 3; d++) for (let i = 0; i < 10; i++) {
+    const g = T.gens[(i + d) % T.gens.length], t = makeTask(g, d);
+    let fig = '';
+    if (t.fig && /<rect/.test(t.fig)) { const v = [...t.fig.matchAll(/<rect[^>]*height="([\d.]+)"/g)].length; fig = ` [диаграмма: ${(t.fig.match(/<text[^>]*text-anchor="middle"[^>]*>([^<]*)</g) || []).map(x => x.replace(/.*>/, '')).join(', ')}]`; }
+    if (t.fig && /polygon/.test(t.fig)) fig = ' [рисунок: ' + [...t.fig.matchAll(/>(\d+ см)</g)].map(m => m[1]).join(', ') + ']';
+    if (t.fig && /<table/.test(t.fig)) fig = ' ' + strip(t.fig);
+    out.push(`${++k}. (ст. ${d}, ${g}) ${strip(t.q)}${fig}${t.options ? '\n    Варианты: ' + t.options.map(strip).join(' | ') : ''}${t.items ? '\n    Утверждения: ' + t.items.map(strip).join(' | ') : ''}\n    Ответ: ${strip(ans(t))}.  Разбор: ${t.explain.map(strip).join(' ')}`);
+  }
+}
+document.getElementById('o').textContent = out.join('\n');
+</script>
