@@ -4,7 +4,7 @@
 'use strict';
 
 /* Адрес облачной функции. Его печатает server/setup_cloud.py; пока пусто — облако выключено и игра работает как раньше */
-const CLOUD_FN = '';
+const CLOUD_FN = 'https://functions.yandexcloud.net/d4e68un4r6mu11dn7uai';
 const CLOUD_URL = (() => {
   if (['localhost', '127.0.0.1'].includes(location.hostname)) {   /* проверка на компьютере: dev/kv_server.py */
     try { const u = localStorage.getItem('oreh_dev_cloud'); if (u) return u; } catch (e) { }
