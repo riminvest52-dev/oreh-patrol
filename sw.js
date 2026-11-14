@@ -5,7 +5,7 @@
    - Обновление: новый sw.js скачивает ВСЕ файлы новой версии одним пакетом, включается сразу,
      а страница (index.html, controllerchange) один раз перезагружается уже целиком новой.
    При обновлении игры поменяйте VERSION. */
-const VERSION = 'oreh-v3.9';
+const VERSION = 'oreh-v3.9.1';
 const FILES = [
   './', './index.html', './manifest.webmanifest', './css/style.css',
   './js/core.js', './js/t-fund.js', './js/t-lang.js', './js/t-models.js', './js/t-logic.js', './js/t-div.js',
