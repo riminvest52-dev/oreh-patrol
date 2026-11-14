@@ -1,0 +1,28 @@
+<!doctype html>
+<html lang="ru"><head><meta charset="utf-8"><title>Образцы задач 5 класса — 3–4 четверть</title>
+<style>body{font:14px system-ui;margin:16px}pre{white-space:pre-wrap}</style></head>
+<body><h1>Образцы задач: новые локации 5 класса (по 50 на локацию)</h1><pre id="out"></pre>
+<script src="../js/core.js"></script><script src="../js/col.js"></script><script src="../js/t4b.js"></script><script src="../js/t5b.js"></script>
+<script src="../js/topics.js"></script><script src="../js/topics5.js"></script>
+<script>
+/* Текст для отчёта: условие, ответ, варианты; проверка — ответ среди вариантов и нет двойников по значению */
+const strip = s => String(s).replace(/<span class="fr"><b>([^<]*)<\/b><b>([^<]*)<\/b><\/span>/g, ' $1/$2').replace(/<sup>(\d+)<\/sup>/g, '^$1').replace(/<svg[\s\S]*?<\/svg>/g, ' [рисунок] ').replace(/<[^>]+>/g, '').replace(/\s+/g, ' ').trim();
+const LEV = ['', 'Росток', 'Орешек', 'Дуб'];
+let out = '', bad = 0;
+for (const T of TOPICS5.filter(T => T.q >= 3)) {
+  out += `\n## ${T.icon} ${T.name} (${T.q} четверть) — проводник: ${T.who}\n`;
+  for (let i = 0; i < 50; i++) {
+    const d = 1 + (i % 3), g = T.gens[i % T.gens.length], t = makeTask(g, d);
+    let ans = t.type === 'multi' ? t.answer.map(strip).join('; ') : t.type === 'frac' ? t.answer : t.answerPlain || strip(t.answer);
+    let chk = '';
+    if (t.type === 'choice') {
+      const inOpts = t.options.includes(t.answer);
+      const vals = t.optVals ? t.optVals.map(v => { const q = qParse(v); return q ? q.n + '/' + q.d : v; }) : t.options;
+      const dup = new Set(vals).size !== vals.length;
+      if (!inOpts || dup) { bad++; chk = ' ⚠ ' + (!inOpts ? 'ответа нет среди вариантов' : 'двойник по значению'); }
+    }
+    out += `${i + 1}. [${LEV[d]}] ${strip(t.q)}${t.options ? '  Варианты: ' + t.options.map(strip).join(' | ') : ''}${t.items ? '  Выбор: ' + t.items.map(strip).join(' | ') : ''}\n   Ответ: ${ans}${t.type === 'frac' ? ' (ввод дробью)' : ''}${chk}\n`;
+  }
+}
+document.getElementById('out').textContent = `Проблем: ${bad}\n` + out;
+</script></body></html>

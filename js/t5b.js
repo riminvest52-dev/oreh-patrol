@@ -367,3 +367,278 @@ reg('fbridge', 'b_word', d => {
     explain: [`${frH(a1, b1)} + ${frH(a2, b2)} = ${qHtml(s)} — за два дня.`].concat(rest ? [`1 − ${qHtml(s)} = ${qHtml(ans)} — осталось.`] : []) }, ans, 'frac',
     [[rest ? s : null, 'Это сделано за два дня, а спрашивают, сколько осталось.'], [b1 !== b2 ? Q(a1 + a2, b1 + b2) : Q(a1 + a2, 2 * b1), 'Знаменатели не складывают.']]);
 });
+
+/* ============ Мастерская дробей: умножение и деление ============ */
+reg('fwork', 'w_mulnat', d => {
+  const [a, b] = properQ(2, d === 1 ? 9 : 12), n = R.int(2, d === 1 ? 5 : 12); if (gcd(a, b) !== 1 || n % b === 0 && d === 1) return null;
+  const div = d === 3 && R.chance(0.5);
+  if (div) { const ans = Q(a, b * n); return fracTask({ q: `Вычисли: <span class="ex">${frH(a, b)} : ${n}</span>`, hint: 'Чтобы разделить дробь на натуральное число, умножь на это число знаменатель.',
+    explain: [`${frH(a, b)} : ${n} = ${frH(a, `${b} · ${n}`)} = ${qHtml(ans)}.`] }, ans, 'frac', [[Q(a * n, b), 'Это умножение. При делении на число знаменатель умножают на это число.']]); }
+  const ans = Q(a * n, b);
+  return fracTask({ q: `Вычисли: <span class="ex">${frH(a, b)} · ${n}</span>`, hint: 'Чтобы умножить дробь на натуральное число, умножь на него числитель, а знаменатель оставь.',
+    explain: [`${frH(a, b)} · ${n} = ${frH(`${a} · ${n}`, b)} = ${frH(a * n, b)}${qText(ans, true) !== `${a * n}/${b}` ? ' = ' + qHtml(ans, true) : ''}.`] }, ans, formOf(ans),
+    [[Q(a * n, b * n), 'На число умножают только числитель. Если умножить и знаменатель — дробь не изменится.']]);
+});
+reg('fwork', 'w_mul', d => {
+  const [a, b] = properQ(2, d === 1 ? 7 : 12), [c, e] = d === 3 && R.chance(0.4) ? [R.int(5, 15), R.int(2, 4)] : properQ(2, d === 1 ? 7 : 12);
+  if (gcd(a, b) !== 1 || gcd(c, e) !== 1) return null;
+  const ans = qMul(Q(a, b), Q(c, e)); if (ans.d === 1 && ans.n === 1) return null;
+  const cut = gcd(a * c, b * e) > 1;
+  return fracTask({ q: `Вычисли: <span class="ex">${frH(a, b)} · ${frH(c, e)}</span>`, draft: d > 1,
+    hint: 'Числитель умножь на числитель, знаменатель — на знаменатель. Сокращай до умножения — так проще.',
+    explain: [`${frH(a, b)} · ${frH(c, e)} = ${frH(`${a} · ${c}`, `${b} · ${e}`)}${cut ? ' — сокращаем' : ''} = ${qHtml(ans, true)}.`] }, ans, formOf(ans),
+    [[Q(a * e, b * c), 'Это деление. При умножении числитель умножают на числитель, знаменатель — на знаменатель.'], [b === e ? Q(a * c, b) : null, 'Знаменатели тоже перемножают.']]);
+});
+reg('fwork', 'w_div', d => {
+  const [a, b] = properQ(2, d === 1 ? 7 : 12), [c, e] = properQ(2, d === 1 ? 7 : 12);
+  if (gcd(a, b) !== 1 || gcd(c, e) !== 1 || (a === c && b === e)) return null;
+  const nat = d === 1 && R.chance(0.4);
+  if (nat) { const n = R.int(2, 9), ans = Q(n * b, a); return fracTask({ q: `Вычисли: <span class="ex">${n} : ${frH(a, b)}</span>`, hint: 'Делить на дробь — значит умножать на обратную дробь.',
+    explain: [`${n} : ${frH(a, b)} = ${n} · ${frH(b, a)} = ${qHtml(ans, true)}.`] }, ans, formOf(ans), [[Q(n * a, b), 'Это умножение. Делить на дробь — значит умножать на перевёрнутую (обратную) дробь.']]); }
+  const ans = qDiv(Q(a, b), Q(c, e));
+  return fracTask({ q: `Вычисли: <span class="ex">${frH(a, b)} : ${frH(c, e)}</span>`, draft: d > 1,
+    hint: 'Делить на дробь — значит умножать на дробь, обратную делителю: «переворачиваем» вторую дробь.',
+    explain: [`${frH(a, b)} : ${frH(c, e)} = ${frH(a, b)} · ${frH(e, c)} = ${qHtml(ans, true)}.`] }, ans, formOf(ans),
+    [[qMul(Q(a, b), Q(c, e)), 'Это умножение. При делении вторую дробь переворачивают.'], [qMul(Q(b, a), Q(c, e)), 'Переворачивают делитель (вторую дробь), а не делимое.']]);
+});
+reg('fwork', 'w_mixed', d => {
+  const b = R.int(2, 6), e = R.int(2, 6), w1 = R.int(1, d === 3 ? 5 : 3), w2 = R.int(1, d === 3 ? 4 : 2), a = R.int(1, b - 1), c = R.int(1, e - 1);
+  if (gcd(a, b) !== 1 || gcd(c, e) !== 1) return null;
+  const x = qMix(w1, a, b), y = qMix(w2, c, e), div = d > 1 && R.chance(0.45), ans = div ? qDiv(x, y) : qMul(x, y);
+  if (ans.d > 30 || ans.n > 300) return null;
+  return fracTask({ q: `Вычисли: <span class="ex">${mxH(w1, a, b)} ${div ? ':' : '·'} ${mxH(w2, c, e)}</span>`, draft: true,
+    hint: 'Сначала переведи смешанные числа в неправильные дроби, потом умножай (дели).',
+    explain: [`${mxH(w1, a, b)} = ${frH(x.n, x.d)}, ${mxH(w2, c, e)} = ${frH(y.n, y.d)}.`, div ? `${frH(x.n, x.d)} : ${frH(y.n, y.d)} = ${frH(x.n, x.d)} · ${frH(y.d, y.n)} = ${qHtml(ans, true)}.` : `${frH(x.n, x.d)} · ${frH(y.n, y.d)} = ${qHtml(ans, true)}.`] }, ans, formOf(ans),
+    div ? [] : [[qAdd(Q(w1 * w2), qMul(Q(a, b), Q(c, e))), 'Нельзя умножать отдельно целые и дробные части! Переведи смешанные числа в неправильные дроби.']]);
+});
+reg('fwork', 'w_recip', d => {
+  if (d === 1) { const [a, b] = properQ(2, 12); if (gcd(a, b) !== 1) return null; const ans = Q(b, a);
+    return fracTask({ q: `Найди число, обратное дроби ${frH(a, b)}.`, hint: 'Обратная дробь — «перевёрнутая»: числитель и знаменатель меняются местами. Их произведение равно 1.',
+      explain: [`${frH(a, b)} · ${frH(b, a)} = 1, значит, обратное число — ${frH(b, a)}.`] }, ans, 'frac', [[Q(a, b), 'Это та же дробь. Переверни её!']]); }
+  if (d === 2 && R.chance(0.5)) { const n = R.int(2, 20); return fracTask({ q: `Найди число, обратное числу ${n}.`, hint: `${n} = ${frH(n, 1)}. Переверни дробь.`,
+    explain: [`${n} = ${frH(n, 1)}, обратное — ${frH(1, n)}, ведь ${n} · ${frH(1, n)} = 1.`] }, Q(1, n), 'frac'); }
+  const b = R.int(2, 9), a = R.int(1, b - 1), w = R.int(1, 4); if (gcd(a, b) !== 1) return null;
+  const x = qMix(w, a, b);
+  return fracTask({ q: `Найди число, обратное числу ${mxH(w, a, b)}.`, hint: 'Сначала запиши смешанное число неправильной дробью, потом переверни её.',
+    explain: [`${mxH(w, a, b)} = ${frH(x.n, x.d)}.`, `Обратное число — ${frH(x.d, x.n)}.`] }, Q(x.d, x.n), 'frac', [[qMix(w, b, a), 'Переворачивают всю дробь, а не только дробную часть: сначала переведи в неправильную дробь.'], [Q(b, a), 'Целая часть тоже участвует: сначала переведи в неправильную дробь.']]);
+});
+
+/* ============ Задачи на части ============ */
+const NAMES5 = ['Маша', 'Настя', 'Оля', 'Вера', 'Аня'];
+reg('parts', 't_part', d => {
+  const [a, b] = d === 1 ? [1, R.int(2, 8)] : properQ(3, d === 2 ? 9 : 12); if (gcd(a, b) !== 1) return null;
+  const N = b * R.int(2, d === 3 ? 20 : 10), P = N / b * a;
+  const kind = R.int(0, 2);
+  if (kind === 0 && (N < 12 || N > 36)) return null;   /* в классе — от 12 до 36 учеников */
+  const s = [[`В классе ${N} ${pl(N, 'ученик', 'ученика', 'учеников')}, ${frH(a, b)} из них — девочки. Сколько девочек в классе?`, 'девочек'], [`В саду ${N} деревьев, ${frH(a, b)} из них — яблони. Сколько яблонь в саду?`, 'яблонь'], [`Длина дороги ${N} км. Отремонтировали ${frH(a, b)} дороги. Сколько километров отремонтировали?`, 'км']][kind];
+  return { q: s[0], type: 'num', answer: P, traps: [[P === N / a * b || N % a ? null : N / a * b, 'Чтобы найти дробь от числа, дели на знаменатель и умножай на числитель.'], [a > 1 ? N / b : null, `Это ${frH(1, b)}, а нужно ${frH(a, b)}.`]],
+    hint: 'Целое раздели на знаменатель (одна часть) и умножь на числитель.', explain: [`${N} : ${b} = ${N / b} — одна часть.`].concat(a > 1 ? [`${N / b} · ${a} = ${P}.`] : []).concat([`Ответ: ${P} ${s[1] === 'км' ? 'км' : ''}`.trim() + '.']) };
+});
+reg('parts', 't_whole', d => {
+  const [a, b] = d === 1 ? [1, R.int(2, 8)] : properQ(3, d === 2 ? 9 : 12); if (gcd(a, b) !== 1) return null;
+  const N = b * R.int(2, d === 3 ? 20 : 10), P = N / b * a;
+  const s = R.pick([[`${R.pick(NAMES5)} прочитала ${P} ${pl(P, 'страницу', 'страницы', 'страниц')} — это ${frH(a, b)} книги. Сколько страниц в книге?`], [`Туристы прошли ${P} км — это ${frH(a, b)} всего маршрута. Какова длина маршрута?`], [`Ёжик собрал ${P} ${pl(P, 'гриб', 'гриба', 'грибов')} — это ${frH(a, b)} всех грибов на поляне. Сколько грибов было на поляне?`]]);
+  return { q: s[0], type: 'num', answer: N, traps: [[P % b ? null : P / b * a, 'Это дробь от числа. А здесь известна часть — ищем целое: дели на числитель, умножай на знаменатель.']],
+    hint: 'Часть раздели на числитель (одна доля) и умножь на знаменатель.', explain: (a > 1 ? [`${P} : ${a} = ${P / a} — одна доля.`] : []).concat([`${P / a} · ${b} = ${N} — целое.`]) };
+});
+reg('parts', 't_rest', d => {
+  const [a, b] = properQ(3, d === 1 ? 6 : 10); if (gcd(a, b) !== 1) return null;
+  const N = b * R.int(d === 1 ? 10 : 20, d === 1 ? 50 : 120), spent = N / b * a, rest = N - spent;
+  if (d === 3) {
+    const [c, e] = properQ(2, 6); if (gcd(c, e) !== 1 || rest % e) return null;
+    const sp2 = rest / e * c, ans = rest - sp2;
+    return { q: `У ${R.pick(['Пети', 'Коли', 'Димы'])} было ${fmt(N)} р. Он потратил ${frH(a, b)} денег на книгу, а потом ${frH(c, e)} остатка — на ручки. Сколько рублей у него осталось?`, type: 'num', answer: ans, draft: true,
+      traps: [[N - spent - N / e * c, `${frH(c, e)} берётся от остатка, а не от всех денег.`]],
+      hint: 'Сначала найди остаток после первой покупки. Вторая дробь — от этого остатка.',
+      explain: [`${fmt(N)} : ${b} · ${a} = ${fmt(spent)} р. — на книгу.`, `${fmt(N)} − ${fmt(spent)} = ${fmt(rest)} р. — остаток.`, `${fmt(rest)} : ${e} · ${c} = ${fmt(sp2)} р. — на ручки.`, `${fmt(rest)} − ${fmt(sp2)} = ${fmt(ans)} р.`] };
+  }
+  return { q: `У ${R.pick(['мамы', 'папы', 'бабушки'])} было ${fmt(N)} р. На продукты ушло ${frH(a, b)} этих денег. Сколько рублей осталось?`, type: 'num', answer: rest, draft: d > 1,
+    traps: [[spent, 'Это сколько потратили. А спрашивают, сколько осталось.']],
+    hint: 'Найди, сколько потратили (дробь от числа), и вычти из всех денег. Или найди, какая часть осталась.',
+    explain: [`${fmt(N)} : ${b} · ${a} = ${fmt(spent)} р. — потратили.`, `${fmt(N)} − ${fmt(spent)} = ${fmt(rest)} р. — осталось.`] };
+});
+const WORK = [[6, 3, 2], [4, 12, 3], [6, 12, 4], [10, 15, 6], [12, 24, 8], [20, 30, 12], [4, 4, 2], [12, 4, 3], [10, 40, 8], [5, 20, 4], [30, 60, 20], [9, 18, 6], [8, 24, 6], [3, 6, 2], [15, 10, 6], [12, 6, 4]];
+reg('parts', 't_work', d => {
+  const [x, y, t] = R.pick(WORK), what = R.pick([['Первая труба наполняет бассейн', 'вторая', 'бассейна', 'наполнят бассейн'], ['Мастер выполняет заказ', 'ученик', 'заказа', 'выполнят заказ'], ['Первый насос откачивает воду из пруда', 'второй', 'пруда', 'откачают воду']]);
+  if (d === 1) return fracTask({ q: `${what[0]} за ${x} ч. Какую часть ${what[2]} он${what[0].startsWith('Первая') ? 'а' : ''} ${what[0].startsWith('Первая') ? 'наполняет' : what[0].startsWith('Мастер') ? 'выполняет' : 'откачивает'} за 1 час?`,
+    hint: 'Вся работа — 1. За 1 час выполняется 1 : время.', explain: [`1 : ${x} = ${frH(1, x)} — за 1 час.`] }, Q(1, x), 'frac', [[Q(x, 1), 'За час выполняется только часть работы — меньше 1.']]);
+  if (d === 2) { const ans = qAdd(Q(1, x), Q(1, y)); return fracTask({ q: `${what[0]} за ${x} ч, а ${what[1]} — за ${y} ч. Какую часть ${what[2]} они ${what[3].split(' ')[0]} вместе за 1 час?`, draft: true,
+    hint: 'Найди часть работы за 1 час для каждого и сложи.', explain: [`${frH(1, x)} + ${frH(1, y)} = ${qHtml(ans)} — вместе за 1 час.`] }, ans, 'frac', [[Q(2, x + y), 'Знаменатели не складывают: приведи дроби к общему знаменателю.'], [Q(1, x + y), 'Время не складывают: складывают части работы за 1 час.']]); }
+  return { q: `${what[0]} за ${x} ч, а ${what[1]} — за ${y} ч. За сколько часов они ${what[3]}, если будут работать вместе?`, type: 'num', answer: t, draft: true,
+    traps: [[x + y, 'Вместе работают быстрее, чем каждый в отдельности, — время не складывают.'], [(x + y) % 2 ? null : (x + y) / 2, 'Среднее время тут не подходит: складывают части работы за 1 час.']],
+    hint: 'Найди, какую часть работы они делают вместе за 1 час, и раздели всю работу (1) на эту часть.',
+    explain: [`За 1 час: ${frH(1, x)} + ${frH(1, y)} = ${frH(1, t)} работы.`, `1 : ${frH(1, t)} = ${t} (ч).`] };
+});
+
+/* ============ Луч координат ============ */
+const RAY = { x0: 24, u: 0, W: 360 };
+function raySvg(n, units, pts, labels) {
+  const U = Math.floor((RAY.W - RAY.x0 - 20) / units), X = v => RAY.x0 + v * U;
+  let g = `<line x1="${RAY.x0 - 8}" y1="40" x2="${RAY.W - 4}" y2="40" stroke="#5B3418" stroke-width="2.5"/><path d="M${RAY.W - 4} 40 l-10 -5 v10 z" fill="#5B3418"/>`;
+  for (let k = 0; k <= units * n; k++) { const big = k % n === 0; g += `<line x1="${X(k / n)}" x2="${X(k / n)}" y1="${big ? 30 : 34}" y2="${big ? 50 : 46}" stroke="#5B3418" stroke-width="${big ? 2.5 : 1.6}"/>`; }
+  for (const [v, t] of labels) g += `<text x="${X(v)}" y="68" font-size="15" font-weight="700" text-anchor="middle" fill="#4A2814">${t}</text>`;
+  for (const [v, t] of pts) g += `<circle cx="${X(v)}" cy="40" r="5.5" fill="#E8742E" stroke="#5B3418" stroke-width="2"/><text x="${X(v)}" y="20" font-size="16" font-weight="800" text-anchor="middle" fill="#C14A1A">${t}</text>`;
+  return `<svg class="gfig ray" viewBox="0 0 ${RAY.W} 76" width="${RAY.W}">${g}</svg>`;
+}
+reg('ray', 'r_point', d => {
+  const n = R.int(d === 1 ? 2 : 3, d === 1 ? 6 : 8), units = d === 3 ? R.int(2, 3) : 1, k = R.int(1, units * n - 1);
+  if (k % n === 0) return null;
+  const ans = Q(k, n), labels = Array.from({ length: units + 1 }, (_, i) => [i, String(i)]);
+  return fracTask({ q: `Какое число отмечено на луче точкой A?`, fig: raySvg(n, units, [[k / n, 'A']], labels),
+    hint: 'Посчитай, на сколько равных частей разделён единичный отрезок (от 0 до 1) — это знаменатель. Сколько таких частей до точки — числитель.',
+    explain: [`Единичный отрезок разделён на ${n} ${pl(n, 'часть', 'части', 'частей')} — каждая часть ${frH(1, n)}.`, `До точки A — ${k} ${pl(k, 'часть', 'части', 'частей')}: A(${qHtml(ans, true)}).`] }, ans, units > 1 ? 'mixed' : 'frac',
+    [[Q(k, n + 1), 'Считай не штрихи, а промежутки между ними: штрихов на 1 больше, чем частей.'], [Q(k, n - 1 || 1), 'Посчитай части единичного отрезка ещё раз.']]);
+});
+reg('ray', 'r_where', d => {
+  const n = R.int(5, d === 1 ? 8 : 10), units = d === 3 ? 2 : 1;
+  const ks = new Set(); while (ks.size < 4) { const k = R.int(1, units * n - 1); if (k % n) ks.add(k); }
+  const arr = [...ks].sort((a, b) => a - b), letters = ['A', 'B', 'C', 'D'], pick = R.int(0, 3), target = Q(arr[pick], n);
+  const show = qHtml(target, true);
+  return { q: `Какая точка соответствует числу ${show}?`, fig: raySvg(n, units, arr.map((k, i) => [k / n, letters[i]]), Array.from({ length: units + 1 }, (_, i) => [i, String(i)])),
+    type: 'choice', options: letters.slice(), answer: letters[pick], cols2: true,
+    hint: `Единичный отрезок разделён на ${n} частей. ${target.d !== n ? `Сначала запиши ${show} со знаменателем ${n}.` : ''}`.trim(),
+    explain: [`${show} = ${frH(arr[pick], n)}${units > 1 && arr[pick] > n ? ` = ${mxH(Math.floor(arr[pick] / n), arr[pick] % n, n)}` : ''}: отсчитай ${arr[pick]} ${pl(arr[pick], 'деление', 'деления', 'делений')} от 0.`, `Это точка ${letters[pick]}.`] };
+});
+reg('ray', 'r_scale', d => {
+  const m = R.pick(d === 1 ? [5, 10] : [4, 5, 10]), step = R.pick(d === 1 ? [1, 2, 10] : d === 2 ? [5, 10, 20, 25] : [15, 25, 50, 200, 250]), L = m * step;
+  const k = R.int(1, m * (d === 3 ? 2 : 1) - 1); if (k % m === 0) return null;
+  const units = d === 3 ? 2 : 1, ans = k * step;
+  let g = '', W = 340, x0 = 20, U = (W - 30) / (m * units);
+  g += `<rect x="${x0}" y="30" width="${U * m * units}" height="14" rx="3" fill="#FFF3DE" stroke="#5B3418" stroke-width="2"/>`;
+  for (let i = 0; i <= m * units; i++) { const big = i % m === 0; g += `<line x1="${x0 + i * U}" x2="${x0 + i * U}" y1="${big ? 22 : 26}" y2="30" stroke="#5B3418" stroke-width="${big ? 2.5 : 1.5}"/>`; if (big) g += `<text x="${x0 + i * U}" y="16" font-size="14" font-weight="700" text-anchor="middle" fill="#4A2814">${(i / m) * L}</text>`; }
+  g += `<path d="M${x0 + k * U} 47 l-7 13 h14 z" fill="#E8742E" stroke="#5B3418" stroke-width="1.6"/>`;
+  return { q: `Какое число показывает стрелка на шкале?`, fig: `<svg class="gfig" viewBox="0 0 ${W} 66" width="${W}">${g}</svg>`, type: 'num', answer: ans,
+    traps: [[k, 'Это число делений. Сначала найди цену деления.'], [k * L, 'Цена одного деления — не ' + L + '. Раздели ' + L + ' на число делений между подписями.']],
+    hint: `Найди цену деления: между подписями 0 и ${L} — ${m} делений.`, explain: [`Цена деления: ${L} : ${m} = ${step}.`, `Стрелка на ${k}-м делении: ${k} · ${step} = ${ans}.`] };
+});
+
+/* ============ Угломерная ============ */
+function angleSvg(deg, mark) {
+  const cx = 60, cy = 110, r = 120, rad = deg * Math.PI / 180;
+  const ex = cx + r * Math.cos(rad), ey = cy - r * Math.sin(rad), ar = 26;
+  const arc = deg === 90 ? `<path d="M${cx + 18} ${cy} v-18 h-18" fill="none" stroke="#C14A1A" stroke-width="2.4"/>` : `<path d="M${cx + ar} ${cy} A${ar} ${ar} 0 0 0 ${cx + ar * Math.cos(rad)} ${cy - ar * Math.sin(rad)}" fill="none" stroke="#C14A1A" stroke-width="2.4"/>`;
+  const W = deg > 90 ? 250 : 200;
+  return `<svg class="gfig" viewBox="${deg > 90 ? -60 : 0} 0 ${W} 124" width="${W}"><line x1="${cx}" y1="${cy}" x2="${cx + r + 10}" y2="${cy}" stroke="#5B3418" stroke-width="3" stroke-linecap="round"/>
+    <line x1="${cx}" y1="${cy}" x2="${ex}" y2="${Math.max(6, ey)}" stroke="#5B3418" stroke-width="3" stroke-linecap="round"/>${arc}<circle cx="${cx}" cy="${cy}" r="3.5" fill="#5B3418"/>${mark ? `<text x="${cx - 14}" y="${cy + 4}" font-size="14" font-weight="700" fill="#4A2814">O</text>` : ''}</svg>`;
+}
+const KINDS = ['острый', 'прямой', 'тупой', 'развёрнутый'];
+const kindOf = a => a < 90 ? 'острый' : a === 90 ? 'прямой' : a < 180 ? 'тупой' : 'развёрнутый';
+reg('angle', 'a_kind', d => {
+  let a, q, fig = '';
+  if (d === 1) { a = R.pick([R.int(10, 80), 90, R.int(100, 170), 180]); q = `Угол равен ${a}${DEG}. Какой это угол?`; }
+  else if (d === 2) { a = R.pick([R.int(15, 75), 90, R.int(105, 165)]); q = 'Какой угол изображён на рисунке?'; fig = angleSvg(a); }
+  else { const x = R.int(20, 80), y = R.int(20, 100); a = x + y; if (a > 180 || Math.abs(a - 90) < 3 && a !== 90) return null; q = `Угол разделили лучом на два угла: ${x}${DEG} и ${y}${DEG}. Каким был весь угол?`; }
+  return { q, fig, type: 'choice', options: KINDS.slice(), answer: kindOf(a), cols2: true,
+    hint: 'Острый — меньше 90°, прямой — ровно 90°, тупой — от 90° до 180°, развёрнутый — 180°.',
+    explain: (d === 3 ? [`Весь угол: ${a}${DEG}.`] : []).concat([`${a}${DEG} — ${kindOf(a)} угол.`]) };
+});
+function protractorSvg(rays) {
+  const cx = 170, cy = 150, R1 = 130, R2 = 106, R3 = 84;
+  let g = `<path d="M${cx - R1} ${cy} A${R1} ${R1} 0 0 1 ${cx + R1} ${cy} Z" fill="#FFF3DE" fill-opacity=".85" stroke="#B88A5A" stroke-width="2"/>`;
+  for (let t = 0; t <= 180; t += 5) {
+    const rad = t * Math.PI / 180, c = Math.cos(rad), s = Math.sin(rad), big = t % 10 === 0;
+    g += `<line x1="${cx + c * (R1 - (big ? 12 : 7))}" y1="${cy - s * (R1 - (big ? 12 : 7))}" x2="${cx + c * R1}" y2="${cy - s * R1}" stroke="#8A5A36" stroke-width="${big ? 1.6 : 1}"/>`;
+    if (t % 20 === 0) {
+      g += `<text x="${cx + c * R2}" y="${cy - s * R2 + 4}" font-size="11" text-anchor="middle" fill="#4A2814" font-weight="700">${t}</text>`;
+      g += `<text x="${cx + c * R3}" y="${cy - s * R3 + 4}" font-size="9.5" text-anchor="middle" fill="#A0703F">${180 - t}</text>`;
+    }
+  }
+  g += `<circle cx="${cx}" cy="${cy}" r="3.5" fill="#5B3418"/>`;
+  for (const t of rays) { const rad = t * Math.PI / 180; g += `<line x1="${cx}" y1="${cy}" x2="${cx + Math.cos(rad) * (R1 + 22)}" y2="${cy - Math.sin(rad) * (R1 + 22)}" stroke="#C14A1A" stroke-width="3" stroke-linecap="round"/>`; }
+  return `<svg class="gfig" viewBox="10 0 320 160" width="320">${g}</svg>`;
+}
+reg('angle', 'a_prot', d => {
+  if (d === 3) {
+    const t1 = R.int(1, 8) * 10, t2 = t1 + R.int(3, 9) * 10; if (t2 > 170) return null;
+    return { q: 'Сколько градусов угол между двумя красными лучами?', fig: protractorSvg([t1, t2]), type: 'num', answer: t2 - t1,
+      traps: [[t2, 'Ни один луч не проходит через 0 — нужно вычесть одно показание из другого.'], [180 - t1, 'Найди показания обоих лучей по одной шкале и вычти.']],
+      hint: 'Посмотри, на какие числа одной шкалы указывают лучи, и найди разность.', explain: [`Лучи указывают на ${t1}${DEG} и ${t2}${DEG} (по одной шкале).`, `${t2} − ${t1} = ${t2 - t1}${DEG}.`] };
+  }
+  const t = d === 1 ? R.int(1, 17) * 10 : R.int(2, 34) * 5; if (t === 90 || (d === 2 && t % 10 === 0)) return null;
+  return { q: 'Сколько градусов угол, отмеченный красными лучами?', fig: protractorSvg([0, t]), type: 'num', answer: t,
+    traps: [[180 - t, 'Это показание другой шкалы. Считай по той шкале, где первая сторона угла стоит на 0.']],
+    hint: 'Одна сторона угла проходит через 0 (справа). Читай числа по той же шкале — она начинается с 0 справа.', explain: [`Первая сторона — на 0, вторая — на ${t} по той же шкале.`, `Угол равен ${t}${DEG}.`] };
+});
+reg('angle', 'a_split', d => {
+  if (d === 3) {
+    const all = R.pick([120, 130, 140, 150, 160, 180]), x = R.int(2, 6) * 5, y = R.int(2, 6) * 5; if (all - x - y < 10) return null;
+    return { q: `Внутри угла AOB, равного ${all}${DEG}, проведены лучи OC и OD так, что ∠AOC = ${x}${DEG} и ∠DOB = ${y}${DEG}, а луч OC ближе к OA. Найди ∠COD.`, type: 'num', answer: all - x - y, draft: true,
+      traps: [[x + y, 'Это сумма двух крайних углов. Нужно вычесть их из всего угла.']], hint: 'Весь угол состоит из трёх частей. Вычти известные части из всего угла.',
+      explain: [`∠COD = ${all} − ${x} − ${y} = ${all - x - y}${DEG}.`] };
+  }
+  const all = d === 1 ? 90 : 180, x = R.int(2, d === 1 ? 16 : 34) * 5;
+  return { q: `Луч OC делит ${d === 1 ? 'прямой' : 'развёрнутый'} угол AOB на два угла. ∠AOC = ${x}${DEG}. Найди ∠COB.`, type: 'num', answer: all - x,
+    traps: [[all + x, 'Угол COB — часть угла AOB, поэтому вычитаем.'], [d === 1 ? 180 - x : 90 - x > 0 ? 90 - x : null, d === 1 ? 'Прямой угол — 90°, а не 180°.' : 'Развёрнутый угол — 180°, а не 90°.']],
+    hint: `${d === 1 ? 'Прямой' : 'Развёрнутый'} угол равен ${all}${DEG}. ∠AOC + ∠COB = ${all}${DEG}.`, explain: [`∠COB = ${all} − ${x} = ${all - x}${DEG}.`] };
+});
+reg('angle', 'a_tri', d => {
+  if (d === 2 || (d === 3 && R.chance(0.5))) {
+    const t = R.pick(['eq', 'iso', 'sc']), a = R.int(3, 12);
+    let s; if (t === 'eq') s = [a, a, a]; else if (t === 'iso') { const b = R.int(2, 2 * a - 1); if (b === a) return null; s = R.shuffle([a, a, b]); } else { const b = R.int(3, 12), c = R.int(3, 12); if (new Set([a, b, c]).size < 3 || a + b <= c || a + c <= b || b + c <= a) return null; s = [a, b, c]; }
+    if (d === 3) { const P = s.reduce((x, y) => x + y, 0); if (t !== 'eq') return null; return { q: `Периметр равностороннего треугольника ${P} см. Найди длину его стороны.`, type: 'num', answer: a, traps: [[P / 2 === Math.floor(P / 2) ? P / 2 : null, 'У треугольника три стороны, а не две.']], hint: 'У равностороннего треугольника все три стороны равны.', explain: [`${P} : 3 = ${a} (см).`] }; }
+    const ans = { eq: 'равносторонний', iso: 'равнобедренный', sc: 'разносторонний' }[t];
+    return { q: `Стороны треугольника: ${s.join(' см, ')} см. Какой это треугольник?`, type: 'choice', options: ['равносторонний', 'равнобедренный', 'разносторонний'], answer: ans,
+      hint: 'Все стороны равны — равносторонний. Две равны — равнобедренный. Все разные — разносторонний.', explain: [`${ans[0].toUpperCase() + ans.slice(1)} треугольник.`] };
+  }
+  let A; do { const x = R.int(20, 110), y = R.int(20, 160 - x); A = R.shuffle([x, y, 180 - x - y]); } while (A.some(v => v < 10));
+  if (R.chance(0.3)) { const x = R.int(20, 70); A = R.shuffle([90, x, 90 - x]); }
+  const mx = Math.max(...A), ans = mx < 90 ? 'остроугольный' : mx === 90 ? 'прямоугольный' : 'тупоугольный';
+  return { q: `Углы треугольника: ${A.join(DEG + ', ')}${DEG}. Какой это треугольник?`, type: 'choice', options: ['остроугольный', 'прямоугольный', 'тупоугольный'], answer: ans,
+    hint: 'Смотри на самый большой угол: меньше 90° — остроугольный, 90° — прямоугольный, больше 90° — тупоугольный.', explain: [`Самый большой угол — ${mx}${DEG}, значит, треугольник ${ans}.`] };
+});
+reg('angle', 'a_circle', d => {
+  if (d === 1) { const r = R.int(2, 25), byR = R.chance(0.5); return byR ? { q: `Радиус окружности ${r} см. Найди её диаметр.`, type: 'num', answer: 2 * r, traps: [[r % 2 ? null : r / 2, 'Диаметр в 2 раза больше радиуса, а не меньше.']], hint: 'Диаметр — это два радиуса: d = 2 · r.', explain: [`d = 2 · ${r} = ${2 * r} (см).`] }
+    : { q: `Диаметр окружности ${2 * r} см. Найди её радиус.`, type: 'num', answer: r, traps: [[4 * r, 'Радиус в 2 раза меньше диаметра.']], hint: 'Радиус — половина диаметра: r = d : 2.', explain: [`r = ${2 * r} : 2 = ${r} (см).`] }; }
+  if (d === 2) { const dm = R.int(2, 9), cm = R.pick([2, 4, 6, 8]); const D = dm * 10 + cm; return { q: `Диаметр круга ${dm} дм ${cm} см. Найди радиус в сантиметрах.`, type: 'num', answer: D / 2, traps: [[D, 'Это диаметр в сантиметрах. Радиус — половина диаметра.']], hint: 'Переведи диаметр в сантиметры и раздели на 2.', explain: [`${dm} дм ${cm} см = ${D} см.`, `${D} : 2 = ${D / 2} (см).`] }; }
+  if (R.chance(0.5)) { const r1 = R.int(2, 12), r2 = R.int(2, 12); return { q: `Две окружности с радиусами ${r1} см и ${r2} см касаются друг друга снаружи. Найди расстояние между их центрами.`, type: 'num', answer: r1 + r2, traps: [[2 * (r1 + r2), 'Расстояние между центрами — сумма радиусов, а не диаметров.']], hint: 'Нарисуй: от одного центра до точки касания — радиус, от неё до другого центра — второй радиус.', explain: [`${r1} + ${r2} = ${r1 + r2} (см).`] }; }
+  const a = R.int(2, 15) * 2; return { q: `Круг вписан в квадрат со стороной ${a} см (касается всех его сторон). Найди радиус круга.`, type: 'num', answer: a / 2, traps: [[a, 'Сторона квадрата равна диаметру, а радиус — половина диаметра.']], hint: 'Диаметр круга равен стороне квадрата.', explain: [`d = ${a} см, r = ${a} : 2 = ${a / 2} (см).`] };
+});
+
+/* ============ Диаграммы ============ */
+reg('charts', 'c_bar', d => {
+  const n = d === 1 ? 4 : 5, step = 10, labels = R.pick([['Пн', 'Вт', 'Ср', 'Чт', 'Пт'], ['5 А', '5 Б', '5 В', '5 Г', '5 Д'], ['Янв', 'Фев', 'Мар', 'Апр', 'Май']]).slice(0, n);
+  let vals; do vals = labels.map(() => step * R.int(1, 9)); while (new Set(vals).size < n || (d === 3 && vals.reduce((a, b) => a + b, 0) % n));
+  const fig = `<div class="small muted">Сколько килограммов макулатуры собрали (диаграмма):</div>${barSvg(labels, vals, 'кг')}`, sum = vals.reduce((a, b) => a + b, 0);
+  if (d === 3) return { q: 'По диаграмме: сколько килограммов собирали <b>в среднем</b> за один раз?', fig, type: 'num', answer: sum / n, draft: true,
+    traps: [[sum, 'Это сумма. Среднее — сумма, делённая на количество.']], hint: 'Сложи все значения и раздели на их количество.', explain: [`${vals.join(' + ')} = ${sum}.`, `${sum} : ${n} = ${sum / n} (кг).`] };
+  const [i, j] = R.sample([...labels.keys()], 2);
+  if (d === 2) return { q: `По диаграмме: на сколько килограммов больше собрали в «${labels[vals[i] > vals[j] ? i : j]}», чем в «${labels[vals[i] > vals[j] ? j : i]}»?`, fig, type: 'num', answer: Math.abs(vals[i] - vals[j]),
+    traps: [[vals[i] + vals[j], 'Спрашивают «на сколько больше» — нужно вычитать.']], hint: 'Найди высоту обоих столбиков по шкале и вычти.', explain: [`${Math.max(vals[i], vals[j])} − ${Math.min(vals[i], vals[j])} = ${Math.abs(vals[i] - vals[j])} (кг).`] };
+  return { q: 'По диаграмме: сколько всего килограммов собрали?', fig, type: 'num', answer: sum, hint: 'Найди высоту каждого столбика по шкале и сложи.', explain: [`${vals.join(' + ')} = ${sum} (кг).`] };
+});
+const PIES = [[[1, 2], [1, 4], [1, 4]], [[1, 2], [1, 4], [1, 8], [1, 8]], [[1, 4], [1, 4], [1, 4], [1, 4]], [[1, 2], [1, 3], [1, 6]], [[1, 3], [1, 3], [1, 6], [1, 6]], [[3, 8], [1, 4], [1, 4], [1, 8]], [[1, 2], [3, 8], [1, 8]]];
+const PIE_COL = ['#E8742E', '#4E9A6A', '#3D7CC9', '#F4C542'];
+function pieSvg(parts, names, showFr) {
+  const cx = 90, cy = 90, r = 80; let a0 = -Math.PI / 2, g = '', leg = '';
+  parts.forEach(([a, b], i) => {
+    const a1 = a0 + 2 * Math.PI * a / b, large = a / b > 0.5 ? 1 : 0;
+    g += `<path d="M${cx} ${cy} L${cx + r * Math.cos(a0)} ${cy + r * Math.sin(a0)} A${r} ${r} 0 ${large} 1 ${cx + r * Math.cos(a1)} ${cy + r * Math.sin(a1)} Z" fill="${PIE_COL[i]}" stroke="#5B3418" stroke-width="2"/>`;
+    leg += `<g transform="translate(196 ${26 + i * 34})"><rect width="18" height="18" rx="4" fill="${PIE_COL[i]}" stroke="#5B3418" stroke-width="1.5"/><text x="26" y="14" font-size="15" fill="#4A2814">${names[i]}${showFr ? ` — ${a}/${b}` : ''}</text></g>`;
+    a0 = a1;
+  });
+  return `<svg class="gfig" viewBox="0 0 340 184" width="340">${g}${leg}</svg>`;
+}
+reg('charts', 'c_pie', d => {
+  /* без подписей долей (Орешек) — только половины, четверти и восьмые: их видно по рисунку */
+  const parts = R.pick(d === 2 ? PIES.slice(0, 3) : PIES), names = R.shuffle(['Футбол', 'Плавание', 'Танцы', 'Шахматы']).slice(0, parts.length);
+  const k = parts.reduce((m, [, b]) => lcm(m, b), 1), N = k * R.int(d === 1 ? 2 : 4, d === 1 ? 10 : 30), i = R.int(0, parts.length - 1), [a, b] = parts[i], v = N / b * a;
+  const fig = pieSvg(parts, names, d === 1);
+  if (d === 3) { const j = (i + 1) % parts.length, w = N / parts[j][1] * parts[j][0]; if (w === v) return null;
+    return { q: `Опросили ${N} ${pl(N, 'пятиклассника', 'пятиклассников', 'пятиклассников')}, какой кружок они выбирают. На сколько больше выбрали «${v > w ? names[i] : names[j]}», чем «${v > w ? names[j] : names[i]}»?`, fig, type: 'num', answer: Math.abs(v - w), draft: true,
+      hint: 'По рисунку определи, какую часть круга занимает каждый сектор, найди число учеников для каждого и вычти.', explain: [`${names[i]}: ${frH(a, b)} от ${N} = ${v}.`, `${names[j]}: ${frH(...parts[j])} от ${N} = ${w}.`, `${Math.max(v, w)} − ${Math.min(v, w)} = ${Math.abs(v - w)}.`] }; }
+  return { q: `Опросили ${N} ${pl(N, 'пятиклассника', 'пятиклассников', 'пятиклассников')}, какой кружок они выбирают. Сколько человек выбрали «${names[i]}»?`, fig, type: 'num', answer: v,
+    traps: [[a === 1 ? null : N / b, `Сектор занимает ${frH(a, b)} круга, а не ${frH(1, b)}.`]],
+    hint: 'Определи, какую часть круга занимает сектор (половина, четверть, восьмая…), и найди эту часть от числа учеников.', explain: [`Сектор «${names[i]}» — ${frH(a, b)} круга.`, `${N} : ${b}${a > 1 ? ' · ' + a : ''} = ${v}.`] };
+});
+reg('charts', 'c_avg', d => {
+  const n = d === 1 ? R.int(2, 3) : R.int(3, 5);
+  if (d === 3) { const avg = R.int(10, 60), known = Array.from({ length: n - 1 }, () => R.int(Math.max(1, avg - 20), avg + 20)), last = avg * n - known.reduce((a, b) => a + b, 0); if (last <= 0) return null;
+    return { q: `Среднее арифметическое ${n} чисел равно ${avg}. ${n - 1 === 1 ? 'Одно из них' : 'Известны ' + (n - 1) + ' из них'}: ${known.join(', ')}. Найди ${n - 1 === 1 ? 'второе' : 'последнее'} число.`, type: 'num', answer: last, draft: true,
+      traps: [[avg, 'Среднее — не само число. Найди сумму всех чисел: среднее · количество.']], hint: 'Сумма всех чисел = среднее · количество. Вычти известные числа.',
+      explain: [`Сумма всех: ${avg} · ${n} = ${avg * n}.`, `${avg * n} − ${known.join(' − ')} = ${last}.`] }; }
+  let xs; do xs = Array.from({ length: n }, () => R.int(d === 1 ? 2 : 10, d === 1 ? 30 : 99)); while (xs.reduce((a, b) => a + b, 0) % n || new Set(xs).size < n);
+  const s = xs.reduce((a, b) => a + b, 0), word = d === 2 && R.chance(0.5);
+  return { q: word ? `За ${n} ${pl(n, 'день', 'дня', 'дней')} ${R.pick(NAMES5)} прочитала ${xs.join(', ')} страниц. Сколько страниц в среднем она читала в день?` : `Найди среднее арифметическое чисел: ${xs.join(', ')}.`, type: 'num', answer: s / n,
+    traps: [[s, 'Это сумма. Её ещё нужно разделить на количество чисел.'], [s % (n - 1) ? null : s / (n - 1), `Делить нужно на количество чисел — на ${n}.`]],
+    hint: 'Среднее арифметическое = сумма чисел : их количество.', explain: [`${xs.join(' + ')} = ${s}.`, `${s} : ${n} = ${s / n}.`] };
+});

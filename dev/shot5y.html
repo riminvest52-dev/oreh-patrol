@@ -1,0 +1,74 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>5 класс, весь год — скриншоты</title>
+<link rel="stylesheet" href="../css/style.css">
+<style>.screen { animation: none !important; } .confetti { display: none; }</style>
+</head>
+<body>
+<!-- Только для проверки раскладки 5 класса (весь год): ?scr=map&y=…|topic&id=…|task&g=…&d=…&a=ok|bad|half|unred|parent&y=…|year|yearres|diag. Ранее — мир «4 класс» и тренажёра: ?scr=map|tree|pic|hint|div|miss|fast|gold|five|parent|family|who|topic&id=…|task&g=…&d=…&a=ok|bad|half|vpr|vprres|diag.
+     Показательный прогресс: столбик ×2 золотой, ×5 зелёный, ×3 и ×4 учатся, трудные — 7 · 8, 6 · 7, 8 · 6. Озвучка и звуки выключены. -->
+<script>
+  /* ?w=390 — узкий «телефонный» экран без рамки (фоновый Chrome не делает окно уже ~500 px) */
+  const NW = +new URLSearchParams(location.search).get('w');
+  if (NW) { document.write(`<style>.screen, .modal, .toast { right: auto !important; width: ${NW}px !important; } html, body { overflow: hidden; }</style>`); Object.defineProperty(window, 'innerWidth', { get: () => NW }); }
+</script>
+<div id="app"></div>
+<div id="modal" class="modal hidden"></div>
+<div id="toast" class="toast hidden"></div>
+<script src="../js/core.js"></script><script src="../js/col.js"></script>
+<script src="../js/t-fund.js"></script><script src="../js/t-lang.js"></script><script src="../js/t-models.js"></script>
+<script src="../js/t-logic.js"></script><script src="../js/t-div.js"></script><script src="../js/t4a.js"></script><script src="../js/t4b.js"></script><script src="../js/t5b.js"></script><script src="../js/topics.js"></script><script src="../js/topics5.js"></script><script src="../js/topics4.js"></script>
+<script src="../js/art.js"></script><script src="../js/art2.js"></script>
+<script src="../js/state.js"></script><script src="../js/cloud.js"></script>
+<script src="../js/ui.js"></script><script>var VOICE_BASE = "../";</script><script src="../js/voice-data.js"></script><script src="../js/voice.js"></script>
+<script src="../js/play.js"></script><script src="../js/t-vol.js"></script><script src="../js/screens.js"></script>
+<script src="../js/vendor/qrcode.js"></script><script src="../js/mult.js"></script><script src="../js/vpr4.js"></script><script src="../js/family.js"></script>
+<script src="../js/kid.js"></script><script src="../js/k-path.js"></script>
+<script>
+  window.onerror = (m, s, l, c, e) => document.body.insertAdjacentHTML("beforeend", `<pre id="err">${m} ${l}:${c} ${e && e.stack}</pre>`);
+  try { localStorage.setItem('oreh_voice', '0'); } catch (e) { }
+  Voice.say = () => Promise.resolve();
+  Element.prototype.scrollIntoView = function () { };
+  if (!F.profiles.length) { addProfile('five'); S.name = 'Настя'; save(); }
+  const five = F.profiles.find(p => p.world === 'five'); useProfile(five.id);
+  /* Показательный прогресс: 1–2 четверть пройдены, в школе — «Пирог дробей» */
+  const day = n => addDays(today(), -n);
+  S.sound = false; S.acorns = 214; S.earned = 380; S.solved = 520; S.right = 431; S.streak = { last: today(), count: 6, best: 9 };
+  for (let i = 0; i < 12; i++) S.history[day(i)] = { n: 12 + (i * 5) % 13, ok: 11 };
+  for (const id of ['fund', 'lang', 'order', 'models', 'eq', 'logic', 'div', 'sieve', 'vol']) { S.stars[id + ':1'] = 3; S.stars[id + ':2'] = 2 + (id.length % 2); S.stars[id + ':3'] = id.length % 3; S.mastery[id] = { m: 0.6 + (id.length % 4) / 10, n: 30, ok: 24, ts: Date.now() }; }
+  S.medals.fund = S.medals.div = S.medals.eq = true; S.stars['nod:1'] = 3; S.stars['nod:2'] = 1; S.stars['pow:1'] = 2;
+  S.mastery.nod = { m: 0.55, n: 12, ok: 8 }; S.mastery.pow = { m: 0.45, n: 8, ok: 4 };
+  S.diag = { date: day(20), scores: {} }; S.school = { id: 'pie', ts: Date.now() };
+  save();
+  const q = new URLSearchParams(location.search), scr = q.get('scr') || 'map';
+  const sc = y => setTimeout(() => { const s = document.querySelector('.screen'); if (s) s.scrollTop = y; }, 50);
+  if (scr === 'map') { showMap(); sc(+q.get('y') || 0); }
+  else if (scr === 'parent') { showParent(); sc(+q.get('y') || 0); }
+  else if (scr === 'topic') { showTopic(q.get('id')); sc(+q.get('y') || 0); if (q.get('sheet')) ACT.sheet(); }
+  else if (scr === 'year') { showMap(); ACT.yearCheck(); }
+  else if (scr === 'yearres') { yearFinish({ queue: TOPICS5.map(T => ({ gen: T.gens[0], d: 2 })), ok: 15, results: TOPICS5.map((T, i) => ({ topic: T.id, ok: ![1, 11, 13, 17].includes(i) })) }); sc(+q.get('y') || 0); }
+  else if (scr === 'diag') { const s2 = {}; passedTopics().filter(T => !T.noDiag).forEach((T, i) => { s2[T.id] = [2, 1, 2, 0, 2][i % 5]; }); showDiagResult(s2, 14, 20); }
+  else if (scr === 'task') {
+    const g = q.get('g'), d = +q.get('d') || 2, T = TOPIC[GEN[g].topic];
+    begin({ mode: q.get('mode') || 'level', topic: T.id, level: d, boss: false, title: `${T.name} · ${LEVELS[d - 1].name}`, queue: [{ gen: g, d }] });
+    const t = SES.task, a = q.get('a');
+    const putFr = (w, n, dd) => { SES.fr = { w: w ? String(w) : '', n: n ? String(n) : '', d: dd ? String(dd) : '' }; SES.fsel = 'd'; frPaint(); };
+    if (t.type === 'frac' && a) {
+      const A = t.ans, W = Math.floor(A.n / A.d), r = A.n % A.d;
+      if (a === 'half') { SES.fr = { w: t.form === 'mixed' && W ? String(W) : '', n: String(t.form === 'mixed' ? r : A.n), d: '' }; SES.fsel = 'd'; frPaint(); }
+      else if (a === 'ok') { if (t.form === 'mixed') putFr(W, r, r ? A.d : ''); else putFr('', A.n, A.d); ACT.check(); }
+      else if (a === 'unred') { putFr('', A.n * 2, A.d * 2); ACT.check(); }
+      else if (a === 'bad') { const tv = t.traps && t.traps[0] ? qParse(t.traps[0].v) : Q(A.n + 1, A.d); putFr('', tv.n, tv.d); ACT.check(); if (q.get('twice')) { putFr('', tv.n, tv.d); ACT.check(); } }
+    } else if (a === 'ok' || a === 'bad') {
+      if (t.type === 'num') { SES.input = String(a === 'ok' ? t.answer : (t.traps && t.traps[0] ? t.traps[0].v : t.answer + 1)); ACT.check(); }
+      else if (t.type === 'choice') { const i = t.options.findIndex(o => a === 'ok' ? o === t.answer : (t.traps && t.traps[0] ? o === t.traps[0].v : o !== t.answer)); ACT.pick(document.querySelectorAll('.opt')[i]); }
+      else if (t.type === 'multi') { t.items.forEach((o, i) => { if (t.answer.includes(o)) ACT.tog(document.querySelectorAll('.chipb')[i]); }); ACT.check(); }
+    }
+    sc(+q.get('y') || 0);
+  }
+</script>
+</body>
+</html>
