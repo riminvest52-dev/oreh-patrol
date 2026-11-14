@@ -1,4 +1,4 @@
-/* Рисунки: бурундуки Фундук и Миндалинка, жёлудь, деревья */
+/* Рисунки: бурундуки Фундук и Миндалинка, белка Шустрик, жёлудь, деревья */
 'use strict';
 
 const ART = {};
@@ -10,8 +10,37 @@ const ART = {};
 const CH = {
   INK: '#5B3418',
   funduk: { name: 'Фундук', f1: '#E59A5A', f2: '#C46F33', f3: '#8E4A1E', light: '#FBE3BE', stripe: '#5A2D12', inner: '#F3A893' },
-  mindal: { name: 'Миндалинка', f1: '#FAD7A4', f2: '#EBB474', f3: '#BE7E40', light: '#FDF0DA', stripe: '#6E3B1C', inner: '#F7B8A6' }
+  mindal: { name: 'Миндалинка', f1: '#FAD7A4', f2: '#EBB474', f3: '#BE7E40', light: '#FDF0DA', stripe: '#6E3B1C', inner: '#F7B8A6' },
+  /* Белка Шустрик (мир 4 класса): рыжая, без полосок, хвост завитком, кисточки на ушах, синий шарфик, карандаш за ухом */
+  shustrik: { name: 'Шустрик', f1: '#F5A25A', f2: '#DE6E2E', f3: '#A3441A', light: '#FDE8CC', stripe: '#7A3414', inner: '#F6AE94' }
 };
+/* Пышный хвост белки: круги-«пушинки» вдоль дуги (сначала контур, потом заливка — получается один пушистый силуэт) и завиток */
+const SQ_TAIL = [[146, 222, 20], [168, 216, 24], [190, 202, 26], [204, 180, 26], [210, 154, 25], [207, 128, 24], [198, 104, 23], [191, 80, 21], [195, 58, 18], [209, 46, 15], [221, 52, 12], [222, 65, 9]];
+function sqTail(u, c) {
+  const I = CH.INK;
+  return SQ_TAIL.map(([x, y, r]) => `<circle cx="${x}" cy="${y}" r="${r + 3.5}" fill="${I}"/>`).join('') +
+    SQ_TAIL.map(([x, y, r]) => `<circle cx="${x}" cy="${y}" r="${r}" fill="url(#q${u})"/>`).join('') +
+    `<path d="M196 206 C214 182 216 146 206 116 C198 94 186 78 194 60 C200 50 214 48 218 58 C220 64 214 68 210 64" stroke="${c.f3}" stroke-width="4.5" fill="none" stroke-linecap="round" opacity=".6"/>` +
+    `<path d="M162 218 C186 210 198 190 200 166 M198 136 C196 116 186 100 180 86" stroke="${c.light}" stroke-width="6" fill="none" stroke-linecap="round" opacity=".55"/>` +
+    [[214, 186], [218, 140], [206, 92], [184, 226]].map(([x, y]) => `<path d="M${x} ${y} q5 -3 7 -9" stroke="${I}" stroke-width="2.5" fill="none" stroke-linecap="round" opacity=".5"/>`).join('');
+}
+/* Острые уши с кисточками и карандаш за правым ухом (рисуются за головой) */
+function sqEars(u, c) {
+  const ear = (d, inner, tuft) => chS(d, `url(#f${u})`, 3) + `<path d="${inner}" fill="${c.inner}"/>` + chS(tuft, c.f3, 2.6);
+  const pencil = `<g transform="translate(170 46) rotate(-38)">${chS('M-30 -5 L14 -5 L14 5 L-30 5 Z', '#F4C542', 2.6)}<path d="M-28 -1 L12 -1" stroke="#FFE39A" stroke-width="2.5"/>` +
+    chS('M14 -5 L28 0 L14 5 Z', '#F2CFA0', 2.4) + '<path d="M23 -1.8 L28 0 L23 1.8 Z" fill="#3A2A20"/>' + chS('M-38 -5 L-30 -5 L-30 5 L-38 5 Q-41 0 -38 -5 Z', '#F08A8A', 2.4) + '</g>';
+  return ''+
+    ear('M56 70 C46 50 50 30 62 18 C74 30 84 46 84 56 Z', 'M60 62 C56 48 58 36 63 28 C70 38 76 48 76 56 Z', 'M62 20 C56 10 58 2 64 -2 C64 6 70 6 72 2 C74 10 70 16 66 21 Z') +
+    ear('M164 70 C174 50 170 30 158 18 C146 30 136 46 136 56 Z', 'M160 62 C164 48 162 36 157 28 C150 38 144 48 144 56 Z', 'M158 20 C164 10 162 2 156 -2 C156 6 150 6 148 2 C146 10 150 16 154 21 Z') + pencil;
+}
+/* Синий шарфик с узелком и концами */
+function sqScarf() {
+  const I = CH.INK, B = '#3D7CC9';
+  return `<path d="M78 146 Q110 162 142 146" stroke="${I}" stroke-width="15" fill="none" stroke-linecap="round"/><path d="M78 146 Q110 162 142 146" stroke="${B}" stroke-width="10" fill="none" stroke-linecap="round"/>` +
+    `<path d="M84 148 Q110 160 136 148" stroke="#8FB8EA" stroke-width="2.5" fill="none" stroke-linecap="round"/>` +
+    chS('M126 154 L134 186 L122 184 L118 156 Z', B, 2.8) + chS('M132 152 L148 180 L138 184 L126 156 Z', '#2F66AD', 2.8) +
+    chS('M120 146 C126 140 136 142 136 150 C136 158 124 160 120 154 Z', B, 2.8);
+}
 const CH_EYES = [[90, 96], [127, 95]];
 let chN = 0;
 const chS = (d, fill, w = 3.5) => `<path d="${d}" fill="${fill}" stroke="${CH.INK}" stroke-width="${w}" stroke-linejoin="round" stroke-linecap="round"/>`;
@@ -81,38 +110,39 @@ function chAccFront(who) {
 const chFlower = () => `<g transform="translate(152 52) rotate(15)">${[0, 72, 144, 216, 288].map(a => `<ellipse cx="0" cy="-10" rx="7" ry="10" transform="rotate(${a})" fill="#FFD25E" stroke="${CH.INK}" stroke-width="2.4"/>`).join('')}<circle r="6" fill="#F08C3A" stroke="${CH.INK}" stroke-width="2.4"/><circle cx="-2" cy="-2" r="2" fill="#fff" opacity=".7"/></g>`;
 
 ART.chip = function (who = 'funduk', mood = 'happy', cls = '', bust = false) {
-  if (who !== 'mindal') who = 'funduk';
+  if (who !== 'mindal' && who !== 'shustrik') who = 'funduk';
+  const sq = who === 'shustrik';
   if (mood === 'sad') mood = 'think';            /* грустных героев в игре нет */
   if (!CH_POSES[mood]) mood = 'happy';
   const c = CH[who], I = CH.INK, u = 'ch' + (++chN);
-  const [front, scarf] = chAccFront(who);
+  const [front, scarf] = sq ? ['', sqScarf()] : chAccFront(who);
   const [left, right] = CH_POSES[mood];
   const squash = mood === 'cheer' ? ' transform="translate(110 244) scale(1.04 .96) translate(-110 -244)"' : '';
   const blink = (3 + Math.random() * 2).toFixed(1);
-  const vb = bust ? '46 24 138 138' : '0 0 230 252';
+  const vb = bust ? (sq ? '40 -6 152 152' : '46 24 138 138') : (sq ? '0 -6 240 258' : '0 0 230 252');
   return `<svg class="chip ch ch-${mood}${bust ? ' bust' : ''} ${cls}" style="--blink:${blink}s" viewBox="${vb}" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="${c.name}"><defs>
 <radialGradient id="f${u}" cx="38%" cy="30%" r="80%"><stop offset="0" stop-color="${c.f1}"/><stop offset=".65" stop-color="${c.f2}"/><stop offset="1" stop-color="${c.f3}"/></radialGradient>
-<radialGradient id="t${u}" cx="30%" cy="30%" r="90%"><stop offset="0" stop-color="${c.f1}"/><stop offset="1" stop-color="${c.f3}"/></radialGradient></defs>
+<radialGradient id="t${u}" cx="30%" cy="30%" r="90%"><stop offset="0" stop-color="${c.f1}"/><stop offset="1" stop-color="${c.f3}"/></radialGradient>${sq ? `<radialGradient id="q${u}" gradientUnits="userSpaceOnUse" cx="185" cy="110" r="130"><stop offset="0" stop-color="${c.f1}"/><stop offset=".6" stop-color="${c.f2}"/><stop offset="1" stop-color="${c.f3}"/></radialGradient>` : ''}</defs>
 <ellipse cx="112" cy="244" rx="54" ry="7" fill="${I}" opacity=".15"/>
 <g class="ch-bob"><g class="ch-jump"><g${squash}>
-<g class="ch-tail">${chS('M138 222 C190 222 214 176 198 132 C188 104 204 78 188 58 C174 40 148 48 152 68 C156 86 170 104 162 134 C156 158 140 176 132 196 Z', `url(#t${u})`, 3.5)}
-<path d="M150 210 C186 202 198 168 186 136 C178 114 190 92 180 72" stroke="${c.light}" stroke-width="7" fill="none" stroke-linecap="round" opacity=".55"/>
-<path d="M146 196 C172 186 180 160 172 136" stroke="${c.stripe}" stroke-width="5" fill="none" stroke-linecap="round" opacity=".45"/></g>
+<g class="ch-tail">${sq ? sqTail(u, c) : chS('M138 222 C190 222 214 176 198 132 C188 104 204 78 188 58 C174 40 148 48 152 68 C156 86 170 104 162 134 C156 158 140 176 132 196 Z', `url(#t${u})`, 3.5)}
+${sq ? '' : `<path d="M150 210 C186 202 198 168 186 136 C178 114 190 92 180 72" stroke="${c.light}" stroke-width="7" fill="none" stroke-linecap="round" opacity=".55"/>
+<path d="M146 196 C172 186 180 160 172 136" stroke="${c.stripe}" stroke-width="5" fill="none" stroke-linecap="round" opacity=".45"/>`}</g>
 ${chS('M72 240 C70 228 84 224 98 228 C106 231 104 242 96 242 L78 242 C74 242 72 241 72 240 Z', c.f3, 3)}
 ${chS('M150 240 C152 228 138 224 124 228 C116 231 118 242 126 242 L144 242 C148 242 150 241 150 240 Z', c.f3, 3)}
 ${chS('M110 136 C146 136 154 172 150 198 C146 224 128 236 110 236 C92 236 74 224 70 198 C66 172 74 136 110 136 Z', `url(#f${u})`, 3.8)}
 <ellipse cx="110" cy="198" rx="24" ry="30" fill="${c.light}"/>
 <path d="M78 170 C76 186 80 204 90 216" stroke="#fff" stroke-width="6" fill="none" stroke-linecap="round" opacity=".25"/>
 ${scarf}
-${chS('M54 62 C46 40 70 32 80 48 Z', `url(#f${u})`, 3)}<path d="M58 56 C56 46 66 42 72 50 Z" fill="${c.inner}"/>
-${chS('M166 60 C174 38 150 30 140 46 Z', `url(#f${u})`, 3)}<path d="M162 54 C164 44 154 40 148 48 Z" fill="${c.inner}"/>
+${sq ? sqEars(u, c) : `${chS('M54 62 C46 40 70 32 80 48 Z', `url(#f${u})`, 3)}<path d="M58 56 C56 46 66 42 72 50 Z" fill="${c.inner}"/>
+${chS('M166 60 C174 38 150 30 140 46 Z', `url(#f${u})`, 3)}<path d="M162 54 C164 44 154 40 148 48 Z" fill="${c.inner}"/>`}
 ${who === 'mindal' ? chFlower() : ''}
 ${chS('M108 46 C150 46 168 76 164 104 C160 132 136 146 110 146 C84 146 58 134 54 106 C50 76 66 46 108 46 Z', `url(#f${u})`, 3.8)}
 <path d="M66 108 C62 134 90 146 110 142 C130 146 158 134 154 108 C140 118 124 116 110 112 C96 116 80 118 66 108 Z" fill="${c.light}"/>
-<ellipse cx="108" cy="56" rx="5" ry="11" fill="${c.stripe}" opacity=".85"/><ellipse cx="93" cy="60" rx="3" ry="8" transform="rotate(-14 93 60)" fill="${c.stripe}" opacity=".7"/><ellipse cx="123" cy="60" rx="3" ry="8" transform="rotate(14 123 60)" fill="${c.stripe}" opacity=".7"/>
+${sq ? '' : `<ellipse cx="108" cy="56" rx="5" ry="11" fill="${c.stripe}" opacity=".85"/><ellipse cx="93" cy="60" rx="3" ry="8" transform="rotate(-14 93 60)" fill="${c.stripe}" opacity=".7"/><ellipse cx="123" cy="60" rx="3" ry="8" transform="rotate(14 123 60)" fill="${c.stripe}" opacity=".7"/>`}
 <path d="M70 70 C76 60 88 54 100 52" stroke="#fff" stroke-width="5" fill="none" stroke-linecap="round" opacity=".3"/>
 <ellipse cx="74" cy="120" rx="10" ry="6.5" fill="#F28C70" opacity=".5"/><ellipse cx="146" cy="119" rx="10" ry="6.5" fill="#F28C70" opacity=".5"/>
-${chBrows(mood, c)}${chEyes(mood, who === 'mindal')}
+${chBrows(mood, c)}${chEyes(mood, who !== 'funduk')}
 <ellipse cx="109" cy="116" rx="7.5" ry="5.5" fill="#4A2412" stroke="${I}" stroke-width="1.5"/><ellipse cx="106.5" cy="114.5" rx="2.4" ry="1.5" fill="#fff" opacity=".8"/>
 ${chMouth(mood)}
 ${front}

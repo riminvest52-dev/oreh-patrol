@@ -34,9 +34,15 @@ function tallyFor(st, dev) {
 }
 
 /* Семья: устройство, код, список игроков */
+/* У игроков 4 класса герой — белка Шустрик (раньше ставились бурундуки). Возвращает true, если что-то поменялось */
+function fixHeroes(fam) {
+  let ch = false;
+  for (const p of fam.profiles || []) if (p.world === 'four' && p.hero !== 'shustrik') { p.hero = 'shustrik'; ch = true; }
+  return ch;
+}
 function loadFamily() {
   const saved = readJson(FAMILY_KEY);
-  if (saved && saved.v === 2) return saved;
+  if (saved && saved.v === 2) { if (fixHeroes(saved)) writeJson(FAMILY_KEY, saved); return saved; }
   const fam = { v: 2, device: newId('d'), code: null, lastSync: 0, profiles: [], current: null };
   const old = readJson(STORE_KEY);
   if (old && old.name) {                    /* перенос прогресса из первой версии */
@@ -56,7 +62,7 @@ const curProfile = () => F.profiles.find(p => p.id === F.current) || null;
 function useProfile(id) { F.current = id; saveFamily(); S = readProfile(id) || fresh(); setWorldTopics((F.profiles.find(p => p.id === id) || {}).world); }
 function addProfile(world) {
   const id = newId('p');
-  F.profiles.push({ id, world, hero: world === 'kid' ? 'zhel' : ['mindal', 'funduk'][F.profiles.length % 2], created: today() });
+  F.profiles.push({ id, world, hero: world === 'kid' ? 'zhel' : world === 'four' ? 'shustrik' : ['mindal', 'funduk'][F.profiles.length % 2], created: today() });
   writeJson(profKey(id), fresh());
   useProfile(id);
 }
@@ -186,7 +192,7 @@ function importMove(obj) {
     const same = F.profiles.find(p => p.world === m.world && playerName(p) === (m.st.name || ''));
     let id;
     if (same) { id = same.id; const mine = readProfile(id) || fresh(); writeJson(profKey(id), mergeStates(mine, Object.assign({}, m.st, { _epoch: mine._epoch }))); }
-    else { id = newId('p'); F.profiles.push({ id, world: m.world, hero: m.hero || (m.world === 'kid' ? 'zhel' : 'mindal'), created: m.created || today() }); writeJson(profKey(id), normState(m.st)); }
+    else { id = newId('p'); F.profiles.push({ id, world: m.world, hero: m.world === 'four' ? 'shustrik' : m.hero || (m.world === 'kid' ? 'zhel' : 'mindal'), created: m.created || today() }); writeJson(profKey(id), normState(m.st)); }
     if (i === obj.cur) cur = id;
     n++;
   });

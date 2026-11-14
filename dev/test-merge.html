@@ -6,6 +6,7 @@
 <h2>Тест слияния прогресса</h2>
 <pre id="out"></pre>
 <script src="../js/core.js"></script>
+<script>function setWorldTopics() { }   /* темы миров в этом тесте не нужны */</script>
 <script src="../js/state.js"></script>
 <script>const ACT = {};</script>
 <script src="../js/mult.js"></script>
@@ -292,6 +293,14 @@ for (let run = 0; run < 400; run++) {
   }
   check('старое устройство без таблицы не стирает её', Object.keys(mergeStates(m, Object.assign(clone(s0), { mul: undefined })).mul).length === 2);
   check('мир «4 класс» есть среди миров', WORLDS.four && WORLDS.four.title === '4 класс' && Object.keys(WORLDS).join() === 'kid,four,five');
+}
+
+/* ---------- Герой 4 класса — белка Шустрик (у старых игроков меняется сам) ---------- */
+{
+  const fam = { profiles: [{ id: 'a', world: 'four', hero: 'mindal' }, { id: 'b', world: 'four', hero: 'funduk' }, { id: 'c', world: 'five', hero: 'mindal' }, { id: 'd', world: 'kid', hero: 'zhel' }, { id: 'e', world: 'four', hero: 'shustrik' }] };
+  check('герой: старые игроки 4 класса получают Шустрика', fixHeroes(fam) === true && fam.profiles.filter(p => p.world === 'four').every(p => p.hero === 'shustrik'), fam.profiles);
+  check('герой: 5 класс и подготовка не меняются', fam.profiles[2].hero === 'mindal' && fam.profiles[3].hero === 'zhel');
+  check('герой: повторная проверка ничего не меняет', fixHeroes(fam) === false);
 }
 
 /* ---------- Облако: та же логика, что в облачной функции (нужен запущенный dev/kv_server.py) ---------- */

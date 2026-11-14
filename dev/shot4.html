@@ -72,6 +72,10 @@
   else if (scr === 'parent') { showParent(); sc(+q.get('y') || 0); }
   else if (scr === 'family') { showFamily(); sc(+q.get('y') || 0); }
   else if (scr === 'who') { showWho(); ACT.addWho(); }
+  else if (scr === 'whos') showWho();
+  else if (scr === 'hello') showWelcome();
+  else if (scr === 'joined') { showWelcome(); document.getElementById('nm').value = 'Тёма'; ACT.join(); }
+  else if (scr === 'res') showResult({ mood: q.get('m') || 'cheer', title: 'Уровень пройден!', stars: 2, ok: 9, n: 10, acorns: 9, text: '', buttons: [['На карту', 'map', 'green']] });
   else if (scr === 'topic') { showTopic(q.get('id')); sc(+q.get('y') || 0); }
   else if (scr === 'diag') { const sc2 = S.diag.scores; showDiagResult(sc2, 15, 22); sc(+q.get('y') || 0); }
   else if (scr === 'vpr') { ACT.vpr(); }

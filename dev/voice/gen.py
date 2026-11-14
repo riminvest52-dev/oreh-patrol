@@ -39,6 +39,7 @@ VOICES = {
     'fu': {'voice': 'alexander', 'role': 'good', 'speed': 0.85, 'chip': 1.45},      # Фундук — вариант B (бурундучий)
     'mi': {'voice': 'lera', 'role': 'friendly', 'speed': 0.85, 'chip': 1.4},        # Миндалинка — вариант D (бурундучий)
     'ez': {'voice': 'kirill', 'role': 'good', 'speed': 0.9},                         # Дедушка Ёж — не выбирали, тёплый мужской
+    'sh': {'voice': 'jane', 'role': 'good', 'speed': 1.0, 'chip': 1.3},              # Белка Шустрик (4 класс) — не выбирали, бойкий звонкий
 }
 
 # ---------- Числа словами в нужном падеже и роде ----------
@@ -236,7 +237,7 @@ def check(items, n, topic=None):
     dirs = {w: rev_of(w, items) for w in VOICES}
     if topic:   # --topic k_path: только фразы одного раздела
         items = [i for i in items if topic in i.get('topics', [])]
-    named = [i for i in items if i['who'] in ('fu', 'mi', 'ez') or re.search('Лиз|Наст', i['text'])]
+    named = [i for i in items if i['who'] in ('fu', 'mi', 'ez', 'sh') or re.search('Лиз|Наст', i['text'])]
     rest = [i for i in items if i not in named]
     k = min(15, len(named), n)
     sample = random.sample(named, k) + random.sample(rest, min(n - k, len(rest)))

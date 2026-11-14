@@ -50,7 +50,7 @@ function vprFinish(s) {
       <ol>${t.explain.map(x => `<li>${nb(x)}</li>`).join('')}</ol></details>`;
   }).join('');
   mount(`<div class="topbar"><button class="iconbtn" data-act="map" aria-label="На карту">←</button><div class="grow"><b>ВПР-тренировка</b><div class="small muted">Разбор</div></div></div>
-    <div class="result">${ART.chip(ok >= 8 ? 'funduk' : 'mindal', ok >= 8 ? 'cheer' : 'think')}<h1>${ok} из ${n}</h1>
+    <div class="result">${ART.chip('shustrik', ok >= 8 ? 'cheer' : 'think')}<h1>${ok} из ${n}</h1>
       <p class="muted">Примерно как отметка «${mark}» (ориентир, не настоящая оценка). Лучший результат: ${S.vpr.best} из ${n}.</p>
       <p><span class="pill">+${ac} ${ART.acorn(20)}</span></p></div>
     <div class="vlist">${rows}</div>

@@ -104,7 +104,7 @@ function renderTask() {
     <div class="card task">${tags}<div>${nb(t.q)}</div>${t.fig || ''}</div>
     <div class="answer" id="ans">${answerUI(t)}</div>
     <div id="fb"></div>
-    <div class="helper" id="helper">${ART.chip('mindal', 'happy')}<div class="bubble">
+    <div class="helper" id="helper">${ART.chip(heroFor('mindal'), 'happy')}<div class="bubble">
       ${SES.mode === 'diag' ? 'Это проверка сил — просто реши как умеешь. Подсказок тут нет 🙂' : SES.mode === 'vpr' ? 'Как на ВПР: подсказок нет, ответ даётся один раз. Решай на черновике 📝' : `Не спеши, подумай! <button class="btn ghost" style="min-height:40px;padding:6px 12px;font-size:15px;margin-top:6px" data-act="hint">💡 Подсказка</button>`}
     </div></div></div>`);
 }
@@ -222,7 +222,7 @@ ACT.hint = () => {
   SES.hint = true;
   const hb = document.querySelector('#helper .bubble');
   hb.innerHTML = `💡 ${SES.task.hint}<div class="small muted" style="margin-top:4px">(с подсказкой орешек не начисляется, а для звёзд ответ считается за половинку)</div>`;
-  document.querySelector('#helper svg').outerHTML = ART.chip('mindal', 'think');
+  document.querySelector('#helper svg').outerHTML = ART.chip(heroFor('mindal'), 'think');
 };
 
 /* Первая ошибка: не показываем ответ, даём подсказку и ещё одну попытку */
@@ -232,7 +232,7 @@ function retry(given, msg) {
   Sound.bad();
   document.getElementById('fb').innerHTML = `<div class="feedback try"><div class="fh">🤔 Не совсем. Попробуй ещё раз!</div></div>`;
   const hl = document.getElementById('helper');
-  hl.innerHTML = `${ART.chip('mindal', 'think')}<div class="bubble">${SES.firstTrap ? `🔎 ${SES.firstTrap.msg}<br>` : ''}💡 ${t.hint}</div>`;
+  hl.innerHTML = `${ART.chip(heroFor('mindal'), 'think')}<div class="bubble">${SES.firstTrap ? `🔎 ${SES.firstTrap.msg}<br>` : ''}💡 ${t.hint}</div>`;
 }
 
 function answered(ok, given) {
@@ -272,7 +272,7 @@ function answered(ok, given) {
   /* Похвала голосом (js/voice.js): со второй попытки, звёздочка, 3 и 5 подряд — всегда, обычный верный ответ — примерно 1 из 3 */
   SES.run = first ? SES.run + 1 : 0;
   const p = ok ? Praise.say(second ? 'second' : SES.star ? 'star' : SES.run === 5 ? 'streak5' : SES.run === 3 ? 'streak3' : 'ok') : Praise.say('bad');
-  const hero = p ? (p.who === 'mi' ? 'mindal' : 'funduk') : ok ? 'funduk' : 'mindal';
+  const hero = heroFor(p ? (p.who === 'mi' ? 'mindal' : 'funduk') : ok ? 'funduk' : 'mindal');
   const line = p ? esc(p.text) : ok ? R.pick(['Ура! 🎉', 'Молодец!', 'Так держать!', 'Орешек наш! 🌰']) : R.pick(['Прочитай разбор — в следующий раз точно получится!', 'Я положу эту задачку в корзинку, повторим позже 🧺', 'Ошибаться — нормально. Главное — понять!']);
   const hl = document.getElementById('helper');
   hl.innerHTML = `${ART.chip(hero, ok ? 'cheer' : 'show')}<div class="bubble">${line}</div>`;

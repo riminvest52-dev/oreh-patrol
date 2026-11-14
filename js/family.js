@@ -49,11 +49,11 @@ function childCard(p) {
   const { st, stars, good, weak, min } = childInfo(p), w = WORLDS[p.world] || {};
   if (p.del) {
     const left = Math.max(1, DEL_DAYS - Math.floor((Date.now() - p.del) / 864e5));
-    return `<div class="kidcard gone"><div class="kch">${ART.chip(p.hero, 'happy', '', true)}</div><div class="grow"><b>${esc(st.name || 'Без имени')}</b>
+    return `<div class="kidcard gone"><div class="kch">${ART.chip(heroOf(p), 'happy', '', true)}</div><div class="grow"><b>${esc(st.name || 'Без имени')}</b>
       <div class="small muted">Удалён ${fmtDate(p.del)}. Можно вернуть ещё ${left} ${pl(left, 'день', 'дня', 'дней')}.</div>
       <button class="btn ghost" style="margin-top:8px" data-act="kidBack" data-id="${p.id}">↩️ Вернуть</button></div></div>`;
   }
-  return `<div class="kidcard"><div class="kch">${ART.chip(p.hero, 'happy', '', true)}</div><div class="grow">
+  return `<div class="kidcard"><div class="kch">${ART.chip(heroOf(p), 'happy', '', true)}</div><div class="grow">
     <div class="kn">${esc(st.name || 'Новый игрок')}${p.id === F.current ? ' <span class="small muted">· играет сейчас</span>' : ''}</div>
     <div class="small muted">${w.title || ''}</div>
     <div class="kstat"><span>★ ${stars}</span><span>${ART.acorn(18)} ${st.acorns}</span><span>⏱ ${min} мин за неделю</span></div>

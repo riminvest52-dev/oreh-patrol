@@ -86,6 +86,7 @@ const Cloud = (() => {
     F.devices = F.devices || {};
     for (const [id, d] of Object.entries(doc.devices || {})) if (id !== F.device && (!F.devices[id] || (d.last || 0) > (F.devices[id].last || 0))) F.devices[id] = d;
     if (purgeProfiles()) changed = true;
+    fixHeroes(F);   /* из облака мог прийти игрок 4 класса со старым героем */
     if (F.current && (F.profiles.find(p => p.id === F.current) || {}).del) { const nx = liveProfiles()[0]; if (nx) useProfile(nx.id); else { F.current = null; S = fresh(); } changed = true; }
     saveFamily();
     return changed;

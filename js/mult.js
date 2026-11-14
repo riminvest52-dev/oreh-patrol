@@ -209,7 +209,7 @@ function showMul() {
   const back = (curProfile() || {}).world === 'five' ? 'mulBack5' : 'map';
   mount(`<div class="topbar"><button class="iconbtn" data-act="${back}" aria-label="Назад">←</button><div class="grow"><b>Беличья кладовая</b><div class="small muted">Тренажёр таблицы умножения</div></div>
       <span class="pill">${ART.acorn(20)}${S.acorns}</span></div>
-    <div class="loc-head"><div class="big">${ART.chip('mindal', 'show')}</div><div class="bubble grow"><b>Миндалинка:</b> ${none
+    <div class="loc-head"><div class="big">${ART.chip('shustrik', 'show')}</div><div class="bubble grow"><b>Шустрик:</b> ${none
       ? 'Белки перепутали свои запасы: в каждом ряду по 7 орехов, а сколько всего — не знают! Начнём с любого столбика таблицы — например, с ×2.'
       : due ? `Пора повторить: ${due} ${pl(due, 'пример', 'примера', 'примеров')}. Каждый орешек на дереве — один пример таблицы. Сделаем всё дерево золотым!`
       : 'Каждый орешек на дереве — один пример таблицы. Сделаем всё дерево золотым!'}</div></div>
@@ -301,7 +301,7 @@ function mulRender() {
     <div class="card task center">${t.pic ? mulPic(t.a, t.b) : ''}<div class="mq">${t.q}</div></div>
     <div class="answer" id="ans">${mulKeypad(false)}</div>
     <div id="fb"></div>
-    <div class="helper" id="helper">${ART.chip('mindal', 'happy')}<div class="bubble">${t.pic ? 'Считай рядами: каждый новый ряд — ещё ' + t.a + '.' : 'Вспомни ответ и набери его на клавиатуре.'}</div></div></div>`);
+    <div class="helper" id="helper">${ART.chip('shustrik', 'happy')}<div class="bubble">${t.pic ? 'Считай рядами: каждый новый ряд — ещё ' + t.a + '.' : 'Вспомни ответ и набери его на клавиатуре.'}</div></div></div>`);
 }
 ACT.mulKey = el => {
   if (!MS || MS.done) return;
@@ -343,7 +343,7 @@ ACT.mulCheck = () => {
     d.textContent = given; d.style.borderColor = 'var(--red)'; d.style.background = '#FBE0D8';
     setTimeout(() => { if (!MS || MS.done || MS.input) return; d.textContent = '?'; d.classList.add('empty'); d.style.borderColor = ''; d.style.background = ''; }, 900);
     document.getElementById('fb').innerHTML = `<div class="feedback try"><div class="fh">🤔 Не совсем. Попробуй ещё раз!</div></div>`;
-    document.getElementById('helper').innerHTML = `${ART.chip('mindal', 'think')}<div class="bubble">💡 ${t.way}</div>`;
+    document.getElementById('helper').innerHTML = `${ART.chip('shustrik', 'think')}<div class="bubble">💡 ${t.way}</div>`;
     MS.run = 0;
     /* Ошибочный пример вернётся в конце тренировки ещё раз */
     if (t.rec && !MS.retold.has(t.q) && MS.queue.length < 40) { MS.retold.add(t.q); MS.queue.push(Object.assign({}, t, { pic: false })); }
@@ -362,7 +362,7 @@ ACT.mulCheck = () => {
     : `<div class="feedback bad"><div class="fh">🤔 Запомним этот пример</div><div>Правильный ответ: <b>${fact}</b></div><div class="small" style="margin-top:4px">💡 ${t.way}</div></div>`;
   document.getElementById('fb').insertAdjacentHTML('beforeend', `<button class="btn ${ok ? 'green' : ''} block" style="margin-top:12px" data-act="mulGo">${MS.i + 1 >= MS.queue.length ? 'Готово 🏁' : 'Дальше →'}</button>`);
   const line = p ? esc(p.text) : ok ? R.pick(['Ура! 🎉', 'Молодец!', 'Так держать!', 'Орешек наш! 🌰']) : 'Ничего страшного — этот пример ещё вернётся.';
-  document.getElementById('helper').innerHTML = `${ART.chip(p && p.who === 'fu' ? 'funduk' : 'mindal', ok ? 'cheer' : 'show')}<div class="bubble">${line}</div>`;
+  document.getElementById('helper').innerHTML = `${ART.chip('shustrik', ok ? 'cheer' : 'show')}<div class="bubble">${line}</div>`;
   /* Верный ответ с первой попытки — сразу дальше, чтобы держать темп */
   if (ok && !second) { const my = MS, i = MS.i; setTimeout(() => { if (MS === my && MS.i === i && MS.done) ACT.mulGo(); }, 1100); }
 };

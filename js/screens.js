@@ -25,12 +25,15 @@ function takeMove() {
 /* ---------- Кто играет ---------- */
 function showWho() {
   SES = null;
-  const tiles = liveProfiles().map(p => `<button class="who-tile" data-act="pickWho" data-id="${p.id}">${ART.chip(p.hero, 'happy', '', true)}<b>${esc(playerName(p) || 'Новый игрок')}</b><span class="small muted">${(WORLDS[p.world] || {}).title || ''}</span></button>`).join('');
+  const tiles = liveProfiles().map(p => `<button class="who-tile" data-act="pickWho" data-id="${p.id}">${ART.chip(heroOf(p), 'happy', '', true)}<b>${esc(playerName(p) || 'Новый игрок')}</b><span class="small muted">${(WORLDS[p.world] || {}).title || ''}</span></button>`).join('');
   mount(`${movedCard()}${newDeviceCard()}<h1 class="center" style="margin-top:14px">Кто играет?</h1>
     <div class="who">${tiles}<button class="who-tile" data-act="addWho"><span class="plus">＋</span><b>Добавить</b><span class="small muted">нового игрока</span></button></div>`);
 }
 const isKid = () => (curProfile() || {}).world === 'kid';
 const isFour = () => (curProfile() || {}).world === 'four';
+/* Герои: у 4 класса — белка Шустрик, у 5 класса — Фундук и Миндалинка, у подготовки — Жёлудик */
+const heroFor = name => isFour() ? 'shustrik' : name;
+const heroOf = p => p.world === 'four' ? 'shustrik' : p.hero;
 function enterWorld() { if (isKid()) return S.name ? showKidMap() : showKidWelcome(); if (!S.name) showWelcome(); else showMap(); }
 ACT.who = () => showWho();
 ACT.pickWho = el => { useProfile(el.dataset.id); enterWorld(); };
@@ -43,20 +46,20 @@ ACT.addGo = el => { closeModal(); addProfile(el.dataset.w); Cloud.soon(); enterW
 
 /* ---------- Знакомство ---------- */
 function showWelcome() {
-  mount(`<div class="hero">${ART.chip('funduk', 'happy')}${ART.chip('mindal', 'happy')}</div>
+  mount(`<div class="hero">${isFour() ? ART.chip('shustrik', 'happy') : ART.chip('funduk', 'happy') + ART.chip('mindal', 'happy')}</div>
     <h1 class="center">Ореховый патруль</h1>
-    <div class="bubble" style="margin:10px 0 16px">${isFour() ? 'Привет! Мы — <b>Фундук</b> и <b>Миндалинка</b>, лесные спасатели. В Беличьей кладовой беда: белки разложили орехи рядами, а сколько всего — сосчитать не могут! Без таблицы умножения не разобраться. Поможешь нам?' : `Привет! Мы — <b>Фундук</b> и <b>Миндалинка</b>, лесные спасатели. В лесу беда: у Бобра перепутались чертежи, у Совы разбежались высказывания, а на Ореховом складе никто не может разделить орехи поровну! Без математики не справиться. Поможешь нам?`}</div>
+    <div class="bubble" style="margin:10px 0 16px">${isFour() ? 'Привет! Я — белка <b>Шустрик</b>, хозяйка Беличьей кладовой. У нас беда: белки разложили орехи рядами, а сколько всего — сосчитать не могут! Без таблицы умножения не разобраться. Поможешь?' : `Привет! Мы — <b>Фундук</b> и <b>Миндалинка</b>, лесные спасатели. В лесу беда: у Бобра перепутались чертежи, у Совы разбежались высказывания, а на Ореховом складе никто не может разделить орехи поровну! Без математики не справиться. Поможешь нам?`}</div>
     <label class="muted small" for="nm">Как тебя зовут?</label>
     <input class="input" id="nm" maxlength="20" autocomplete="off" placeholder="Твоё имя" value="${esc(S.name)}">
-    <button class="btn block green" style="margin-top:14px" data-act="join">Вступить в патруль! 🌰</button>`);
+    <button class="btn block green" style="margin-top:14px" data-act="join">${isFour() ? 'Помогу! 🌰' : 'Вступить в патруль! 🌰'}</button>`);
 }
 ACT.join = () => {
   const v = document.getElementById('nm').value.trim();
   if (!v) { toast('Напиши своё имя 🙂'); return; }
   S.name = v.slice(0, 20); save();
-  if (isFour()) return mount(`<div class="hero">${ART.chip('mindal', 'happy')}</div>
+  if (isFour()) return mount(`<div class="hero">${ART.chip('shustrik', 'cheer')}</div>
     <h2 class="center">Рады знакомству, ${esc(S.name)}!</h2>
-    <div class="bubble" style="margin:10px 0 16px">Начнём с <b>Беличьей кладовой</b> — там живёт таблица умножения. Каждый пример — орешек на дереве. Выучишь все — дерево станет золотым! Остальные уголки леса 4 класса скоро откроются.</div>
+    <div class="bubble" style="margin:10px 0 16px">Начнём с <b>Беличьей кладовой</b> — там живёт таблица умножения. Каждый пример — орешек на дереве. Выучишь все — дерево станет золотым! Остальные уголки леса 4 класса уже ждут на карте.</div>
     <button class="btn block green" data-act="mulOpen">В Беличью кладовую 🐿️</button><button class="btn block ghost" style="margin-top:10px" data-act="map">На карту</button>`);
   mount(`<div class="hero">${ART.chip('mindal', 'happy')}</div>
     <h2 class="center">Рады знакомству, ${esc(S.name)}!</h2>
@@ -95,7 +98,7 @@ function showMap() {
       <div class="nm">${t.name}</div><div class="st">★ ${st}/9</div></div>`;
   }).join('');
   const sn = streakNow();
-  mount(`<div class="topbar"><div class="avatar" data-act="who" role="button" aria-label="Сменить игрока">${ART.chip((curProfile() || {}).hero || 'funduk', 'happy', '', true)}<span class="swap">⇄</span></div>
+  mount(`<div class="topbar"><div class="avatar" data-act="who" role="button" aria-label="Сменить игрока">${ART.chip(curProfile() ? heroOf(curProfile()) : 'funduk', 'happy', '', true)}<span class="swap">⇄</span></div>
       <div class="grow"><div class="hello">Привет, ${esc(S.name || 'друг')}!</div><div class="small muted">${sn ? `🔥 ${sn} ${pl(sn, 'день', 'дня', 'дней')} подряд` : 'Ореховый патруль на связи'}</div></div>
       <span class="pill">${ART.acorn(22)}${S.acorns}</span><button class="iconbtn" data-act="parent" aria-label="Для взрослых">⚙️${cloudDot()}</button></div>
     ${four ? fourQuick() : `<div class="quick">
@@ -145,7 +148,7 @@ ACT.sheet = () => { const T = TOPIC[curTopic]; modal(`<h2>📜 Шпаргалк�
 let LASTRES = null;
 function showResult(r) {
   LASTRES = r;
-  mount(`<div class="result">${ART.chip(r.mood === 'think' ? 'mindal' : 'funduk', r.mood)}
+  mount(`<div class="result">${ART.chip(heroFor(r.mood === 'think' ? 'mindal' : 'funduk'), r.mood)}
     <h1>${r.title}</h1>${r.stars !== null ? `<div class="bigstars">${starsHtml(r.stars)}</div>` : ''}
     <p style="font-size:19px">Верно: <b>${r.ok}</b> из ${r.n}</p>
     <p><span class="pill">+${r.acorns} ${ART.acorn(20)}</span></p>
@@ -160,7 +163,7 @@ function showDiagResult(scores, ok, n) {
     return `<div class="trow"><div style="font-size:22px">${T.icon}</div><div><div class="tn">${T.name}</div><div class="bar"><i style="width:${(sc / 2) * 100}%;background:${col}"></i></div></div><div class="small" style="font-weight:800;color:${col}">${sc}/2</div></div>`;
   }).join('');
   const weak = weakTopics(2).map(id => TOPIC[id].name);
-  mount(`<div class="result">${ART.chip('funduk', 'cheer')}<h1>Проверка сил пройдена!</h1><p>Верно: <b>${ok}</b> из ${n} · <span class="pill">+5 ${ART.acorn(18)}</span></p></div>
+  mount(`<div class="result">${ART.chip(heroFor('funduk'), 'cheer')}<h1>Проверка сил пройдена!</h1><p>Верно: <b>${ok}</b> из ${n} · <span class="pill">+5 ${ART.acorn(18)}</span></p></div>
     <div class="card" style="margin-top:12px">${rows}</div>
     <div class="bubble" style="margin-top:14px">Начнём с локаций: <b>${weak.join('</b> и <b>')}</b> — на карте они отмечены «Сюда сначала!».</div>
     <button class="btn green block" style="margin-top:16px" data-act="map">На карту леса 🗺️</button>`);

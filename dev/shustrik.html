@@ -1,0 +1,10 @@
+<!doctype html><meta charset="utf-8"><title>Шустрик</title>
+<link rel="stylesheet" href="../css/style.css">
+<style>body{background:#FDF3E1;padding:16px;max-width:none}.row{display:flex;gap:20px;align-items:flex-end;flex-wrap:wrap}.row>div{text-align:center;font-style:italic}.row svg{width:200px;height:auto}.bust svg{width:110px}</style>
+<h2>Белка Шустрик — мир 4 класса</h2><div class="row" id="r"></div><h3>Аватарки и рядом с Фундуком</h3><div class="row bust" id="b"></div>
+<script src="../js/core.js"></script><script src="../js/art.js"></script>
+<script>
+document.getElementById('r').innerHTML = [['happy', 'Привет'], ['cheer', 'Ура! Верно'], ['think', 'Подумаем…'], ['show', 'Смотри, как надо']].map(([m, t]) => `<div>${ART.chip('shustrik', m)}<br>${t}</div>`).join('');
+document.getElementById('b').innerHTML = ['shustrik', 'funduk', 'mindal'].map(w => `<div>${ART.chip(w, 'happy', '', true)}<br>${CH[w].name}</div>`).join('') +
+  `<div class="big2">${ART.chip('funduk', 'happy')}<br>Фундук</div><div>${ART.chip('shustrik', 'happy')}<br>Шустрик</div>`;
+</script>
