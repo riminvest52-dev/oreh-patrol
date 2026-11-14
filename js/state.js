@@ -53,7 +53,7 @@ const saveFamily = () => writeJson(FAMILY_KEY, F);
 const readProfile = id => { const st = readJson(profKey(id)); return st ? Object.assign(fresh(), st) : null; };
 const playerName = p => (readProfile(p.id) || {}).name || '';
 const curProfile = () => F.profiles.find(p => p.id === F.current) || null;
-function useProfile(id) { F.current = id; saveFamily(); S = readProfile(id) || fresh(); }
+function useProfile(id) { F.current = id; saveFamily(); S = readProfile(id) || fresh(); setWorldTopics((F.profiles.find(p => p.id === id) || {}).world); }
 function addProfile(world) {
   const id = newId('p');
   F.profiles.push({ id, world, hero: world === 'kid' ? 'zhel' : ['mindal', 'funduk'][F.profiles.length % 2], created: today() });
@@ -118,7 +118,7 @@ function recordAnswer(task, ok, given, opts = {}) {
   else if (!ok) addMistake(task, given);
   save();
 }
-function answerText(task) { return task.type === 'multi' ? task.answer.join(', ') : task.type === 'num' ? fmt(task.answer) : task.answer; }
+function answerText(task) { return task.type === 'multi' ? task.answer.join(', ') : task.type === 'num' || task.type === 'col' ? fmt(task.answer) : task.answer; }
 
 /* Корзинка ошибок: интервальные повторения 1 → 3 → 7 дней */
 const BOX_DAYS = [0, 1, 3, 7];
@@ -350,3 +350,4 @@ function restoreDoc(doc) {
 
 let F = loadFamily();
 let S = (F.current && readProfile(F.current)) || fresh();
+setWorldTopics((F.profiles.find(p => p.id === F.current) || {}).world);

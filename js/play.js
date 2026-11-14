@@ -8,7 +8,10 @@ const nb = s => String(s).replace(/(\d) (?=[а-яёА-ЯЁ])/g, '$1 ');
 function startLevel(topicId, n) {
   const T = TOPIC[topicId], L = LEVELS[n - 1];
   const gens = []; while (gens.length < L.count) gens.push(...R.shuffle(T.gens));
-  begin({ mode: 'level', topic: topicId, level: n, boss: !!L.boss, title: `${T.name} · ${L.name}`, queue: gens.slice(0, L.count).map(g => ({ gen: g, d: L.d })) });
+  const queue = gens.slice(0, L.count).map(g => ({ gen: g, d: L.d }));
+  /* 4 класс: в Испытании «в столбик»-локаций хотя бы 2 задачи — только в столбик */
+  if (L.boss && T.colGens) R.sample(queue.map((_, i) => i), 2).forEach(i => { queue[i] = { gen: R.pick(T.colGens), d: L.d, colOnly: true }; });
+  begin({ mode: 'level', topic: topicId, level: n, boss: !!L.boss, title: `${T.name} · ${L.name}`, queue });
 }
 function startDiag() {
   const queue = [];
@@ -46,7 +49,7 @@ const is5050 = t => t.type === 'choice' && t.options.length <= 2;
 const canRetry = t => SES.mode !== 'diag' && !is5050(t);
 function findTrap(t, given) {
   if (!t.traps || !t.traps.length || given === null || given === undefined) return null;
-  return t.traps.find(x => t.type === 'num' ? +x.v === +String(given).replace(/\s/g, '') : String(x.v) === String(given)) || null;
+  return t.traps.find(x => t.type === 'num' || t.type === 'col' ? +x.v === +String(given).replace(/\s/g, '') : String(x.v) === String(given)) || null;
 }
 
 function nextTask() {
@@ -57,12 +60,26 @@ function nextTask() {
   if (SES.mode === 'level' && SES.wrongStreak >= 2 && d > 1) { d--; easier = true; }
   /* После 4 чистых ответов подряд — задача на ступень выше */
   else if (SES.mode === 'level' && !SES.boss && SES.cleanRun >= 4 && d < 3) { d++; star = true; SES.cleanRun = 0; }
-  Object.assign(SES, { task: makeTask(item.gen, d), item, easier, star, answered: false, hint: false, tries: 0, firstGiven: null, firstTrap: null, input: '', sel: new Set() });
+  /* Без повторов внутри одного захода: такое же условие — составляем заново (до 8 раз) */
+  const qkey = t => t ? t.q + '|' + (t.options || t.items || []).join() : '';
+  SES.seen = SES.seen || new Set();
+  let task = makeTask(item.gen, d);
+  for (let k = 0; k < 8 && SES.seen.has(qkey(task)); k++) task = makeTask(item.gen, d);
+  SES.seen.add(qkey(task));
+  Object.assign(SES, { task, item, easier, star, answered: false, hint: false, tries: 0, firstGiven: null, firstTrap: null, input: '', sel: new Set(), colv: {}, colSel: null, colNum: false });
+  if (item.colOnly && SES.task.type === 'col') SES.task.colOnly = true;
   renderTask();
+  if (SES.task.type === 'col') { SES.colSel = colOrder(SES.task)[0]; colPaint(); }
 }
 
 function answerUI(t) {
-  if (t.type === 'num') return `<div class="display empty" id="disp">?</div>
+  if (t.type === 'col' && !SES.colNum) return `${colField(t, SES.colv)}
+    <div class="small muted center" style="margin:4px 0 2px">Нажми на клетку и набери цифру. Маленькие клетки сверху — для переносов, их можно не заполнять.</div>
+    <div class="keypad">${[1, 2, 3, 4, 5, 6, 7, 8, 9].map(k => `<button class="key" data-act="key" data-k="${k}">${k}</button>`).join('')}
+    <button class="key del" data-act="key" data-k="del">⌫</button><button class="key" data-act="key" data-k="0">0</button>
+    <button class="key ok" data-act="check" aria-label="Проверить">✓</button></div>
+    ${t.colOnly ? '<div class="small muted center" style="margin-top:6px">В Испытании эту задачу решаем только в столбик.</div>' : '<button class="btn ghost block" style="margin-top:10px" data-act="colNum">Решу на черновике — введу только ответ</button>'}`;
+  if (t.type === 'num' || t.type === 'col') return `<div class="display empty" id="disp">?</div>
     <div class="keypad">${[1, 2, 3, 4, 5, 6, 7, 8, 9].map(k => `<button class="key" data-act="key" data-k="${k}">${k}</button>`).join('')}
     <button class="key del" data-act="key" data-k="del">⌫</button><button class="key" data-act="key" data-k="0">0</button>
     <button class="key" style="background:var(--green);color:#fff;border-color:var(--green-d);box-shadow:0 4px 0 var(--green-d)" data-act="check">✓</button></div>`;
@@ -91,9 +108,35 @@ function renderTask() {
     </div></div></div>`);
 }
 
+/* ---------- Ответ «в столбик» (js/col.js) ---------- */
+function colPaint() {
+  document.querySelectorAll('.cc.inp').forEach(b => { const i = +b.dataset.i; b.textContent = SES.colv[i] || ''; b.classList.toggle('sel', i === SES.colSel && !SES.answered); });
+  const s = document.querySelector('.cc.sel'), w = document.querySelector('.colwrap');
+  /* выбранная клетка всегда видна: если ушла за край — прокручиваем поле */
+  if (s && w) { const x = s.offsetLeft + s.parentElement.offsetLeft; if (x < w.scrollLeft + 8 || x + 48 > w.scrollLeft + w.clientWidth) w.scrollLeft = x - w.clientWidth / 2 + 20; }
+}
+ACT.colCell = el => { if (SES.answered) return; SES.colSel = +el.dataset.i; colPaint(); };
+ACT.colNum = () => { if (SES.answered) return; SES.colNum = true; document.getElementById('ans').innerHTML = answerUI(SES.task); };
+function colKey(k) {
+  const t = SES.task, order = colOrder(t), cur = SES.colSel;
+  document.querySelectorAll('.cc.bad').forEach(b => b.classList.remove('bad'));
+  if (cur === null || cur === undefined) return;
+  if (k === 'del') {
+    if (SES.colv[cur]) delete SES.colv[cur];
+    else { const p = order.indexOf(cur); if (p > 0) { SES.colSel = order[p - 1]; delete SES.colv[SES.colSel]; } }
+  } else {
+    SES.colv[cur] = k;
+    const p = order.indexOf(cur);
+    /* дальше — по порядку решения; после маленькой клетки — к первой незаполненной */
+    const next = p >= 0 ? order[p + 1] : order.find(i => !SES.colv[i]);
+    if (next !== undefined) SES.colSel = next;
+  }
+  colPaint();
+}
 ACT.key = el => {
   if (SES.answered) return;
   const k = el.dataset.k;
+  if (SES.task.type === 'col' && !SES.colNum) return colKey(k);
   if (k === 'del') SES.input = SES.input.slice(0, -1);
   else if (SES.input.length < 7) SES.input = (SES.input === '0' ? '' : SES.input) + k;
   const d = document.getElementById('disp');
@@ -102,7 +145,7 @@ ACT.key = el => {
 };
 document.addEventListener('keydown', e => {
   if (!SES || SES.answered || !SES.task || !document.getElementById('ans')) return;
-  if (SES.task.type === 'num') {
+  if (SES.task.type === 'num' || SES.task.type === 'col') {
     if (/^\d$/.test(e.key)) ACT.key({ dataset: { k: e.key } });
     else if (e.key === 'Backspace') ACT.key({ dataset: { k: 'del' } });
     else if (e.key === 'Enter') ACT.check();
@@ -128,7 +171,20 @@ ACT.tog = el => {
 ACT.check = () => {
   if (SES.answered) return;
   const t = SES.task;
-  if (t.type === 'num') {
+  if (t.type === 'col' && !SES.colNum) {
+    const res = colCheck(t, SES.colv), given = colRowNum(t, SES.colv, colResPred(t)), gtxt = given === null ? '—' : fmt(given);
+    if (res.empty) { toast('Сначала заполни клетки 🙂'); return; }
+    res.wrong.forEach(i => { const b = document.querySelector(`.cc[data-i="${i}"]`); if (b) b.classList.add('bad'); });
+    if (!res.ok && SES.tries === 0 && canRetry(t)) return retry(gtxt, res.msg);
+    if (!res.ok) SES.firstTrap = { msg: res.msg };
+    /* Показываем верное решение: исправленные клетки — зелёным */
+    SES.answered = true;
+    const sol = colSolution(t);
+    document.querySelectorAll('.cc.inp').forEach(b => { const i = +b.dataset.i; if ((SES.colv[i] || '') !== (sol[i] || '') && !t.lay.cells[i].opt) { b.textContent = sol[i] || ''; b.classList.remove('bad'); b.classList.add('fix'); } b.classList.remove('sel'); });
+    document.querySelector('#ans .keypad').classList.add('hidden');
+    return answered(res.ok, gtxt);
+  }
+  if (t.type === 'num' || t.type === 'col') {
     if (!SES.input) { toast('Сначала введи ответ 🙂'); return; }
     const given = +SES.input, ok = given === t.answer;
     const d = document.getElementById('disp');
@@ -169,9 +225,9 @@ ACT.hint = () => {
 };
 
 /* Первая ошибка: не показываем ответ, даём подсказку и ещё одну попытку */
-function retry(given) {
+function retry(given, msg) {
   const t = SES.task;
-  SES.tries = 1; SES.firstGiven = given; SES.firstTrap = findTrap(t, given);
+  SES.tries = 1; SES.firstGiven = given; SES.firstTrap = msg ? { msg } : findTrap(t, given);
   Sound.bad();
   document.getElementById('fb').innerHTML = `<div class="feedback try"><div class="fh">🤔 Не совсем. Попробуй ещё раз!</div></div>`;
   const hl = document.getElementById('helper');
@@ -213,7 +269,7 @@ function answered(ok, given) {
   document.getElementById('fb').insertAdjacentHTML('beforeend', `<button class="btn ${ok ? 'green' : ''} block" style="margin-top:14px" data-act="next">${last ? 'Готово 🏁' : ok ? 'Дальше →' : 'Понятно, дальше →'}</button>`);
   /* Похвала голосом (js/voice.js): со второй попытки, звёздочка, 3 и 5 подряд — всегда, обычный верный ответ — примерно 1 из 3 */
   SES.run = first ? SES.run + 1 : 0;
-  const p = ok ? Praise.say(second ? 'second' : SES.star ? 'star' : SES.run === 5 ? 'streak5' : SES.run === 3 ? 'streak3' : 'ok', 'five') : Praise.say('bad', 'five');
+  const p = ok ? Praise.say(second ? 'second' : SES.star ? 'star' : SES.run === 5 ? 'streak5' : SES.run === 3 ? 'streak3' : 'ok') : Praise.say('bad');
   const hero = p ? (p.who === 'mi' ? 'mindal' : 'funduk') : ok ? 'funduk' : 'mindal';
   const line = p ? esc(p.text) : ok ? R.pick(['Ура! 🎉', 'Молодец!', 'Так держать!', 'Орешек наш! 🌰']) : R.pick(['Прочитай разбор — в следующий раз точно получится!', 'Я положу эту задачку в корзинку, повторим позже 🧺', 'Ошибаться — нормально. Главное — понять!']);
   const hl = document.getElementById('helper');
@@ -238,7 +294,7 @@ function finish() {
       if (win) { const first = !S.medals[s.topic]; S.medals[s.topic] = true; S.stars[lvKey(s.topic, 4)] = 3; if (first) giveAcorns(15); }
       save();
       if (win) { Sound.win(); confetti(); }
-      if (win) setTimeout(() => Praise.say('medal', 'five'), 0);
+      if (win) setTimeout(() => Praise.say('medal'), 0);
       return showResult({
         mood: win ? 'cheer' : 'think', title: win ? `Испытание пройдено! 🏅` : 'Почти получилось!',
         text: win ? `${T.who} говорит спасибо! Ты получаешь медаль «${T.name}».` : `Нужно ${n - 1} верных из ${n} с первой попытки, а у тебя ${scTxt}. Попробуй ещё раз — ты сможешь!`,
@@ -250,7 +306,7 @@ function finish() {
     const prev = starsOf(s.topic, s.level);
     S.stars[lvKey(s.topic, s.level)] = Math.max(prev, stars);
     const bonus = Math.max(0, stars - prev) * 2; giveAcorns(bonus); save();
-    if (stars >= 2) { Sound.win(); if (stars === 3) confetti(); setTimeout(() => Praise.say('level', 'five'), 0); }
+    if (stars >= 2) { Sound.win(); if (stars === 3) confetti(); setTimeout(() => Praise.say('level'), 0); }
     const nextOpen = s.level < 4 && isOpen(s.topic, s.level + 1);
     const btns = [];
     if (stars >= 2 && nextOpen) btns.push([`Дальше: ${LEVELS[s.level].name} →`, 'nextLevel', 'green']);

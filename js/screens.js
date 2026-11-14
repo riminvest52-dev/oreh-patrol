@@ -74,8 +74,7 @@ function showMap() {
   const weak = S.diag || Object.values(S.mastery).some(m => m.n >= 5) ? weakTopics(2) : [];
   const W = Math.min(window.innerWidth, 560), stepY = 156, top = 70;
   const four = isFour();
-  const all = four ? FOUR_MAP.map(t => ({ t, locked: !t.act }))
-    : TOPICS.map(t => ({ t, locked: false })).concat(LOCKED.map(t => ({ t, locked: true })));
+  const all = TOPICS.map(t => ({ t, locked: false })).concat(LOCKED.map(t => ({ t, locked: true })));
   const pts = all.map((x, i) => ({ x: i % 2 ? W * 0.7 : W * 0.3, y: top + i * stepY }));
   const H = top + all.length * stepY + 10;
   let path = `M${pts[0].x} ${pts[0].y + 44}`;
@@ -111,8 +110,8 @@ function showMap() {
   Praise.hello(); if (!four) Voice.prefetch('five');
 }
 let resizeT; window.addEventListener('resize', () => { clearTimeout(resizeT); resizeT = setTimeout(() => { if (document.querySelector('.forest')) showMap(); }, 200); });
-ACT.daily = () => isFour() ? fourDaily() : startDaily();
-ACT.review = () => isFour() ? ACT.mulDue() : startReview();
+ACT.daily = () => startDaily();
+ACT.review = () => startReview();
 ACT.diagAsk = () => modal(`<h2>Пройти Проверку сил ещё раз?</h2><p class="muted">Результаты обновят подсказки «Сюда сначала!» на карте. Звёзды и орешки сохранятся.</p>
   <div class="stack"><button class="btn green block" data-act="diagGo">Да, пройти</button><button class="btn ghost block" data-act="close">Не сейчас</button></div>`);
 ACT.diagGo = () => { closeModal(); startDiag(); };
@@ -199,7 +198,7 @@ function showParent() {
   const maxN = Math.max(1, ...days.map(d => (S.history[d] || {}).n || 0));
   const acc = S.solved ? Math.round(S.right / S.solved * 100) : 0;
   const four = isFour(), hasMul = Object.keys(S.mul || {}).length > 0;
-  const topics = four ? '' : TOPICS.map(T => {
+  const topics = TOPICS.filter(T => !T.act).map(T => {
     const M = mast(T.id), [lbl, col] = masteryLabel(M.m), pct = M.m === null || M.m === undefined ? 0 : Math.round(M.m * 100);
     const weak = M.weak && S.skill[M.weak] && S.skill[M.weak].m < 0.8 && SKILL[M.weak] ? `<div class="small muted">слабее всего: ${SKILL[M.weak]}</div>` : '';
     return `<div class="trow"><div style="font-size:22px">${T.icon}</div><div><div class="tn">${T.name} <span class="small" style="color:${col}">· ${lbl}</span></div>${weak}
@@ -217,7 +216,7 @@ function showParent() {
       <div class="days">${days.map(d => { const n = (S.history[d] || {}).n || 0; return `<div class="${n ? '' : 'zero'}" style="height:${Math.max(4, n / maxN * 100)}%" title="${d}: ${n}"></div>`; }).join('')}</div>
       <div class="small muted center" style="margin-top:4px">Задач в день за последние 2 недели</div></div>
     ${movedCard()}${four || hasMul ? `<h3 style="margin-top:18px">Таблица умножения</h3>${mulParentCard(S)}` : ''}
-    ${four ? '' : `<h3 style="margin-top:18px">Темы</h3><div class="card">${topics}<p class="small muted">Тема оценивается по самому слабому навыку внутри неё. «Уверенно» — 80%+ по последним ответам с учётом сложности, «почти» — 55–80%, «подтянуть» — ниже. Ответ с подсказкой освоенность не повышает, со второй попытки — считается ошибкой.</p></div>`}
+    ${`<h3 style="margin-top:18px">Темы</h3><div class="card">${topics}<p class="small muted">Тема оценивается по самому слабому навыку внутри неё. «Уверенно» — 80%+ по последним ответам с учётом сложности, «почти» — 55–80%, «подтянуть» — ниже. Ответ с подсказкой освоенность не повышает, со второй попытки — считается ошибкой.</p></div>`}
     ${!four && typeof handsParentCard === 'function' ? handsParentCard() : ''}
     <h3 style="margin-top:18px">Последние ошибки</h3><div class="card">${recentBad}</div>
     <h3 style="margin-top:18px">Настройки</h3><div class="card">

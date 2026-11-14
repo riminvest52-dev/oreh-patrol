@@ -14,7 +14,7 @@ const SKILL = {
   vol_count: 'кубики в штабеле', vol_net: 'развёртки куба', vol_opp: 'противоположные грани куба', vol_view: 'виды сверху, спереди, справа',
   vol_calc: 'объём прямоугольного параллелепипеда', vol_units: 'единицы объёма'
 };
-const TOPICS = [
+const TOPICS5 = [
   { id: 'fund', name: 'Старый дуб', sub: 'Фундамент: деление, величины, площадь', icon: '🦔', who: 'Дедушка Ёж',
     intro: 'Корни старого дуба держат весь лес. Крепкие корни — никакая буря не страшна! Проверим наш фундамент: деление с нулями, величины, периметр и площадь.',
     gens: ['f_div0', 'f_units', 'f_geom', 'f_more', 'f_mul'],
@@ -110,12 +110,14 @@ const TOPICS = [
       '<b>Смотришь справа:</b> то, что было спереди, окажется слева. <b>Смотришь сверху:</b> передний ряд — внизу картинки.'
     ] }
 ];
-const LOCKED = [
+const LOCKED5 = [
   { id: 'nod', name: 'Башня НОД и НОК', icon: '🏰', sub: 'Скоро — после Сита' },
   { id: 'pow', name: 'Лестница степеней', icon: '🪜', sub: 'Скоро' },
   { id: 'frac', name: 'Пирог дробей', icon: '🥧', sub: '3-я четверть' }
 ];
-const TOPIC = Object.fromEntries(TOPICS.map(t => [t.id, t]));
+/* Темы текущего игрока: 5 класс или 4 класс (js/topics4.js, setWorldTopics) */
+let TOPICS = TOPICS5, LOCKED = LOCKED5;
+const TOPIC = Object.fromEntries(TOPICS5.map(t => [t.id, t]));
 const LEVELS = [
   { n: 1, name: 'Росток', d: 1, count: 10 },
   { n: 2, name: 'Орешек', d: 2, count: 10 },

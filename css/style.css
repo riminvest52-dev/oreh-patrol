@@ -552,3 +552,19 @@ svg.sor-sly .sor-spark { animation: sorspark 1.2s ease-in-out infinite; }
 .kmul { margin-top: 6px; } .kmul summary { cursor: pointer; }
 .goldtree { font-size: 90px; filter: drop-shadow(0 0 14px #F5B43C) sepia(1) saturate(4) hue-rotate(5deg); }
 @media (max-width: 360px) { .mq { font-size: 36px; } .keypad.big .key { height: 56px; } }
+
+/* ---------- Ответ «в столбик» (4 класс) ---------- */
+.colwrap { overflow-x: auto; -webkit-overflow-scrolling: touch; margin: 6px 0; padding: 8px 2px; position: relative; background: #fff; border: 2px solid var(--line); border-radius: 16px; }
+.colgrid { position: relative; margin: 0 auto; background-image: linear-gradient(#E3ECF7 1px, transparent 1px), linear-gradient(90deg, #E3ECF7 1px, transparent 1px); background-size: 20px 23px; }
+.cc { position: absolute; width: 40px; height: 46px; display: flex; align-items: center; justify-content: center; font: 800 26px var(--font); color: var(--ink); padding: 0; box-sizing: border-box; }
+.cc.fix { pointer-events: none; }
+.cc.fix.sign { color: var(--ink2); font-size: 24px; }
+.cc.fix.shift { color: #C7B39A; font-size: 22px; }
+.cc.inp { border: 2px dashed #D9C4A4; border-radius: 9px; background: rgba(255, 251, 243, .9); cursor: pointer; margin: 0; width: 38px; height: 44px; transform: translate(1px, 1px); }
+.cc.inp.sm { font-size: 15px; height: 26px; width: 26px; transform: translate(7px, 18px); border-style: dotted; color: var(--orange-d); }
+.cc.inp.quo { background: #FFF6D8; }
+.cc.inp.sel { border: 3px solid var(--gold); background: #FFF0C2; box-shadow: 0 0 0 3px rgba(245, 180, 60, .25); }
+.cc.inp.bad { border: 3px solid var(--red); background: #FDE3DB; color: var(--red-d); }
+.cc.inp.fix { border: 2px solid var(--green); background: #E6F3DE; color: var(--green-d); pointer-events: none; }
+.cline { position: absolute; height: 3px; background: var(--ink); border-radius: 2px; }
+.cvbar { position: absolute; width: 3px; background: var(--ink); border-radius: 2px; }

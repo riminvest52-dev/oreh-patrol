@@ -2,9 +2,9 @@
 <html lang="ru"><head><meta charset="utf-8"><title>Тест генераторов</title>
 <style>body{font:14px system-ui;margin:16px}pre{white-space:pre-wrap}.bad{color:#b00}.task{border-bottom:1px solid #ddd;padding:6px 0}</style></head>
 <body><h1>Тест генераторов</h1><div id="out"></div>
-<script src="../js/core.js"></script><script src="../js/t-fund.js"></script><script src="../js/t-lang.js"></script>
-<script src="../js/t-models.js"></script><script src="../js/t-logic.js"></script><script src="../js/t-div.js"></script><script src="../js/topics.js"></script>
-<script>const ACT = {}; const S = {};</script><script src="../js/t-vol.js"></script>
+<script src="../js/core.js"></script><script src="../js/col.js"></script><script src="../js/t-fund.js"></script><script src="../js/t-lang.js"></script>
+<script src="../js/t-models.js"></script><script src="../js/t-logic.js"></script><script src="../js/t-div.js"></script><script src="../js/t4a.js"></script><script src="../js/topics.js"></script><script src="../js/topics4.js"></script>
+<script>const ACT = {}; const S = {};</script><script src="../js/t-vol.js"></script><script src="../js/mult.js"></script>
 <script>
 const strip = s => String(s).replace(/<[^>]+>/g, '');
 function check(t) {
@@ -36,6 +36,15 @@ function check(t) {
   } else if (t.type === 'build') {
     if (!t.check(t.sol)) errs.push('build: own solution rejected');
     if (t.check(t.sol.map(r => r.map(() => 0)))) errs.push('build: empty accepted');
+  } else if (t.type === 'col') {
+    /* «В столбик»: своё решение принимается, в строке ответа — ответ, неверная цифра ловится */
+    if (!Number.isInteger(t.answer) || t.answer < 0) errs.push('bad col answer ' + t.answer);
+    const sol = colSolution(t), r = colCheck(t, sol);
+    if (!r.ok) errs.push('col: own solution rejected: ' + r.msg);
+    if (colRowNum(t, sol, colResPred(t)) !== t.answer) errs.push('col: answer row ' + colRowNum(t, sol, colResPred(t)) + ' != ' + t.answer);
+    const main = colOrder(t), k = R.pick(main), bad = Object.assign({}, sol); bad[k] = String((+(sol[k] || 0) + R.int(1, 8)) % 10);
+    if (colCheck(t, bad).ok) errs.push('col: wrong digit accepted');
+    const pos = new Set(); for (const c of t.lay.cells) { const key = c.r + ':' + c.c + (c.sm ? 's' : ''); if (pos.has(key)) errs.push('col: cells overlap ' + key); pos.add(key); }
   } else errs.push('bad type ' + t.type);
   if (t.optHtml && (t.optHtml.length !== t.options.length || new Set(t.optHtml).size !== t.optHtml.length)) errs.push('optHtml mismatch/dup');
   for (const x of t.traps || []) {
@@ -61,10 +70,12 @@ function exprVal(o) {
 const VALDUP = {}, VALDUPEX = [];
 const out = document.getElementById('out');
 const summary = {}; let total = 0, fails = 0; const samples = [];
-for (const top of TOPICS) for (const g of top.gens) {
+/* Оба мира: 5 класс и 4 класс */
+const ALLT = TOPICS5.concat(TOPICS4); const REPEAT = {};
+for (const top of ALLT) for (const g of top.gens) {
   if (!GEN[g]) { summary[g] = 'MISSING'; fails++; continue; }
   for (let d = 1; d <= 3; d++) {
-    let f = 0, ex = null;
+    let f = 0, ex = null; const seen = {};
     for (let i = 0; i < 400; i++) {
       total++;
       let t, e;
@@ -75,11 +86,21 @@ for (const top of TOPICS) for (const g of top.gens) {
     summary[g + ' d' + d] = f ? `FAIL ${f}/400: ${ex}` : 'ok';
   }
 }
+/* Повторы внутри уровня 4 класса: 300 уровней по 10 задач на каждую ступень, как в игре (play.js перегенерирует до 8 раз) */
+for (const top of TOPICS4) if (!top.act) for (let d = 1; d <= 3; d++) {
+  let bad = 0;
+  for (let l = 0; l < 300; l++) {
+    const gens = []; while (gens.length < 10) gens.push(...R.shuffle(top.gens));
+    const seen = new Set(), key = t => t.q + '|' + (t.options || []).join();
+    for (const g of gens.slice(0, 10)) { let t = makeTask(g, d); for (let k = 0; k < 8 && seen.has(key(t)); k++) t = makeTask(g, d); if (seen.has(key(t))) { bad++; break; } seen.add(key(t)); }
+  }
+  if (bad) REPEAT[top.id + ' d' + d] = bad + '/300';
+}
 /* Доля заданий «из двух» (50/50) по каждой локации */
 const share = {}; let two = 0, all = 0;
-for (const top of TOPICS) {
+for (const top of ALLT) {
   let t2 = 0, n = 0;
-  for (const g of top.gens) for (let d = 1; d <= 3; d++) for (let i = 0; i < 300; i++) { const t = makeTask(g, d); n++; if (t.type === 'choice' && t.options.length <= 2) t2++; }
+  for (const g of top.gens) for (let d = 1; d <= 3; d++) for (let i = 0; i < 300; i++) { const t = makeTask(g, d); if (!t) continue; n++; if (t.type === 'choice' && t.options.length <= 2) t2++; }
   share[top.id] = Math.round(t2 / n * 1000) / 10; two += t2; all += n;
 }
 const share5050 = Math.round(two / all * 1000) / 10;
@@ -101,11 +122,11 @@ for (const cs of HEXO.all) for (const T of SYM8) if (!!foldNet(polyNorm(cs.map(T
 for (let i = 0; i < 300; i++) { const H = stairs(3, 3, 0, 4, 26); if (H && viewTop(H).flat().length !== 9) VOLX.push('top size'); }
 /* Сколько заданий генератор выдал бы с «вариантом того же значения» без перегенерации (makeTask их отбрасывает) */
 const RAWDUP = {};
-for (const top of TOPICS) for (const g of top.gens) if (GEN[g]) for (let d = 1; d <= 3; d++) {
+for (const top of ALLT) for (const g of top.gens) if (GEN[g]) for (let d = 1; d <= 3; d++) {
   let n = 0; for (let i = 0; i < 2000; i++) { let t; try { t = GEN[g].f(d); } catch (e) { continue; } if (!t) continue; t.gen = g; if (sameValueOpt(t)) n++; }
   if (n) RAWDUP[g + ' d' + d] = n + '/2000';
 }
-window.TEST = { rawdup: RAWDUP, valdup: VALDUP, valdupEx: VALDUPEX, volx: VOLX, total, fails, summary, share5050, share, near: NEAR.length, nearEx: NEAR.slice(0, 5), plural: PLURAL.slice(0, 20), pluralN: PLURAL.length, trapMiss: TRAPMISS };
-out.innerHTML = `<p><b>${total}</b> заданий, ошибок: <b class="${fails ? 'bad' : ''}">${fails}</b>. Заданий «из двух» (50/50): ${share5050}% (${Object.entries(share).map(([k, v]) => TOPIC[k].name + ' ' + v + '%').join(', ')}). Остров правды, строк одного шаблона в задании: ${NEAR.length}. Подозрительных склонений: ${PLURAL.length}</p><pre>${PLURAL.slice(0, 20).join(String.fromCharCode(10))}</pre><pre>${Object.entries(summary).map(([k, v]) => k + ': ' + v).join('\n')}</pre><h2>Примеры</h2>` +
+window.TEST = { repeat: REPEAT, rawdup: RAWDUP, valdup: VALDUP, valdupEx: VALDUPEX, volx: VOLX, total, fails, summary, share5050, share, near: NEAR.length, nearEx: NEAR.slice(0, 5), plural: PLURAL.slice(0, 20), pluralN: PLURAL.length, trapMiss: TRAPMISS };
+out.innerHTML = `<p><b>${total}</b> заданий, ошибок: <b class="${fails ? 'bad' : ''}">${fails}</b>. Уровней 4 класса с повтором задачи: ${JSON.stringify(REPEAT)}. Заданий «из двух» (50/50): ${share5050}% (${Object.entries(share).map(([k, v]) => TOPIC[k].name + ' ' + v + '%').join(', ')}). Остров правды, строк одного шаблона в задании: ${NEAR.length}. Подозрительных склонений: ${PLURAL.length}</p><pre>${PLURAL.slice(0, 20).join(String.fromCharCode(10))}</pre><pre>${Object.entries(summary).map(([k, v]) => k + ': ' + v).join('\n')}</pre><h2>Примеры</h2>` +
   samples.map(s => `<div class="task"><pre>${s.replace(/</g, '&lt;')}</pre></div>`).join('');
 </script></body></html>

@@ -30,15 +30,16 @@ function childInfo(p) {
   let good = [], weak = [];
   withState(st, () => {
     if (p.world === 'four') {
-      good = MUL_NUMS.filter(n => mulColDone(st, n)).map(n => 'таблица на ' + n);
-      weak = mulHard(st, 3);
+      good = TOPICS4.filter(T => !T.act && (mast(T.id).m || 0) >= 0.8).map(T => T.name).concat(MUL_NUMS.filter(n => mulColDone(st, n)).map(n => 'таблица на ' + n));
+      weak = Object.entries(st.skill || {}).filter(([g, M]) => GEN[g] && GEN[g].topic !== 'tab' && TOPICS4.includes(TOPIC[GEN[g].topic]) && M.n >= 2 && M.m < 0.8)
+        .sort((a, b) => a[1].m - b[1].m).slice(0, 2).map(([g]) => SKILL[g] || g).concat(mulHard(st, 3)).slice(0, 3);
     } else if (p.world === 'kid' && typeof KID_TOPICS !== 'undefined') {
       const ms = KID_TOPICS.map(T => ({ name: T.name, M: st.mastery[T.id] })).filter(x => x.M && x.M.n >= 2);
       good = ms.filter(x => x.M.m >= 0.8).map(x => x.name);
       weak = ms.filter(x => x.M.m < 0.8).sort((a, b) => a.M.m - b.M.m).slice(0, 3).map(x => x.name);
     } else {
-      good = TOPICS.filter(T => { const m = mast(T.id).m; return m !== null && m !== undefined && m >= 0.8; }).map(T => T.name);
-      weak = Object.entries(st.skill || {}).filter(([g, M]) => GEN[g] && TOPIC[GEN[g].topic] && M.n >= 2 && M.m < 0.8)
+      good = TOPICS5.filter(T => { const m = mast(T.id).m; return m !== null && m !== undefined && m >= 0.8; }).map(T => T.name);
+      weak = Object.entries(st.skill || {}).filter(([g, M]) => GEN[g] && TOPICS5.includes(TOPIC[GEN[g].topic]) && M.n >= 2 && M.m < 0.8)
         .sort((a, b) => a[1].m - b[1].m).slice(0, 3).map(([g]) => SKILL[g] || g);
     }
   });

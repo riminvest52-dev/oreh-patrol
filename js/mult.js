@@ -460,34 +460,17 @@ function mulFastEnd() {
     stars: null, ok: s.ok, n: s.n, acorns: ac, buttons: [['Ещё раз', 'mulFast', 'green'], ['К дереву 🌳', 'mulOpen', 'ghost']] });
 }
 
-/* ---------- Мир «4 класс»: карта, быстрые карточки, задание дня ---------- */
-/* Часть 1 задания 07: открыта только Беличья кладовая, остальные локации появятся в частях 2 и 3 */
-const FOUR_MAP = [
-  { id: 'mul', name: 'Беличья кладовая', icon: '🐿️', act: 'mulOpen' },
-  { id: 'big', name: 'Большие числа', icon: '🔢', sub: 'Скоро' },
-  { id: 'col', name: 'Мост «в столбик»', icon: '🌉', sub: 'Скоро' },
-  { id: 'mill', name: 'Мельница умножения и деления', icon: '⚙️', sub: 'Скоро' },
-  { id: 'ord4', name: 'Порядок действий', icon: '🪜', sub: 'Скоро' },
-  { id: 'units4', name: 'Лавка величин', icon: '⚖️', sub: 'Скоро' },
-  { id: 'road', name: 'Дорога и магазин', icon: '🛒', sub: 'Скоро' },
-  { id: 'frac4', name: 'Доли', icon: '🥧', sub: 'Скоро' },
-  { id: 'eq4', name: 'Уравнения', icon: '🔑', sub: 'Скоро' },
-  { id: 'geo4', name: 'Геометрия', icon: '📐', sub: 'Скоро' },
-  { id: 'data4', name: 'Таблицы и логика', icon: '📊', sub: 'Скоро' }
-];
+/* ---------- Мир «4 класс»: быстрые карточки на карте (локации — js/topics4.js) ---------- */
 function fourQuick() {
-  const dailyDone = S.daily.date === today() && S.daily.done, due = mulDueCount(S);
+  const dailyDone = S.daily.date === today() && S.daily.done, due = dueMistakes().length, mdue = mulDueCount(S);
   return `<div class="quick">
-    <div class="qcard ${dailyDone ? '' : 'hot'}" data-act="daily">${dailyDone ? '<span class="done">✅</span>' : ''}<div class="qi">☀️</div><div><div class="qt">Задание дня</div><div class="qs">${dailyDone ? 'Выполнено! Можно ещё' : '20 примеров · +10 орешков'}</div></div></div>
-    <div class="qcard" data-act="review">${due ? `<span class="badge">${due}</span>` : ''}<div class="qi">🧺</div><div><div class="qt">Повторение</div><div class="qs">${due ? 'Пора повторить!' : 'Всё по расписанию'}</div></div></div>
-    <div class="qcard off"><div class="qi">🧭</div><div><div class="qt">Проверка сил</div><div class="qs">Скоро — когда откроются все уголки леса</div></div></div>
+    <div class="qcard ${dailyDone || !S.diag ? '' : 'hot'}" data-act="daily">${dailyDone ? '<span class="done">✅</span>' : ''}<div class="qi">☀️</div><div><div class="qt">Задание дня</div><div class="qs">${dailyDone ? 'Выполнено! Можно ещё' : '10 задач · +10 орешков'}</div></div></div>
+    <div class="qcard" data-act="review">${due ? `<span class="badge">${due}</span>` : ''}<div class="qi">🧺</div><div><div class="qt">Корзинка ошибок</div><div class="qs">${due ? 'Пора повторить!' : S.mistakes.length ? `${S.mistakes.length} ждут своего дня` : 'Пока пусто'}</div></div></div>
+    <div class="qcard ${S.diag ? '' : 'hot first'}" data-act="${S.diag ? 'diagAsk' : 'diag'}">${S.diag ? '' : '<div class="tip">Начни отсюда!</div>'}<div class="qi">🧭</div><div><div class="qt">Проверка сил</div><div class="qs">${S.diag ? 'Пройдена ' + S.diag.date.split('-').reverse().slice(0, 2).join('.') : TOPICS.length * 2 + ' задач — с чего начать'}</div></div></div>
+    <div class="qcard" data-act="mulDue">${mdue ? `<span class="badge">${mdue}</span>` : ''}<div class="qi">🐿️</div><div><div class="qt">Повторение таблицы</div><div class="qs">${mdue ? 'Пора повторить!' : 'Всё по расписанию'}</div></div></div>
+    ${typeof vprCard === 'function' ? vprCard() : ''}
     <div class="qcard" data-act="album"><div class="qi">📒</div><div><div class="qt">Альбом наклеек</div><div class="qs">${S.stickers.length} из ${STICKERS.length}</div></div></div>
   </div>`;
-}
-/* Задание дня 4 класса: 20 примеров вперемешку; если ни один столбик ещё не начат — первый неначатый столбик */
-function fourDaily() {
-  if (!mulStudied(S).length) { mulLearn(2); MS.daily = true; MS.title = 'Задание дня · столбик ×2'; mulRender(); return; }
-  mulSession('mix', 'Задание дня'); if (MS) MS.daily = true;
 }
 /* Ссылка на тренажёр из «Старого дуба» (5 класс) */
 function mulLink() {
