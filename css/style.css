@@ -604,3 +604,21 @@ table.dt th { background: #FFF0D6; }
 .node.final .disc { background: radial-gradient(circle at 35% 30%, #FFF8D8, #F5C542); }
 svg.ray { max-width: 100%; }
 @media (max-width: 360px) { .fbox { width: 70px; height: 48px; font-size: 26px; } .fline { width: 78px; } .fbox.fw { width: 60px; height: 60px; } }
+
+/* ---------- Лесная полянка: Ступенька 2 (js/k-step2.js) ---------- */
+.k10 { display: grid; grid-template-columns: repeat(5, calc(var(--ki) * .8)); gap: 3px; padding: 5px; background: #8A5A2E; border-radius: 12px; }
+.k10 span { width: calc(var(--ki) * .8); height: calc(var(--ki) * .8); background: #FFF3DE; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: calc(var(--ki) * .58); line-height: 1; }
+.kten { display: flex; flex-direction: column; align-items: center; gap: 6px; }
+.kten .op { font-size: 40px; line-height: 1; font-weight: 900; color: var(--orange-d); }
+.kten .kgrp { max-width: calc(5 * var(--ki) + 16px); }
+.knum.kpair { font-size: 36px; white-space: nowrap; }
+.kstart.right { align-self: flex-end; }
+.kopts.grid2 { grid-template-columns: 1fr 1fr; }
+.kpat.shp span svg { width: 100%; height: 100%; }
+svg.kpieces { width: auto; height: calc(var(--ki) * 1.6); }
+.kopt svg.kpieces { height: calc(var(--ki) * 1.25); }
+.kst2 { display: flex; align-items: center; gap: 4px; font-size: 20px; }
+.kst2 .kst { font-size: 22px; }
+.kstep2 { font: 800 20px var(--font); color: var(--gold-d); margin: 0; }
+.kmedal { font-size: 64px; line-height: 1; margin: 6px 0 0; }
+.kstep .btn { display: flex; align-items: center; justify-content: center; gap: 10px; flex-wrap: wrap; }

@@ -396,11 +396,16 @@ ACT.kJoin = () => {
 };
 function showKidMap() {
   K = null; if (typeof PT !== 'undefined') PT = null; Voice.stop();
-  const next = KID_TOPICS.reduce((m, T) => (S.stars[T.id] || 0) < (S.stars[m.id] || 0) ? T : m, KID_TOPICS[0]).id;
+  /* Подсветка «куда дальше»: меньше всего звёзд; если открыта Ступенька 2 — её звёзды считаются сверху первых трёх */
+  const s2of = T => typeof step2Open === 'function' && step2Open(T.id) ? S.stars[step2Key(T.id)] || 0 : null;
+  const score = T => { const s2 = s2of(T); return (S.stars[T.id] || 0) + (s2 === null ? 0 : s2); };
+  const full = T => score(T) >= (s2of(T) === null ? 3 : 6);
+  const next = KID_TOPICS.filter(T => !full(T)).reduce((m, T) => !m || score(T) < score(m) ? T : m, null);
   const tiles = KID_TOPICS.map(T => {
-    const st = S.stars[T.id] || 0;
-    return `<button class="ktile ${T.id === next && st < 3 ? 'next' : ''}" data-act="kTopic" data-id="${T.id}"><span class="ki">${T.icon}</span><b>${T.name}</b>
-      <span class="kst">${'★'.repeat(st)}<i>${'★'.repeat(3 - st)}</i></span></button>`;
+    const st = S.stars[T.id] || 0, s2 = s2of(T);
+    const two = s2 === null ? '' : `<span class="kst2">🌟🌟 <span class="kst">${'★'.repeat(s2)}<i>${'★'.repeat(3 - s2)}</i></span>${S.medals[step2Key(T.id)] ? ' 🏅' : ''}</span>`;
+    return `<button class="ktile ${next && T.id === next.id ? 'next' : ''}${s2 === null ? '' : ' two'}" data-act="kTopic" data-id="${T.id}"><span class="ki">${T.icon}</span><b>${T.name}</b>
+      <span class="kst">${'★'.repeat(st)}<i>${'★'.repeat(3 - st)}</i></span>${two}</button>`;
   }).join('');
   mountKid(`<div class="topbar"><div class="avatar" data-act="who" role="button" aria-label="Сменить игрока">${ART.zhel('happy')}<span class="swap">⇄</span></div>
       <div class="grow"><div class="hello">Привет, ${esc(S.name || 'друг')}!</div><div class="small muted">Лесная полянка</div></div>
@@ -409,20 +414,25 @@ function showKidMap() {
     <button class="btn gold block" style="margin-top:16px" data-act="album">📒 Наклейки · ${S.stickers.length}</button>`);
   Praise.hello(); Voice.prefetch('kid');
 }
-const kidOpen = tid => KTOPIC[tid] && KTOPIC[tid].game ? KID_GAMES[tid].start() : kidStart(tid);
-ACT.kTopic = el => kidOpen(el.dataset.id);
-ACT.kAgain = el => kidOpen(el.dataset.id);
-function kidStart(tid) {
-  const T = KTOPIC[tid], q = [];
-  while (q.length < KID_PER_SESSION) q.push(...R.shuffle(T.gens));
-  K = { tid, d: kidLevel(tid), queue: q.slice(0, KID_PER_SESSION), i: 0, first: 0, acorns: 0, wrongRun: 0, run: 0 };
+const kidOpen = (tid, step = 1) => KTOPIC[tid] && KTOPIC[tid].game ? KID_GAMES[tid].start(step) : kidStart(tid, step);
+/* Если у уголка открыта Ступенька 2 — сначала выбор ступеньки (js/k-step2.js) */
+ACT.kTopic = el => typeof step2Open === 'function' && step2Open(el.dataset.id) ? kidStepPick(el.dataset.id) : kidOpen(el.dataset.id);
+ACT.kAgain = el => kidOpen(el.dataset.id, +el.dataset.s || 1);
+function kidStart(tid, step = 1) {
+  const T = KTOPIC[tid], q = [], two = step === 2 && typeof KID_STEP2 !== 'undefined' && KID_STEP2[tid];
+  const gens = two ? KID_STEP2[tid].gens : T.gens;
+  while (q.length < KID_PER_SESSION) q.push(...R.shuffle(gens));
+  K = { tid, step: two ? 2 : 1, d: two ? kidLevel2(tid) : kidLevel(tid), queue: q.slice(0, KID_PER_SESSION), i: 0, first: 0, acorns: 0, wrongRun: 0, run: 0, miss: 0 };
   Voice.prefetch(tid);
   kidNext();
 }
 function kidNext() {
   if (K.i >= K.queue.length) return kidFinish();
-  let d = K.d; if (K.wrongRun >= 2 && d > 1) d--;   /* после двух неудач подряд — полегче */
-  const t = makeKid(K.queue[K.i], d); t.topic = K.tid;
+  let d = K.d, g = K.queue[K.i];
+  if (K.step === 2) {   /* Ступенька 2: две ошибки подряд — один пример с прошлого уровня (с 1-го уровня — с 3-го уровня первой ступеньки) */
+    if (K.miss >= 2) { K.miss = 0; if (d > 1) d--; else { g = KID_STEP2[K.tid].back[g]; d = 3; } }
+  } else if (K.wrongRun >= 2 && d > 1) d--;   /* после двух неудач подряд — полегче */
+  const t = makeKid(g, d); t.topic = K.tid;
   Object.assign(K, { t, tries: 0, done: false, tapped: 0, flashTok: (K.flashTok || 0) + 1 });
   renderKid();
 }
@@ -480,7 +490,7 @@ ACT.kDone = () => {
 function kAnswer(v, el) {
   const t = K.t;
   if (v === t.ans) return kResolve(true);
-  K.tries++;
+  K.tries++; K.miss = (K.miss || 0) + 1;
   Sound.bad();
   if (el) el.classList.add('off');
   if (K.tries < 2) {
@@ -509,7 +519,7 @@ function kResolve(ok) {
   const t = K.t; K.done = true;
   const first = ok && K.tries === 0;
   kidRecord(t, first);
-  if (first) { K.first++; K.acorns++; giveAcorns(1); }
+  if (first) { K.first++; K.acorns++; giveAcorns(1); K.miss = 0; }
   K.wrongRun = ok ? 0 : K.wrongRun + 1;
   save();
   document.querySelectorAll('.kopt').forEach((b, i) => {
@@ -543,17 +553,22 @@ function kidRecord(t, ok) {
 function kidFinish() {
   const k = K; K = null;
   markActive();
-  const prev = S.stars[k.tid] || 0, earn = k.first >= KID_PER_SESSION - 1 && prev < 3;
-  if (earn) S.stars[k.tid] = prev + 1;
+  const key = k.step === 2 ? step2Key(k.tid) : k.tid;
+  const prev = S.stars[key] || 0, earn = k.first >= KID_PER_SESSION - 1 && prev < 3;
+  if (earn) S.stars[key] = prev + 1;
+  /* Новая медаль — за пройденную Ступеньку 2 (третья звёздочка на ней) */
+  const medal = k.step === 2 && earn && S.stars[key] === 3 && !S.medals[key];
+  if (medal) S.medals[key] = today();
   giveAcorns(2); save(); Sound.win(); confetti(earn ? 26 : 12);
-  const st = S.stars[k.tid] || 0;
+  const st = S.stars[key] || 0;
   mountKid(`<div class="result">${ART.zhel('cheer')}<h1>Молодец${S.name ? ', ' + esc(S.name) : ''}!</h1>
+    ${k.step === 2 ? '<p class="kstep2">🌟🌟 Ступенька 2</p>' : ''}
     <div class="bigstars kst">${'★'.repeat(st)}<i>${'★'.repeat(3 - st)}</i></div>
-    ${earn ? '<p style="font-size:20px"><b>Новая звёздочка!</b></p>' : ''}
+    ${medal ? `<p class="kmedal">🏅</p><p style="font-size:20px"><b>Новая медаль: ${esc(KTOPIC[k.tid].name)}!</b></p>` : earn ? '<p style="font-size:20px"><b>Новая звёздочка!</b></p>' : ''}
     <p style="font-size:20px">Сразу верно: <b>${k.first}</b> из ${k.queue.length}</p>
     <p><span class="pill">+${k.acorns + 2} ${ART.acorn(20)}</span></p>
-    <div class="stack"><button class="btn green block big" data-act="kAgain" data-id="${k.tid}">Ещё раз 🔁</button><button class="btn ghost block big" data-act="map">На полянку 🌳</button></div></div>`);
-  Praise.say(earn ? 'star' : 'level', 'kid');
+    <div class="stack"><button class="btn green block big" data-act="kAgain" data-id="${k.tid}" data-s="${k.step}">Ещё раз 🔁</button><button class="btn ghost block big" data-act="map">На полянку 🌳</button></div></div>`);
+  Praise.say(medal ? 'medal' : earn ? 'star' : 'level', 'kid');
 }
 
 /* ---------- Раздел для взрослых ---------- */
@@ -562,7 +577,7 @@ function showKidParent() {
   const rows = KID_TOPICS.map(T => {
     const M = mast(T.id), [lbl, col] = masteryLabel(M.m), pct = M.m === null || M.m === undefined ? 0 : Math.round(M.m * 100), st = S.stars[T.id] || 0;
     return `<div class="trow"><div style="font-size:22px">${T.icon}</div><div><div class="tn">${T.name} <span class="small" style="color:${col}">· ${lbl}</span></div>
-      <div class="bar"><i style="width:${pct}%;background:${col}"></i></div></div><div class="small muted">${'★'.repeat(st) || '—'} · ступень ${kidLevel(T.id)}</div></div>`;
+      <div class="bar"><i style="width:${pct}%;background:${col}"></i></div></div><div class="small muted">${'★'.repeat(st) || '—'} · ступень ${kidLevel(T.id)}${typeof step2Open === 'function' && step2Open(T.id) ? ` · Ступенька 2: ${'★'.repeat(S.stars[step2Key(T.id)] || 0) || '—'}${S.medals[step2Key(T.id)] ? ' 🏅' : ''}` : ''}</div></div>`;
   }).join('');
   mount(`<div class="topbar"><button class="iconbtn" data-act="map">←</button><div class="grow"><b>Для родителей · ${esc(S.name)}</b><div class="small muted">Подготовка к 1 классу</div></div></div>
     <div class="card"><div class="row" style="justify-content:space-around;text-align:center">
@@ -573,7 +588,8 @@ function showKidParent() {
     ${familyEntry()}
     ${movedCard()}
     <h3 style="margin-top:18px">Темы</h3><div class="card">${rows}
-      <p class="small muted">В игре 6 заданий. Если 5 из 6 решены с первого раза, тема получает звёздочку, и задания становятся сложнее: ступень 1 — числа до 5, ступень 2 — до 10, ступень 3 — до 20. После двух ошибок подряд задания на время становятся проще.</p></div>
+      <p class="small muted">В игре 6 заданий. Если 5 из 6 решены с первого раза, тема получает звёздочку, и задания становятся сложнее: ступень 1 — числа до 5, ступень 2 — до 10, ступень 3 — до 20. После двух ошибок подряд задания на время становятся проще.
+      Когда у уголка три звёздочки, открывается «Ступенька 2» (🌟🌟): те же игры с числами до 20, составом 10–12, «сколько не хватает», узорами и фигурами посложнее. За три звёздочки на ней — медаль.</p></div>
     <h3 style="margin-top:18px">Настройки</h3><div class="card">
       <button class="btn ghost block" style="margin-bottom:12px" data-act="who">👧 Сменить или добавить игрока</button>
       <label class="small muted" for="pn">Имя</label><div class="row"><input class="input" id="pn" maxlength="20" value="${esc(S.name)}"><button class="btn" data-act="saveName">OK</button></div>

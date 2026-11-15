@@ -6,7 +6,7 @@
 <script src="../js/core.js"></script><script src="../js/t-fund.js"></script><script src="../js/t-lang.js"></script><script src="../js/t-models.js"></script>
 <script src="../js/t-logic.js"></script><script src="../js/t-div.js"></script><script src="../js/topics.js"></script><script src="../js/art.js"></script><script src="../js/art2.js"></script>
 <script src="../js/state.js"></script><script src="../js/cloud.js"></script><script src="../js/ui.js"></script><script src="../js/voice-data.js"></script><script src="../js/voice.js"></script><script src="../js/play.js"></script>
-<script src="../js/screens.js"></script><script src="../js/kid.js"></script><script src="../js/k-path.js"></script>
+<script src="../js/screens.js"></script><script src="../js/kid.js"></script><script src="../js/k-path.js"></script><script src="../js/k-step2.js"></script>
 <script>
 const RUNS = 300, KINDS = ['pick', 'count', 'put', 'frame', 'flash'];
 const BAD = /undefined|NaN|null|\[object/;
@@ -46,6 +46,25 @@ for (const T of KID_TOPICS.filter(t => !t.game)) {   /* разделы-игры 
     sum[g + ' d' + d] = f ? `FAIL ${f}/${RUNS}: ${ex}` : 'ok';
   }
   share[T.name] = Math.round(two / n * 1000) / 10;
+}
+/* Ступенька 2: те же проверки + числа до 20 + откат на прошлый уровень существует */
+for (const [tid, S2] of Object.entries(KID_STEP2)) {
+  let two = 0, n = 0;
+  for (const g of S2.gens) {
+    if (!KG[S2.back[g]]) { fails++; sum[g + ' back'] = 'FAIL: нет игры для отката ' + S2.back[g]; }
+    for (let d = 1; d <= 3; d++) {
+      let f = 0, ex = '';
+      for (let i = 0; i < RUNS; i++) {
+        total++; n++;
+        let t, e;
+        try { t = makeKid(g, d); e = checkKid(t); if (t.opts) for (const o of t.opts) if (typeof o.v === 'number' && (o.v < 0 || o.v > 20)) e.push('число вне 0–20: ' + o.v); } catch (err) { e = ['throw ' + err.message]; }
+        if (t && t.opts && t.opts.length <= 2) two++;
+        if (e.length) { f++; fails++; if (!ex) ex = e.join('; '); }
+      }
+      sum[g + ' d' + d] = f ? `FAIL ${f}/${RUNS}: ${ex}` : 'ok';
+    }
+  }
+  share[KTOPIC[tid].name + ' (ст. 2)'] = Math.round(two / n * 1000) / 10;
 }
 /* Жёлудик: уникальные id в каждом выводе и все четыре позы */
 const ids = new Set(); let dupIds = 0;

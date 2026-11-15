@@ -1,0 +1,65 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Лиза: быстрый блок — скриншоты</title>
+<link rel="stylesheet" href="../css/style.css">
+</head>
+<body>
+<!-- Скриншоты задания 10 (Лиза): ?s=map|pick|task&g=k2_tens&d=2|medal|shop…|house…|path2… Озвучка и звуки выключены.
+     Игрок — отдельный тестовый профиль «Лиза» этого браузера (localhost), настоящий прогресс не трогается. -->
+<div id="app"></div>
+<div id="modal" class="modal hidden"></div>
+<div id="toast" class="toast hidden"></div>
+<script src="../js/core.js"></script>
+<script src="../js/col.js"></script>
+<script src="../js/t-fund.js"></script>
+<script src="../js/t-lang.js"></script>
+<script src="../js/t-models.js"></script>
+<script src="../js/t-logic.js"></script>
+<script src="../js/t-div.js"></script>
+<script src="../js/t4a.js"></script>
+<script src="../js/t4b.js"></script>
+<script src="../js/t5b.js"></script>
+<script src="../js/topics.js"></script>
+<script src="../js/topics5.js"></script>
+<script src="../js/topics4.js"></script>
+<script src="../js/art.js"></script>
+<script src="../js/art2.js"></script>
+<script src="../js/state.js"></script>
+<script src="../js/cloud.js"></script>
+<script src="../js/ui.js"></script>
+<script>var VOICE_BASE = "../";</script><script src="../js/voice-data.js"></script><script src="../js/voice.js"></script>
+<script src="../js/play.js"></script>
+<script src="../js/t-vol.js"></script>
+<script src="../js/screens.js"></script>
+<script src="../js/vendor/qrcode.js"></script>
+<script src="../js/mult.js"></script>
+<script src="../js/vpr4.js"></script>
+<script src="../js/family.js"></script>
+<script src="../js/kid.js"></script>
+<script src="../js/k-path.js"></script>
+<script src="../js/k-step2.js"></script>
+<script>for (const f of ['k-shop', 'k-house']) document.write(`<script src="../js/${f}.js" onerror="this.remove()"><\/script>`);</script>
+<script>
+  try { localStorage.setItem('oreh_voice', '0'); } catch (e) { }
+  const kp = F.profiles.find(p => p.world === 'kid');
+  if (kp) useProfile(kp.id); else addProfile('kid');
+  /* Как у Лизы сейчас: все уголки на три звезды, около 340 орешков */
+  S.name = 'Лиза'; S.sound = false;
+  for (const T of KID_TOPICS) S.stars[T.id] = 3;
+  S.stars['k_cnt#2'] = 2; S.stars['k_add#2'] = 3; S.medals['k_add#2'] = '2026-11-15'; S.stars['k_line#2'] = 1;
+  S.acorns = 340; S.earned = Math.max(S.earned, 340 + S.stickers.reduce((s, i) => s + STICKERS[i][2], 0));
+  save();
+  const q = new URLSearchParams(location.search), s = q.get('s') || 'map', g = q.get('g'), d = +(q.get('d') || 1);
+  const task = (tid, gen, lev, step = 2) => { kidStart(tid, step); K.queue[0] = gen; K.d = lev; kidNext(); };
+  const tidOf = gen => Object.keys(KID_STEP2).find(t => KID_STEP2[t].gens.includes(gen)) || KID_TOPICS.find(T => T.gens.includes(gen)).id;
+  if (s === 'map') showKidMap();
+  if (s === 'pick') { showKidMap(); kidStepPick('k_cnt'); }
+  if (s === 'task') task(tidOf(g), g, d);
+  if (s === 'medal') { S.stars['k_cnt#2'] = 2; delete S.medals['k_cnt#2']; kidStart('k_cnt', 2); K.first = 6; K.acorns = 6; K.i = K.queue.length; kidNext(); }
+  if (window.SHOT_EXTRA) SHOT_EXTRA(s, q);
+</script>
+</body>
+</html>

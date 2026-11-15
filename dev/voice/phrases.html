@@ -5,7 +5,7 @@
 <script src="../../js/core.js"></script><script src="../../js/t-fund.js"></script><script src="../../js/t-lang.js"></script><script src="../../js/t-models.js"></script>
 <script src="../../js/t-logic.js"></script><script src="../../js/t-div.js"></script><script src="../../js/topics.js"></script><script src="../../js/art.js"></script><script src="../../js/art2.js"></script>
 <script src="../../js/state.js"></script><script src="../../js/cloud.js"></script><script src="../../js/ui.js"></script><script src="../../js/voice-data.js"></script><script src="../../js/voice.js"></script>
-<script src="../../js/play.js"></script><script src="../../js/screens.js"></script><script src="../../js/kid.js"></script><script src="../../js/k-path.js"></script>
+<script src="../../js/play.js"></script><script src="../../js/screens.js"></script><script src="../../js/kid.js"></script><script src="../../js/k-path.js"></script><script src="../../js/k-step2.js"></script>
 <pre id="out"></pre>
 <script>
 const RUNS = +(new URLSearchParams(location.search).get('runs') || 12000);
@@ -26,6 +26,14 @@ for (const T of KID_TOPICS) for (const g of T.gens) for (let d = 1; d <= 3; d++)
   add('zh', 'Попробуй ещё раз! ' + (t.hint || ''), T.id);
   add('zh', 'Смотри. ' + (t.whySay || t.why), T.id);
 }
+/* Ступенька 2 (js/k-step2.js): фразы — в ту же тему, что и первая ступенька, чтобы докачивались вместе */
+for (const [tid, S2] of Object.entries(KID_STEP2)) for (const g of S2.gens) for (let d = 1; d <= 3; d++) for (let i = 0; i < RUNS; i++) {
+  const t = makeKid(g, d);
+  add('nr', t.say, tid);
+  add('zh', 'Попробуй ещё раз! ' + (t.hint || ''), tid);
+  add('zh', 'Смотри. ' + (t.whySay || t.why), tid);
+}
+add('zh', 'Выбери ступеньку.', 'kid');
 for (let n = 1; n <= 20; n++) add('zh', String(n), 'k_cnt');
 for (const [id, g] of Object.entries(KID_GAMES)) for (const [who, text] of g.phrases()) add(who, text, id);
 add('zh', 'Озвучка включена.', 'kid');
