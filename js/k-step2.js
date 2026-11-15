@@ -216,7 +216,8 @@ const KID_STEP2 = {
   k_add: { gens: ['k2_add', 'k2_miss'], back: { k2_add: 'k_add', k2_miss: 'k_add' } },
   k_shape: { gens: ['k2_build', 'k2_spat'], back: { k2_build: 'k_shape', k2_spat: 'k_shape' } },
   k_where: { gens: ['k2_order', 'k2_grid'], back: { k2_order: 'k_order', k2_grid: 'k_where' } },
-  k_logic: { gens: ['k2_odd', 'k2_pat'], back: { k2_odd: 'k_odd', k2_pat: 'k_pattern' } }
+  k_logic: { gens: ['k2_odd', 'k2_pat'], back: { k2_odd: 'k_odd', k2_pat: 'k_pattern' } },
+  k_path: { gens: [], back: {}, game: true }   /* вторая доска «Тропинки» — своя игра (js/k-path.js) */
 };
 const step2Key = tid => tid + '#2';
 const step2Open = tid => !!KID_STEP2[tid] && (S.stars[tid] || 0) >= 3;

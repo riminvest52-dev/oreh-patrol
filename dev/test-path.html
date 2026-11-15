@@ -39,6 +39,28 @@ for (const n of [10, 20]) {
   const avg = a => Math.round(a.reduce((s, x) => s + x, 0) / a.length * 10) / 10;
   sim[n] = { ходов: avg(turns), минут: avg(mins), побед_Лизы: Math.round(avg(lizaWins) * 100) + '%' };
 }
+/* 3б. Вторая доска: ускорители (+3) и ловушки (−2) — правильные места, прыжок на обычную клетку; партия кончается */
+for (const d of [1, 2, 3]) for (let i = 0; i < 5000; i++) {
+  const sp = pathSpecials(d, 20), ks = Object.keys(sp).map(Number), up = ks.filter(k => sp[k] === 3).length, dn = ks.filter(k => sp[k] === -2).length;
+  if (up !== 3 || dn !== (d >= 2 ? 3 : 0)) errs.push(`особых клеток: d${d} +${up} −${dn}`);
+  for (const k of ks) {
+    const to = k + sp[k];
+    if (to < 1 || to >= 20 || to in sp || (k + 1) in sp) errs.push(`прыжок: ${k}→${to} ${JSON.stringify(sp)}`);
+    const a = pathJumpSay(k, sp[k]), q = pathJumpAsk(k, sp[k]);
+    if (+a[5] !== to || q.ans !== to) errs.push(`озвучка прыжка ${k}`);
+    a.forEach(x => said.add('zh|' + x)); said.add('nr|' + q.text); said.add('zh|Попробуй ещё раз! ' + q.hint);
+  }
+  const pos = [0, 0]; let turn = 0, guard = 0;
+  while (guard++ < 500) {
+    const r = pathSpin(turn === 1, true); if (r < 1 || r > 3) errs.push('волчок ' + r);
+    pos[turn] = Math.min(20, pos[turn] + r); if (pos[turn] < 20 && sp[pos[turn]]) pos[turn] += sp[pos[turn]];
+    if (pos[turn] >= 20) break; turn = 1 - turn;
+  }
+  if (guard >= 500) errs.push('бесконечная партия на второй доске');
+  if (i < 30) for (let r = 1; r <= 3; r++) for (let p = 0; p < 20; p++) { const q = pathAsk(p, r, 20); if (q) { said.add('nr|' + q.text); said.add('zh|Попробуй ещё раз! ' + q.hint); } }
+}
+said.add('zh|Вторая тропинка! Тут есть ускорители и ловушки.'); said.add('zh|Выпало 3.');
+
 /* 4. Озвучка: у каждой фразы раздела есть запись */
 for (const [w, t] of pathPhrases()) said.add(w + '|' + t);
 for (let k = 1; k <= 20; k++) said.add('zh|' + k);

@@ -68,6 +68,9 @@
     save(); showHouse();
     if (s === 'hbuy') ACT.hPick({ dataset: { id: 'sofa' } });
   }
+  /* Вторая доска «Тропинки»: d — уровень (1–3) */
+  if (s === 'path2') { S.stars['k_path#2'] = d - 1; save(); pathSetup(2); if (q.get('go')) pathStart('bird'); }
+  if (s === 'pick2') { showKidMap(); kidStepPick('k_path'); }
   if (window.SHOT_EXTRA) SHOT_EXTRA(s, q);
 </script>
 </body>

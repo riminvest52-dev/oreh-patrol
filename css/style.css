@@ -676,3 +676,14 @@ span.coin { cursor: default; width: calc(var(--ki) * 1.05); height: calc(var(--k
   .hshop { max-height: calc(100vh - 110px); overflow: auto; }
   .hcards { grid-template-columns: 1fr 1fr; }
 }
+
+/* ---------- Тропинка, вторая доска: ускорители и ловушки ---------- */
+.pcell .psp { position: absolute; top: 100%; left: 50%; transform: translateX(-50%); font-style: normal; font-weight: 800; font-size: clamp(11px, 1.2vw, 16px); line-height: 1.2; margin-top: 4px; white-space: nowrap; }
+.ptrack.two { margin-bottom: 34px; }
+@media (max-width: 700px) { .ptrack.two .pcells { row-gap: 22px; } .ptrack.two { margin-bottom: 26px; } }
+.pcell.boost b { background: #DDF2CC; border-color: #5FA83A; }
+.pcell.trap b { background: #FBE0D8; border-color: #D2694B; }
+.pcell.boost .psp { color: #3E7F22; }
+.pcell.trap .psp { color: #B24A2E; }
+.pcell.p0.boost b, .pcell.p0.trap b { background: var(--c0); }
+.pcell.p1.boost b, .pcell.p1.trap b { background: var(--c1); }

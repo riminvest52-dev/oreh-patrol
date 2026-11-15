@@ -2,7 +2,10 @@
    Строго: клетки в ОДИН ряд слева направо, на каждой — крупная цифра. Не по кругу, не цветами без чисел.
    Волчок 1–2, фишка идёт по клеткам, каждое число звучит вслух. Соперник — Сорока или второй игрок.
    Между ходами: «Сейчас 4, выпало 2 — на какую клетку придёшь?», «Покажи, где живёт число 7».
-   Ступени: 1 — 10 клеток, шагаем нажатием на каждую клетку; 2 — 10 клеток и вопросы; 3 — 20 клеток и вопросы. */
+   Ступени: 1 — 10 клеток, шагаем нажатием на каждую клетку; 2 — 10 клеток и вопросы; 3 — 20 клеток и вопросы.
+   Вторая доска (задание 10, п. 4; открывается после трёх звёзд): 20 клеток, волчок 1–3, ускорители (+3) и ловушки (−2).
+   Каждый прыжок звучит: «Было 12, плюс три. Стало 15». Уровни: 1 — только ускорители; 2 — и ловушки, вопросы «куда придёшь»;
+   3 — ещё и «Ускоритель! Куда попадёшь?». Звёзды — S.stars['k_path#2'], медаль за третью. */
 'use strict';
 
 const PATH_ID = 'k_path';
@@ -10,7 +13,27 @@ let PT = null;
 
 /* ---------- Чистые функции (их проверяет dev/test-path.html) ---------- */
 const pathCells = d => d >= 3 ? 20 : 10;
-const pathSpin = bird => (bird ? R.chance(0.55) : R.chance(0.5)) ? 1 : 2;   /* Сорока чуть чаще получает 1 */
+const pathSpin = (bird, two) => two ? R.int(1, 3) : (bird ? R.chance(0.55) : R.chance(0.5)) ? 1 : 2;   /* Сорока чуть чаще получает 1 */
+/* Вторая доска: особые клетки { клетка: +3 | −2 }. Не рядом друг с другом, прыжок не попадает на особую клетку и не выходит за доску */
+function pathSpecials(d, n = 20) {
+  const want = [3, 3, 3].concat(d >= 2 ? [-2, -2, -2] : []);
+  for (let attempt = 0; attempt < 1000; attempt++) {   /* раскладка целиком: если не уложились — пробуем заново */
+    const sp = {}, used = k => k in sp || Object.entries(sp).some(([c, v]) => +c + v === k);
+    for (const dl of want) {
+      for (let tries = 0; tries < 40; tries++) {
+        const k = dl > 0 ? R.int(2, n - 4) : R.int(5, n - 2), to = k + dl;
+        if (used(k) || used(to) || (k - 1) in sp || (k + 1) in sp || to < 1 || to >= n) continue;
+        sp[k] = dl; break;
+      }
+    }
+    if (Object.keys(sp).length === want.length) return sp;
+  }
+  return d >= 2 ? { 2: 3, 4: 3, 13: 3, 8: -2, 11: -2, 17: -2 } : { 3: 3, 9: 3, 14: 3 };   /* запасная раскладка (проверена) */
+}
+/* Прыжок с особой клетки: кусочки озвучки и текст в облачке */
+const pathJumpSay = (a, dl) => [dl > 0 ? 'Ускоритель!' : 'Ловушка!', 'Было', String(a), dl > 0 ? 'плюс три.' : 'минус два.', 'Стало', String(a + dl)];
+const pathJumpAsk = (a, dl) => ({ kind: 'jump', ans: a + dl, text: dl > 0 ? 'Ускоритель! Плюс три. Куда попадёшь?' : 'Ловушка! Минус два. Куда попадёшь?',
+  hint: dl > 0 ? 'Шагай вперёд на 3 клетки.' : 'Шагай назад на 2 клетки.' });
 /* Вопрос «куда придёшь»: только если не перешагиваем дуб */
 function pathAsk(pos, r, n) {
   if (pos + r > n) return null;
@@ -33,21 +56,27 @@ function pathPhrases() {
     'Шагай: нажимай на клетки по порядку.', 'Нажми на следующую клетку.', 'Считай со мной!', 'Попробуй ещё раз!', 'Смотри.',
     'Ура! Мы у дуба!', 'Сорока прилетела первой!', 'А ты отлично считала. Сыграем ещё?', 'Жёлудик первый у дуба!', 'Фундук первый у дуба!',
     'Верно!', 'Шагай с первой клетки.', 'Считай клетки слева: один, два, три…'].forEach(zh);
-  for (let r = 1; r <= 2; r++) zh(`Выпало ${r}.`);
+  for (let r = 1; r <= 3; r++) zh(`Выпало ${r}.`);
+  /* Вторая доска */
+  ['Ускоритель!', 'Ловушка!', 'Было', 'Стало', 'плюс три.', 'минус два.', 'Шагай вперёд на 3 клетки.', 'Шагай назад на 2 клетки.',
+    'Вторая тропинка! Тут есть ускорители и ловушки.'].forEach(zh);
+  nr('Ускоритель! Плюс три. Куда попадёшь?'); nr('Ловушка! Минус два. Куда попадёшь?'); nr('Выпало 3.');
   for (let k = 1; k <= 20; k++) { zh(String(k)); zh(`Вот число ${k}.`); nr(`Покажи, где живёт число ${k}.`); }
   for (let k = 1; k <= 19; k++) { zh(`Встань на клетку ${k} и шагай вперёд.`); nr(`Сейчас ${k}.`); }
   nr('Ты на старте.'); nr('Выпало 1.'); nr('Выпало 2.'); nr('На какую клетку придёшь?');
   return out;
 }
-KID_GAMES[PATH_ID] = { start: () => pathSetup(), phrases: pathPhrases };
+KID_GAMES[PATH_ID] = { start: step => pathSetup(step), phrases: pathPhrases };
+let PATH_STEP = 1;   /* какая доска выбрана: 1 или 2 (вторая) */
 
 /* ---------- Экран выбора соперника ---------- */
-function pathSetup() {
-  PT = null; Voice.stop();
-  mountKid(`<div class="playtop"><button class="iconbtn" data-act="map" aria-label="На полянку">✕</button><div class="grow"><b>Тропинка к дубу</b></div></div>
+function pathSetup(step = 1) {
+  PT = null; Voice.stop(); PATH_STEP = step === 2 ? 2 : 1;
+  const two = PATH_STEP === 2;
+  mountKid(`<div class="playtop"><button class="iconbtn" data-act="map" aria-label="На полянку">✕</button><div class="grow"><b>Тропинка к дубу${two ? ' · 🌟🌟' : ''}</b></div></div>
     <div class="psetup">
       <div class="pduo">${ART.zhel('happy')}${ART.soroka('happy')}</div>
-      <div class="bubble" style="font-size:20px">Добежим до дуба? Крути волчок, шагай по числам и считай вслух!</div>
+      <div class="bubble" style="font-size:20px">${two ? 'Вторая тропинка — до 20! 🚀 Ускоритель — прыжок вперёд на 3, 🕳️ ловушка — назад на 2.' : 'Добежим до дуба? Крути волчок, шагай по числам и считай вслух!'}</div>
       <div class="stack">
         <button class="btn green block big" data-act="pGo" data-m="bird">🐦 С Сорокой</button>
         <button class="btn gold block big" data-act="pGo" data-m="two">👫 Вдвоём на одном планшете</button>
@@ -55,7 +84,7 @@ function pathSetup() {
       <p class="small muted center">Вдвоём: Жёлудик — первый игрок, Фундук — второй.</p>
     </div>`);
   Voice.prefetch(PATH_ID);
-  Voice.say('С кем будешь играть?', 'zh');
+  Voice.say(two ? ['Вторая тропинка! Тут есть ускорители и ловушки.', 'С кем будешь играть?'] : 'С кем будешь играть?', 'zh');
 }
 ACT.pGo = el => pathStart(el.dataset.m);
 ACT.pAgain = () => pathStart(PT ? PT.mode : 'bird');
@@ -74,8 +103,9 @@ const P_COLORS = { zhel: ['#FFD978', '#D99A1E'], sor: ['#A6E3DE', '#2F9C9A'], fu
 const pDots = r => '<span class="pdots">' + '●'.repeat(r) + '</span>';
 
 function pathStart(mode) {
-  const d = kidLevel(PATH_ID), n = pathCells(d);
-  PT = { id: Math.random(), mode, d, n, pos: [0, 0], turn: 0, human: 0, asks: 0, first: 0, acorns: 0, phase: 'idle', q: null, tries: 0, need: 0, target: 0 };
+  const two = PATH_STEP === 2 && typeof kidLevel2 === 'function';
+  const d = two ? kidLevel2(PATH_ID) : kidLevel(PATH_ID), n = two ? 20 : pathCells(d);
+  PT = { id: Math.random(), mode, d, n, two, sp: two ? pathSpecials(d, n) : null, pos: [0, 0], turn: 0, human: 0, asks: 0, first: 0, acorns: 0, phase: 'idle', q: null, tries: 0, need: 0, target: 0 };
   K = null;
   pathRender();
   pathTurn();
@@ -88,11 +118,13 @@ const pWait = ms => new Promise(r => setTimeout(r, ms));
 /* ---------- Отрисовка ---------- */
 function pathRender() {
   const P = PT, pl = P_PLAYERS[P.mode];
-  const cells = Array.from({ length: P.n }, (_, i) => `<button class="pcell" data-act="pCell" data-i="${i + 1}"><span class="ptoks"></span><b>${i + 1}</b></button>`).join('');
+  const spc = k => !P.sp || !P.sp[k] ? '' : P.sp[k] > 0 ? ' boost' : ' trap';
+  const spi = k => !P.sp || !P.sp[k] ? '' : `<i class="psp">${P.sp[k] > 0 ? '🚀+3' : '🕳️−2'}</i>`;
+  const cells = Array.from({ length: P.n }, (_, i) => `<button class="pcell${spc(i + 1)}" data-act="pCell" data-i="${i + 1}"><span class="ptoks"></span><b>${i + 1}</b>${spi(i + 1)}</button>`).join('');
   mountKid(`<div class="kplay ppath">
-    <div class="playtop"><button class="iconbtn" data-act="pQuit" aria-label="Выйти">✕</button><div class="grow"><b>Тропинка к дубу</b></div>
+    <div class="playtop"><button class="iconbtn" data-act="pQuit" aria-label="Выйти">✕</button><div class="grow"><b>Тропинка к дубу${P.two ? ' · 🌟🌟' : ''}</b></div>
       <span class="pill">${ART.acorn(20)}<span id="pac">${P.acorns}</span></span></div>
-    <div class="ptrack ${P.n > 10 ? 'n20' : ''}">
+    <div class="ptrack ${P.n > 10 ? 'n20' : ''}${P.two ? ' two' : ''}">
       <div class="pstart"><span class="ptoks"></span><b>старт</b></div>
       <div class="pcells">${cells}</div>
       <div class="poak">${ART.oak()}</div>
@@ -137,10 +169,10 @@ async function pathTurn() {
     pBub('Ход Сороки! 🐦', 'happy');
     await Voice.say('Ход Сороки!', 'zh'); if (!pAlive(id)) return;
     await pWait(300);
-    return pathSpun(pathSpin(true));
+    return pathSpun(pathSpin(true, P.two));
   }
   /* Регулярно (на 10 клетках чаще, на 20 — реже, чтобы партия укладывалась в 3–5 минут) — сначала «покажи, где живёт число» */
-  const every = P.n > 10 ? 4 : 3;
+  const every = P.two && P.d === 1 ? 2 : P.n > 10 ? 4 : 3;   /* вторая доска, 1-й уровень: вопросов «куда придёшь» нет — чаще «где живёт число» */
   if (P.turn === 0 && P.human % every === every - 1) {
     P.human++;
     return pathQuestion(pathWhere(P.n, P.pos.filter(Boolean)), () => pathTurn());
@@ -154,7 +186,7 @@ async function pathTurn() {
 ACT.pSpin = () => {
   if (!PT || PT.phase !== 'spin') return;
   PT.phase = 'spinning';
-  pathSpun(pathSpin(false));
+  pathSpun(pathSpin(false, PT.two));
 };
 async function pathSpun(r) {
   const P = PT, id = P.id, k = P.turn;
@@ -167,17 +199,40 @@ async function pathSpun(r) {
   else pBub(`Выпало <b class="pbig">${r}</b> ${pDots(r)}`, 'happy');
   await Voice.say(`Выпало ${r}.`, 'zh'); if (!pAlive(id)) return;
   const pos = P.pos[k], target = Math.min(P.n, pos + r);
-  if (P_PLAYERS[P.mode][k].bot) { await pathWalk(k, target); return pathAfter(); }
-  if (P.d === 1) {   /* ступень 1: шагаем сами, нажимая на каждую клетку */
+  if (P_PLAYERS[P.mode][k].bot) { await pathWalk(k, target); return pathLand(k); }
+  if (P.d === 1 && !P.two) {   /* ступень 1: шагаем сами, нажимая на каждую клетку */
     P.phase = 'tap'; P.target = target; P.tries = 0;
     pMark(pos + 1, 'next');
     pBub('Шагай: нажимай на клетки по порядку 👆', 'show');
     Voice.say('Шагай: нажимай на клетки по порядку.', 'zh');
     return;
   }
-  const q = pathAsk(pos, r, P.n);
-  if (!q) { await pathWalk(k, target); return pathAfter(); }
-  pathQuestion(q, async () => { await pathWalk(k, target); pathAfter(); });
+  const q = P.two && P.d === 1 ? null : pathAsk(pos, r, P.n);
+  if (!q) { await pathWalk(k, target); return pathLand(k); }
+  pathQuestion(q, async () => { await pathWalk(k, target); pathLand(k); });
+}
+
+/* Вторая доска: встали на ускоритель или ловушку — прыжок. На 3-м уровне сначала вопрос «Куда попадёшь?» */
+function pathLand(k) {
+  const P = PT; if (!P) return;
+  const a = P.pos[k], dl = P.sp && a < P.n ? P.sp[a] || 0 : 0;
+  if (!dl) return pathAfter();
+  if (P.d >= 3 && !P_PLAYERS[P.mode][k].bot) return pathQuestion(pathJumpAsk(a, dl), () => pathJump(k, a, dl));
+  pathJump(k, a, dl);
+}
+async function pathJump(k, a, dl) {
+  const P = PT, id = P.id, b = a + dl;
+  pClear(); pMark(a, dl > 0 ? 'ok' : 'hint');
+  pBub(`${dl > 0 ? '🚀 Ускоритель!' : '🕳️ Ловушка!'} Было <b>${a}</b>, ${dl > 0 ? 'плюс 3' : 'минус 2'}…`, dl > 0 ? 'cheer' : 'think');
+  const say = pathJumpSay(a, dl);
+  await Voice.say(say.slice(0, 4), 'zh'); if (!pAlive(id)) return;
+  /* фишка прыгает по клеткам — видно, куда */
+  while (P.pos[k] !== b) { P.pos[k] += Math.sign(dl); pathTokens(); pathHop(k); await pWait(260); if (!pAlive(id)) return; }
+  pClear(); pMark(b, 'goal');
+  pBub(`Было <b>${a}</b>, ${dl > 0 ? 'плюс 3' : 'минус 2'} — стало <b class="pbig">${b}</b>`, dl > 0 ? 'cheer' : 'happy');
+  await Voice.say(say.slice(4), 'zh'); if (!pAlive(id)) return;
+  await pWait(500); if (!pAlive(id)) return;
+  pathAfter();
 }
 
 /* Вопрос с ответом нажатием на клетку; после 2 ошибок Жёлудик показывает */
@@ -295,20 +350,22 @@ async function pathFinish(winner) {
   const P = PT; P.phase = 'end';
   const pl = P_PLAYERS[P.mode], w = pl[winner];
   markActive();
-  const prev = S.stars[PATH_ID] || 0;
+  const key = P.two ? PATH_ID + '#2' : PATH_ID, prev = S.stars[key] || 0;
   const earn = prev < 3 && P.asks >= 3 && P.first / P.asks >= 0.8;
-  if (earn) S.stars[PATH_ID] = prev + 1;
+  if (earn) S.stars[key] = prev + 1;
+  const medal = P.two && earn && S.stars[key] === 3 && !S.medals[key];   /* медаль за пройденную вторую доску */
+  if (medal) S.medals[key] = today();
   giveAcorns(2); save(); Sound.win(); confetti(winner === 0 || P.mode === 'two' ? 26 : 12);
   const lizaWon = winner === 0 && P.mode === 'bird';
   const title = P.mode === 'two' ? `${w.name} первый у дуба!` : lizaWon ? 'Ура! Мы у дуба!' : 'Сорока прилетела первой!';
-  const st = S.stars[PATH_ID] || 0;
+  const st = S.stars[key] || 0;
   mountKid(`<div class="result pfinal">
     <div class="pscene">${ART.oak('big')}<div class="pwin">${winner === 0 ? ART.zhel('cheer') : w.who === 'sor' ? ART.soroka('cheer') : ART.chip('funduk', 'cheer')}</div>
       <div class="plose">${winner === 0 ? (pl[1].who === 'sor' ? ART.soroka('oops') : ART.chip('funduk', 'happy', '', true)) : ART.zhel('happy')}</div></div>
     <h1>${title}</h1>
     ${!lizaWon && P.mode === 'bird' ? '<p style="font-size:20px">А ты отлично считала!</p>' : ''}
     <div class="bigstars kst">${'★'.repeat(st)}<i>${'★'.repeat(3 - st)}</i></div>
-    ${earn ? '<p style="font-size:20px"><b>Новая звёздочка!</b></p>' : ''}
+    ${earn ? '<p style="font-size:20px"><b>Новая звёздочка!</b></p>' : ''}${medal ? '<div class="kmedal">🏅</div><p style="font-size:20px"><b>Медаль за вторую тропинку!</b></p>' : ''}
     <p style="font-size:18px">Сразу верно: <b>${P.first}</b> из ${P.asks}</p>
     <p><span class="pill">+${P.acorns + 2} ${ART.acorn(20)}</span></p>
     <div class="stack"><button class="btn green block big" data-act="pAgain">Ещё раз 🔁</button><button class="btn ghost block big" data-act="map">На полянку 🌳</button></div></div>`);
@@ -316,5 +373,5 @@ async function pathFinish(winner) {
   if (PT !== P) return;
   if (!lizaWon && P.mode === 'bird') await Voice.say('А ты отлично считала. Сыграем ещё?', 'zh');
   if (PT !== P) return;
-  Praise.say(earn ? 'star' : 'level', 'kid');
+  Praise.say(medal ? 'medal' : earn ? 'star' : 'level', 'kid');
 }
