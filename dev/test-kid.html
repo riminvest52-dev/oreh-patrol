@@ -6,9 +6,9 @@
 <script src="../js/core.js"></script><script src="../js/t-fund.js"></script><script src="../js/t-lang.js"></script><script src="../js/t-models.js"></script>
 <script src="../js/t-logic.js"></script><script src="../js/t-div.js"></script><script src="../js/topics.js"></script><script src="../js/art.js"></script><script src="../js/art2.js"></script>
 <script src="../js/state.js"></script><script src="../js/cloud.js"></script><script src="../js/ui.js"></script><script src="../js/voice-data.js"></script><script src="../js/voice.js"></script><script src="../js/play.js"></script>
-<script src="../js/screens.js"></script><script src="../js/kid.js"></script><script src="../js/k-path.js"></script><script src="../js/k-step2.js"></script>
+<script src="../js/screens.js"></script><script src="../js/kid.js"></script><script src="../js/k-path.js"></script><script src="../js/k-step2.js"></script><script src="../js/k-shop.js"></script>
 <script>
-const RUNS = 300, KINDS = ['pick', 'count', 'put', 'frame', 'flash'];
+const RUNS = 300, KINDS = ['pick', 'count', 'put', 'frame', 'flash', 'coins'];
 const BAD = /undefined|NaN|null|\[object/;
 function checkKid(t) {
   const e = [];
@@ -23,6 +23,13 @@ function checkKid(t) {
     if (t.opts.some(o => !o.h || BAD.test(o.h))) e.push('bad opt html');
   } else if (t.kind === 'pick') e.push('pick without opts');
   if (t.kind === 'put' && !(t.pile >= t.n && t.n === t.ans)) e.push('put pile');
+  /* Лавка Сороки: верные монетки из кошелька дают ровно цену; игрушка есть; цена в пределах ступеньки */
+  if (t.kind === 'coins') {
+    if (!t.sol || t.sol.reduce((s, i) => s + t.wallet[i], 0) !== t.p || t.ans !== t.p) e.push('монетки не дают цену');
+    if (!SHOP_TOYS.some(x => x.id === t.toy)) e.push('нет игрушки');
+    if (t.p > (/^k2_/.test(t.gen) ? 20 : 10)) e.push('цена больше нормы: ' + t.p);
+  }
+  if (Array.isArray(t.say) && t.say.some(x => BAD.test(String(x)) || x === '')) e.push('bad say part');
   if (t.kind === 'frame' && !(t.a < t.t && t.t <= 10 && t.ans === t.t)) e.push('frame');
   if (t.gen === 'k_sub' && t.d < 3) {
     const n = (t.scene.match(/<span/g) || []).length, gone = (t.scene.match(/class="gone"/g) || []).length;

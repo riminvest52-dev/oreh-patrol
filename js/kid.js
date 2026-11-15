@@ -445,14 +445,15 @@ function renderKid() {
     <div class="kbasket"><div class="kbl">🧺 корзинка</div><div class="kin" id="kin"></div></div>`;
   if (t.kind === 'frame') scene = `<div class="tenframe">${Array.from({ length: 10 }, (_, i) => i < t.a ? '<span class="cell fix">🌰</span>' : '<button class="cell" data-act="kCell"></button>').join('')}</div>`;
   if (t.kind === 'flash') scene = `<div class="kflash" id="kfl">${t.scene}</div><button class="btn ghost" data-act="kShow">👀 Покажи ещё раз</button>`;
+  if (t.kind === 'coins') scene = (t.scene || '') + shopCoinsHtml(t);   /* Лавка Сороки: js/k-shop.js */
   if (t.opts) opts = `<div class="kopts ${t.layout || ''}">${t.opts.map((o, i) => `<button class="kopt" data-act="kPick" data-i="${i}">${o.h}</button>`).join('')}</div>`;
-  if (t.kind === 'put' || t.kind === 'frame') opts += '<button class="btn green block big kdone" data-act="kDone">Готово ✓</button>';
+  if (t.kind === 'put' || t.kind === 'frame' || t.kind === 'coins') opts += '<button class="btn green block big kdone" data-act="kDone">Готово ✓</button>';
   mountKid(`<div class="kplay">
     <div class="playtop"><button class="iconbtn" data-act="kQuit" aria-label="Выйти">✕</button><div class="kdots">${dots}</div><span class="pill">${ART.acorn(20)}<span>${K.acorns}</span></span></div>
     <div class="kbody"><div class="kq"><button class="ksay" data-act="kSay" aria-label="Прочитать ещё раз">🔊</button><div class="kt">${t.text}</div></div>
     <div class="kright"><div class="kscene">${scene}</div>${opts}</div>
     <div class="helper" id="khelp">${ART.zhel('happy')}<div class="bubble" id="kbub">${K.i === 0 ? 'Я читаю задание вслух. Нажми 🔊, чтобы послушать ещё раз.' : R.pick(['Ты справишься!', 'Подумай, не спеши.', 'Я рядом!', 'Интересно, что получится?'])}</div></div></div></div>`);
-  Voice.say(t.say, 'nr');
+  Voice.say(t.say, t.who || 'nr');
   if (t.kind === 'flash') kFlash();
 }
 function kFlash() {
@@ -464,7 +465,7 @@ const kBub = (html, mood) => {
   const b = document.getElementById('kbub'); if (b) b.innerHTML = html;
   const h = document.querySelector('#khelp svg'); if (h && mood) h.outerHTML = ART.zhel(mood);
 };
-ACT.kSay = () => { if (K) Voice.say(K.t.say, 'nr'); };
+ACT.kSay = () => { if (K) Voice.say(K.t.say, K.t.who || 'nr'); };
 ACT.kShow = () => { if (K && !K.done) { K.flashTok++; kFlash(); } };
 ACT.kTap = el => {
   if (!K || K.done || el.classList.contains('on')) return;
@@ -485,6 +486,7 @@ ACT.kDone = () => {
   if (!K || K.done) return;
   const t = K.t;
   if (t.kind === 'put') kAnswer(document.getElementById('kin').children.length);
+  else if (t.kind === 'coins') kAnswer(shopSum());
   else kAnswer(t.a + document.querySelectorAll('.tenframe .cell.add').length);
 };
 function kAnswer(v, el) {
@@ -510,6 +512,7 @@ function kSolve() {
     while (kin.children.length > t.n) pile.appendChild(kin.lastElementChild);
     while (kin.children.length < t.n && pile.children.length) kin.appendChild(pile.firstElementChild);
   }
+  if (t.kind === 'coins') shopSolve(t);
   if (t.kind === 'frame') {
     const cells = [...document.querySelectorAll('.tenframe button.cell')];
     cells.forEach((c, i) => { const on = i < t.t - t.a; c.classList.toggle('add', on); c.textContent = on ? '🌰' : ''; });
@@ -518,6 +521,8 @@ function kSolve() {
 function kResolve(ok) {
   const t = K.t; K.done = true;
   const first = ok && K.tries === 0;
+  /* Лавка Сороки: заплатили ровно — игрушка в подарок в Домик Жёлудика */
+  const gift = ok && t.kind === 'coins' && t.toy && typeof shopGift === 'function' && shopGift(t.toy);
   kidRecord(t, first);
   if (first) { K.first++; K.acorns++; giveAcorns(1); K.miss = 0; }
   K.wrongRun = ok ? 0 : K.wrongRun + 1;
@@ -526,14 +531,16 @@ function kResolve(ok) {
     b.disabled = true;
     if (t.opts[i].v === t.ans) b.classList.add('right'); else if (!b.classList.contains('off')) b.classList.add('dim');
   });
-  document.querySelectorAll('.kit, .tenframe .cell, .kdone').forEach(b => { b.disabled = true; });
+  document.querySelectorAll('.kit, .tenframe .cell, .kdone, .coin').forEach(b => { b.disabled = true; });
   if (!ok) kSolve();
   /* Похвала голосом: со второй попытки, 3 и 5 подряд — всегда, обычный верный ответ — примерно 1 из 3 */
   K.run = first ? K.run + 1 : 0;
-  const p = !ok ? null : Praise.say(!first ? 'second' : K.run === 5 ? 'streak5' : K.run === 3 ? 'streak3' : 'ok', 'kid');
+  const p = !ok || gift ? null : Praise.say(!first ? 'second' : K.run === 5 ? 'streak5' : K.run === 3 ? 'streak3' : 'ok', 'kid');
   const praise = p ? esc(p.text) : R.pick(['Молодец!', 'Верно!', 'Умница!', 'Здорово!', 'Отлично!']);
   if (ok) Sound.ok();
-  kBub(ok ? (first ? `${praise} +1 ${ART.acorn(18)}` : p ? praise : `${praise} Получилось!`) : `Смотри! ${esc(t.why)}`, ok ? 'cheer' : 'show');
+  kBub(gift ? `Ура! ${SHOP_TOYS.find(x => x.id === t.toy).e} теперь в Домике Жёлудика!${first ? ` +1 ${ART.acorn(18)}` : ''}`
+    : ok ? (first ? `${praise} +1 ${ART.acorn(18)}` : p ? praise : `${praise} Получилось!`) : `Смотри! ${esc(t.why)}`, ok ? 'cheer' : 'show');
+  if (gift) Voice.say('Ура! Игрушка теперь в домике Жёлудика!', 'zh');
   if (!ok) Voice.say('Смотри. ' + (t.whySay || t.why), 'zh');
   const last = K.i + 1 >= K.queue.length;
   document.querySelector('.kright').insertAdjacentHTML('beforeend', `<button class="btn green block big knext" data-act="kNext">${last ? 'Готово 🏁' : 'Дальше ➜'}</button>`);

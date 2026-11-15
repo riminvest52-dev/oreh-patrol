@@ -622,3 +622,28 @@ svg.kpieces { width: auto; height: calc(var(--ki) * 1.6); }
 .kstep2 { font: 800 20px var(--font); color: var(--gold-d); margin: 0; }
 .kmedal { font-size: 64px; line-height: 1; margin: 6px 0 0; }
 .kstep .btn { display: flex; align-items: center; justify-content: center; gap: 10px; flex-wrap: wrap; }
+
+/* ---------- Лавка Сороки (js/k-shop.js) ---------- */
+.shop { display: flex; align-items: center; gap: 14px; justify-content: center; }
+.stoy { font-size: calc(var(--ki) * 1.7); line-height: 1; }
+.ptag { display: inline-flex; align-items: center; padding: 6px 14px 6px 22px; background: #FFF3DE; border: 3px solid var(--gold-d); border-radius: 6px 14px 14px 6px;
+  font: 900 30px var(--font); color: var(--ink); position: relative; transform: rotate(-4deg); }
+.ptag::before { content: ''; position: absolute; left: 7px; top: 50%; width: 8px; height: 8px; margin-top: -4px; border-radius: 50%; background: var(--gold-d); }
+.coin { width: max(var(--tap), calc(var(--ki) * 1.25)); height: max(var(--tap), calc(var(--ki) * 1.25)); border-radius: 50%; border: 3px solid #8E8E8E; padding: 0;
+  background: radial-gradient(circle at 35% 30%, #FFFFFF, #D9D9D9 55%, #B4B4B4); box-shadow: 0 4px 0 #8E8E8E; display: inline-flex; flex-direction: column;
+  align-items: center; justify-content: center; line-height: 1; color: #4A4A4A; cursor: pointer; margin: 3px; vertical-align: middle; flex: none; }
+.coin b { font: 900 calc(var(--ki) * .55) var(--font); }
+.coin i { font: 800 calc(var(--ki) * .26) var(--font); font-style: normal; opacity: .75; }
+.coin.c10 { border-color: #B07A12; background: radial-gradient(circle at 35% 30%, #FFF4C2, #F2C94C 55%, #D9A21E); box-shadow: 0 4px 0 #B07A12; color: #6B4508; }
+.coin.c5 { width: max(var(--tap), calc(var(--ki) * 1.35)); height: max(var(--tap), calc(var(--ki) * 1.35)); }
+.coin:disabled { cursor: default; }
+span.coin { cursor: default; width: calc(var(--ki) * 1.05); height: calc(var(--ki) * 1.05); }
+.counter { width: 100%; min-height: calc(var(--ki) * 1.7 + 30px); background: #C98A52; border: 3px solid #8A5A2E; border-radius: 16px; padding: 6px 10px; position: relative;
+  display: flex; align-items: center; gap: 8px; }
+.counter .ctl { position: absolute; left: 12px; top: -12px; background: #8A5A2E; color: #FFF3DE; font: 800 14px var(--font); padding: 2px 10px; border-radius: 10px; }
+.counter .cin { flex: 1; display: flex; flex-wrap: wrap; align-items: center; min-height: calc(var(--ki) * 1.3); }
+.counter .csum { font: 900 34px var(--font); color: #fff; text-shadow: 0 2px 0 #8A5A2E; white-space: nowrap; }
+.wallet { display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 2px; font-size: 34px; }
+.wallet.show { background: #fff; border: 3px dashed var(--line); border-radius: 16px; padding: 6px 10px; }
+.dcard { display: flex; flex-direction: column; align-items: center; gap: 6px; }
+.shop svg.sshop { width: calc(var(--ki) * 2.2); height: auto; flex: none; }

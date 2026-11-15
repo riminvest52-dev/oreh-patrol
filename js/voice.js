@@ -4,8 +4,9 @@
    Список записей — VOICE_DATA в js/voice-data.js (его пишет dev/voice/gen.py). */
 'use strict';
 
-/* Кто говорит: zh — Жёлудик, nr — Рассказчик (задания Лизы), fu — Фундук, mi — Миндалинка, ez — Дедушка Ёж, sh — белка Шустрик (4 класс) */
-const VOICE_WHO = ['zh', 'nr', 'fu', 'mi', 'ez', 'sh'];
+/* Кто говорит: zh — Жёлудик, nr — Рассказчик (задания Лизы), fu — Фундук, mi — Миндалинка, ez — Дедушка Ёж, sh — белка Шустрик (4 класс),
+   so — Сорока (Лавка Сороки) */
+const VOICE_WHO = ['zh', 'nr', 'fu', 'mi', 'ez', 'sh', 'so'];
 
 /* Одинаковая нормализация и разрезка здесь и в dev/voice/phrases.html — по ним считается имя файла */
 const voiceClean = s => String(s).replace(/<[^>]+>/g, ' ').replace(/[  ]/g, ' ').replace(/\s+/g, ' ').trim();
@@ -120,14 +121,16 @@ const Voice = (() => {
   return {
     has: tts || !!D, on, stop,
     toggle() { try { localStorage.setItem('oreh_voice', on() ? '0' : '1'); } catch (e) { } if (!on()) stop(); },
-    /* who — кто говорит (по умолчанию Жёлудик) */
+    /* who — кто говорит (по умолчанию Жёлудик). text — строка или список кусочков, которые звучат подряд:
+       ['Игрушка стоит', '7', 'рублей.'] — так цены и числа не нужно записывать каждой фразой целиком */
     say(text, who = 'zh') {
-      if (!on() || !text) return Promise.resolve();
+      if (!on() || !text || (Array.isArray(text) && !text.length)) return Promise.resolve();
       stop();
+      const parts = Array.isArray(text) ? text.map(String) : [text], joined = parts.join(' ');
       const p = new Promise(r => { finish = r; });
-      safety = setTimeout(done, 2500 + voiceClean(text).length * 110);   /* на случай, если звук «завис» */
-      const list = clipsOf(text, who);
-      if (list) playList(list, text, tok); else { st.last = 'браузер (нет записи)'; browserSay(text); }
+      safety = setTimeout(done, 2500 + voiceClean(joined).length * 110);   /* на случай, если звук «завис» */
+      const lists = parts.map(x => clipsOf(x, who)), list = lists.every(Boolean) ? [].concat(...lists) : null;
+      if (list) playList(list, joined, tok); else { st.last = 'браузер (нет записи)'; browserSay(joined); }
       return p;
     },
     /* Докачка записей темы заранее: сервис-воркер положит их в кэш, задания потом звучат сразу и без сети */

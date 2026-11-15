@@ -14,7 +14,7 @@ function addDays(s, n) { const d = new Date(s + 'T12:00:00'); d.setDate(d.getDat
 const fresh = () => ({ v: 2, name: '', created: today(), acorns: 0, earned: 0, sound: true, stars: {}, medals: {},
   mastery: {}, skill: {}, mistakes: [], history: {}, streak: { last: null, count: 0, best: 0 }, daily: { date: null, done: false },
   stickers: [], diag: null, recent: [], hands: {}, play: {}, mul: {}, mulCols: {}, mulBest: 0, solved: 0, right: 0, _epoch: 0, _ts: 0, _tally: {}, gone: {},
-  vpr: null, year: null, school: null });
+  vpr: null, year: null, school: null, toys: [] });
 const newId = p => p + Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
 const readJson = k => { try { const v = localStorage.getItem(k); return v ? JSON.parse(v) : null; } catch (e) { return null; } };
 const writeJson = (k, v) => { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) { } };
@@ -232,6 +232,7 @@ function mergeStates(a, b) {
   for (const k of keysOf(A.stars, B.stars)) R.stars[k] = Math.max(A.stars[k] || 0, B.stars[k] || 0);
   R.medals = Object.assign({}, A.medals, B.medals);
   R.stickers = [...new Set([...A.stickers, ...B.stickers])].sort((x, y) => x - y);
+  R.toys = [...new Set([...(A.toys || []), ...(B.toys || [])])];   /* игрушки из Лавки Сороки (бесплатные) */
 
   for (const d of keysOf(A._tally, B._tally)) {
     R._tally[d] = {};
