@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Задание 11 — скриншоты</title>
+<link rel="stylesheet" href="../css/style.css">
+</head>
+<body>
+<!-- Скриншоты и ручная проверка задания 11: ?w=five|four|kid&s=map|forest|chap|mission|gift|chest|album…
+     Тестовые игроки «Настя» и «Лиза» этого браузера (localhost); облако — только тестовое dev/kv_server.py, настоящее не трогается. -->
+<div id="app"></div>
+<div id="modal" class="modal hidden"></div>
+<div id="toast" class="toast hidden"></div>
+<script>try { localStorage.setItem('oreh_dev_cloud', 'http://localhost:8766/'); localStorage.setItem('oreh_voice', '0'); } catch (e) { }</script>
+<script src="../js/core.js"></script><script src="../js/col.js"></script><script src="../js/t-fund.js"></script><script src="../js/t-lang.js"></script>
+<script src="../js/t-models.js"></script><script src="../js/t-logic.js"></script><script src="../js/t-div.js"></script><script src="../js/t4a.js"></script>
+<script src="../js/t4b.js"></script><script src="../js/t5b.js"></script><script src="../js/topics.js"></script><script src="../js/topics5.js"></script>
+<script src="../js/topics4.js"></script><script src="../js/art.js"></script><script src="../js/art2.js"></script><script src="../js/state.js"></script>
+<script src="../js/cloud.js"></script><script src="../js/ui.js"></script><script>var VOICE_BASE = "../";</script><script src="../js/voice-data.js"></script>
+<script src="../js/voice.js"></script><script src="../js/play.js"></script><script src="../js/t-vol.js"></script><script src="../js/screens.js"></script>
+<script src="../js/vendor/qrcode.js"></script><script src="../js/mult.js"></script><script src="../js/vpr4.js"></script><script src="../js/family.js"></script>
+<script src="../js/kid.js"></script><script src="../js/k-path.js"></script><script src="../js/k-step2.js"></script><script src="../js/k-shop.js"></script>
+<script src="../js/k-house.js"></script><script src="../js/story.js"></script><script src="../js/forest.js"></script><script src="../js/interes.js"></script>
+<script>for (const f of ['mission', 'chest']) document.write(`<script src="../js/${f}.js" onerror="this.remove()"><\/script>`);</script>
+<script>
+  window.onerror = (m, s, l, c, e) => document.body.insertAdjacentHTML('beforeend', `<pre id="err" style="position:fixed;bottom:0;background:#fee">${m} ${l}:${c}</pre>`);
+  const q = new URLSearchParams(location.search), w = q.get('w') || 'five', s = q.get('s') || 'map';
+  /* Тестовые игроки: Настя (5 класс или 4 класс) и Лиза */
+  const prof = world => F.profiles.find(p => p.world === world && !p.del) || (addProfile(world), curProfile());
+  const nas = prof(w === 'four' ? 'four' : 'five'), liz = prof('kid');
+  const day = n => addDays(today(), -n);
+  useProfile(liz.id); S.name = 'Лиза'; S.sound = false;
+  for (const T of KID_TOPICS) S.stars[T.id] = 3;
+  S.stars['k_cnt#2'] = 3; S.medals['k_cnt#2'] = day(2); S.stars['k_add#2'] = 3; S.medals['k_add#2'] = day(1); S.acorns = 340; S.earned = Math.max(S.earned, 340);
+  save();
+  useProfile(nas.id); S.name = 'Настя'; S.sound = false; S.acorns = 214; S.earned = Math.max(S.earned, 380); S.streak = { last: today(), count: 6, best: 9 };
+  for (const id of ['fund', 'lang', 'order', 'models', 'eq', 'logic', 'div', 'big', 'mul4', 'units']) { S.stars[id + ':1'] = 3; S.stars[id + ':2'] = 3; S.stars[id + ':3'] = 2; }
+  S.medals.fund = S.medals.div = true; S.diag = { date: day(20), scores: {} };
+  save();
+  if (q.get('fam')) { F.code = 'TESTFAM2'; saveFamily(); }   /* семья включена — только с тестовым облаком */
+  useProfile(w === 'kid' ? liz.id : nas.id);
+  const nFresh = +(q.get('fresh') || 0);
+  if (q.has('fresh')) { const al = forestAlive(S, worldOf()); S.forest = { seen: al.slice(0, Math.max(0, al.length - nFresh)), read: (q.get('read') || '').split(',').filter(Boolean).map(Number), init: 1 }; save(); }
+  if (s === 'map') enterWorld();
+  if (s === 'forest') showForest();
+  if (s === 'chap') ACT.chapter({ dataset: { i: q.get('i') || '0' } });
+  if (s === 'album') showAlbum();
+  if (window.SHOT_EXTRA) SHOT_EXTRA(s, q, { nas, liz });
+</script>
+</body>
+</html>

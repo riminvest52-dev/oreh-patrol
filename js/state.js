@@ -14,7 +14,7 @@ function addDays(s, n) { const d = new Date(s + 'T12:00:00'); d.setDate(d.getDat
 const fresh = () => ({ v: 2, name: '', created: today(), acorns: 0, earned: 0, sound: true, stars: {}, medals: {},
   mastery: {}, skill: {}, mistakes: [], history: {}, streak: { last: null, count: 0, best: 0 }, daily: { date: null, done: false },
   stickers: [], diag: null, recent: [], hands: {}, play: {}, mul: {}, mulCols: {}, mulBest: 0, solved: 0, right: 0, _epoch: 0, _ts: 0, _tally: {}, gone: {},
-  vpr: null, year: null, school: null, toys: [], house: null });
+  vpr: null, year: null, school: null, toys: [], house: null, forest: null, fam: null, coll: [], chest: null, wear: null });
 const newId = p => p + Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
 const readJson = k => { try { const v = localStorage.getItem(k); return v ? JSON.parse(v) : null; } catch (e) { return null; } };
 const writeJson = (k, v) => { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) { } };
@@ -291,6 +291,9 @@ function mergeStates(a, b) {
   /* Время игры: секунды по дням и устройствам, берём большее */
   const PA = A.play || {}, PB = B.play || {};
   for (const d of keysOf(PA, PB)) { const x = PA[d] || {}, y = PB[d] || {}; R.play[d] = {}; for (const k of keysOf(x, y)) R.play[d][k] = Math.max(x[k] || 0, y[k] || 0); }
+
+  /* Задание 11: лес (js/forest.js), семейная миссия (js/mission.js), сундук-сюрприз (js/chest.js) */
+  if (typeof mergeInteres === 'function') mergeInteres(A, B, R, keysOf);
 
   /* Таблица умножения (js/mult.js): по каждому примеру — более свежая запись */
   if (typeof mergeMul === 'function') mergeMul(A, B, R);

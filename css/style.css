@@ -687,3 +687,49 @@ span.coin { cursor: default; width: calc(var(--ki) * 1.05); height: calc(var(--k
 .pcell.trap .psp { color: #B24A2E; }
 .pcell.p0.boost b, .pcell.p0.trap b { background: var(--c0); }
 .pcell.p1.boost b, .pcell.p1.trap b { background: var(--c1); }
+
+/* ---------- «Мой лес» и истории (js/forest.js, задание 11) ---------- */
+.fcard { display: flex; align-items: center; gap: 12px; width: 100%; margin: 6px 0 12px; padding: 8px 12px 8px 8px; border: 3px solid var(--line); border-radius: 22px;
+  background: var(--card); box-shadow: 0 4px 0 var(--line); cursor: pointer; font: inherit; color: var(--ink); text-align: left; }
+.fcard .fsvg.thumb { width: 132px; flex: none; border-radius: 14px; border: 2px solid #8A5A2E; }
+.fcard .fct { display: flex; flex-direction: column; gap: 2px; font-size: 18px; }
+.fcard.news { border-color: var(--gold); box-shadow: 0 4px 0 var(--gold-d); animation: fpulse 1.6s ease-in-out infinite; }
+.fnew { color: var(--orange-d); }
+.fsvg { display: block; width: 100%; height: auto; }
+.fbig .fsvg { border-radius: 22px; border: 4px solid #8A5A2E; }
+.fo { transform-box: fill-box; transform-origin: 50% 80%; transition: opacity .6s, filter .6s; }
+.fo.off { opacity: .16; filter: grayscale(1); }
+.fo.off * { animation: none !important; }
+.fo.wake { animation: fwake 2.4s ease-out both; }
+@keyframes fwake { 0% { opacity: .16; filter: grayscale(1); transform: scale(.85); } 35% { opacity: 1; filter: grayscale(0) drop-shadow(0 0 18px #FFE58A); transform: scale(1.12); }
+  70% { transform: scale(.98); } 100% { opacity: 1; filter: grayscale(0); transform: scale(1); } }
+.fo .spin { transform-box: fill-box; transform-origin: center; animation: fspin 24s linear infinite; }
+.fo .flap { animation: fbob 3s ease-in-out infinite; }
+.fo .sway { transform-box: fill-box; transform-origin: 50% 0; animation: fsway 3.4s ease-in-out infinite; }
+.fo .glow { animation: fglow 2.6s ease-in-out infinite; }
+.fo .swim { animation: fbob 2.4s ease-in-out infinite; }
+@keyframes fspin { to { transform: rotate(360deg); } }
+@keyframes fbob { 50% { transform: translateY(-6px); } }
+@keyframes fsway { 50% { transform: rotate(6deg); } }
+@keyframes fglow { 50% { opacity: .45; } }
+@media (prefers-reduced-motion: reduce) { .fo * { animation: none !important; } }
+.fsay { margin: 12px 0 4px; font-size: 20px; text-align: center; }
+.fnext { margin-top: 10px; } .fnext ul { margin: 6px 0 0; padding-left: 20px; }
+.fchs { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 10px; }
+.fch { display: flex; gap: 10px; align-items: center; text-align: left; padding: 10px 12px; border: 3px solid var(--line); border-radius: 18px; background: #fff; box-shadow: 0 4px 0 var(--line);
+  font: inherit; color: var(--ink); cursor: pointer; }
+.fch > span:last-child { display: flex; flex-direction: column; }
+.fchn { flex: none; width: 38px; height: 38px; border-radius: 50%; background: var(--gold); color: #fff; font-weight: 800; display: flex; align-items: center; justify-content: center; font-size: 19px; }
+.fch.lock { opacity: .55; } .fch.lock .fchn { background: var(--muted); }
+.fch.new { border-color: var(--green); box-shadow: 0 4px 0 var(--green-d); animation: fpulse 1.6s ease-in-out infinite; }
+.story { min-height: 300px; }
+.sline { display: flex; gap: 14px; align-items: center; animation: fadein .35s ease; }
+.sline .spic { flex: none; width: 150px; }
+.sline .spic svg { width: 100%; height: auto; }
+.sline .bubble { flex: 1; font-size: 22px; line-height: 1.35; }
+.sline.secret .bubble { background: #FFF6D6; border-color: var(--gold); }
+.ezpic { font-size: 96px; text-align: center; line-height: 1.2; }
+.sdots { display: flex; gap: 8px; justify-content: center; margin-top: 16px; }
+.sdots i { width: 12px; height: 12px; border-radius: 50%; background: var(--line); } .sdots i.on { background: var(--orange); }
+@media (max-width: 600px) { .sline { flex-direction: column; } .sline .spic { width: 120px; } .sline .bubble { font-size: 19px; } .fcard .fsvg.thumb { width: 104px; } }
+@keyframes fpulse { 50% { transform: scale(1.02); } }

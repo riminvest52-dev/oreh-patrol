@@ -410,6 +410,7 @@ function showKidMap() {
   mountKid(`<div class="topbar"><div class="avatar" data-act="who" role="button" aria-label="Сменить игрока">${ART.zhel('happy')}<span class="swap">⇄</span></div>
       <div class="grow"><div class="hello">Привет, ${esc(S.name || 'друг')}!</div><div class="small muted">Лесная полянка</div></div>
       <span class="pill">${ART.acorn(22)}${S.acorns}</span><button class="iconbtn" data-act="parent" aria-label="Для взрослых">⚙️${cloudDot()}</button></div>
+    ${typeof forestCard === 'function' ? forestCard() : ''}
     <div class="ktiles">${tiles}</div>
     <div class="krowb"><button class="btn green block big" data-act="house">🏠 Домик Жёлудика</button>
       <button class="btn gold block big" data-act="album">📒 Наклейки · ${S.stickers.length}</button></div>`);
@@ -575,7 +576,7 @@ function kidFinish() {
     ${medal ? `<p class="kmedal">🏅</p><p style="font-size:20px"><b>Новая медаль: ${esc(KTOPIC[k.tid].name)}!</b></p>` : earn ? '<p style="font-size:20px"><b>Новая звёздочка!</b></p>' : ''}
     <p style="font-size:20px">Сразу верно: <b>${k.first}</b> из ${k.queue.length}</p>
     <p><span class="pill">+${k.acorns + 2} ${ART.acorn(20)}</span></p>
-    <div class="stack"><button class="btn green block big" data-act="kAgain" data-id="${k.tid}" data-s="${k.step}">Ещё раз 🔁</button><button class="btn ghost block big" data-act="map">На полянку 🌳</button></div></div>`);
+    <div class="stack">${typeof forestNews === 'function' && forestNews(S, 'kid').fresh.length ? '<button class="btn gold block big" data-act="forest">🌳 Лес оживает! ✨</button>' : ''}<button class="btn green block big" data-act="kAgain" data-id="${k.tid}" data-s="${k.step}">Ещё раз 🔁</button><button class="btn ghost block big" data-act="map">На полянку 🌳</button></div></div>`);
   Praise.say(medal ? 'medal' : earn ? 'star' : 'level', 'kid');
 }
 

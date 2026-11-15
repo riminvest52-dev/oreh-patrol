@@ -115,6 +115,7 @@ function showMap() {
       <div class="qcard ${S.diag ? '' : 'hot first'}" data-act="${S.diag ? 'diagAsk' : 'diag'}">${S.diag ? '' : '<div class="tip">Начни отсюда!</div>'}<div class="qi">🧭</div><div><div class="qt">Проверка сил</div><div class="qs">${S.diag ? 'Пройдена ' + S.diag.date.split('-').reverse().slice(0, 2).join('.') : diagCount() + ' задач — с чего начать'}</div></div></div>
       <div class="qcard" data-act="album"><div class="qi">📒</div><div><div class="qt">Альбом наклеек</div><div class="qs">${S.stickers.length} из ${STICKERS.length}</div></div></div>
     </div>`}
+    ${typeof forestCard === 'function' ? forestCard() : ''}
     <h3 style="margin:4px 0 0">${four ? 'Лес 4 класса' : 'Тропа 5 класса'}</h3>
     <div class="forest" style="height:${H}px"><svg class="paths" viewBox="0 0 ${W} ${H}" preserveAspectRatio="none">${deco}
       <path d="${path}" stroke="#E2B47C" stroke-width="22" fill="none" stroke-linecap="round"/><path d="${path}" stroke="#F6D7A6" stroke-width="12" fill="none" stroke-linecap="round" stroke-dasharray="2 18"/></svg>${signs}${nodes}</div>`);
@@ -157,6 +158,8 @@ ACT.sheet = () => { const T = TOPIC[curTopic]; modal(`<h2>📜 Как решат
 let LASTRES = null;
 function showResult(r) {
   LASTRES = r;
+  /* В лесу ожил новый объект — кнопка «Лес оживает!» (js/forest.js) */
+  if (typeof forestNews === 'function' && forestNews(S, worldOf()).fresh.length) r = Object.assign({}, r, { buttons: [['🌳 Лес оживает! ✨', 'forest', 'gold']].concat(r.buttons) });
   mount(`<div class="result">${ART.chip(heroFor(r.mood === 'think' ? 'mindal' : 'funduk'), r.mood)}
     <h1>${r.title}</h1>${r.stars !== null ? `<div class="bigstars">${starsHtml(r.stars)}</div>` : ''}
     <p style="font-size:19px">Верно: <b>${r.ok}</b> из ${r.n}</p>
