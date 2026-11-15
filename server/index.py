@@ -3,7 +3,9 @@
 Один документ на семью. Семейный код на сервер не приходит: игра присылает только его SHA-256 (key).
 Запрос: POST, тело JSON {op, key, ...}. Ответ: JSON {ok, ...}.
   get / join  {key}              -> {doc, ts}   (doc = null, если семьи нет: это считается неверным кодом)
-  put         {key, doc}         -> {ts}        (предыдущая версия хранится рядом; раз в день — копия в bak/)
+  put         {key, doc, ver}    -> {ts}        (предыдущая версия хранится рядом; раз в день — копия в bak/)
+                                 ver — версия игры (APP_VER в js/state.js). Старше MIN_VER — отказ 426 «обновите игру»:
+                                 старая игра не умеет сохранять новые поля и стёрла бы их у всей семьи. Сама она играет дальше без облака.
   backups     {key}              -> {list: [{id, ts}]}   копии за 30 дней и предыдущая версия
   backup      {key, id}          -> {doc, ts}
 
@@ -35,6 +37,15 @@ MAX_DOC = 600 * 1024          # байт; обычная семья — 20–60 
 LIMIT = 10                    # неверных кодов в час с одного адреса
 KEY = re.compile(r'^[0-9a-f]{64}$')
 BAK_ID = re.compile(r'^(\d{4}-\d{2}-\d{2}|prev)$')
+MIN_VER = (4, 2)              # с v4.2 в прогрессе лес, семейная миссия и сюрпризы — версии старше их теряют
+
+
+def ver_ok(v):
+    """'4.2', '4.10', 'oreh-v4.2.1' → сравнение по числам; нет версии — старая игра."""
+    nums = re.findall(r'\d+', str(v or ''))
+    return bool(nums) and tuple(int(x) for x in nums[:3]) >= MIN_VER
+
+
 MSK = dt.timezone(dt.timedelta(hours=3))
 
 
@@ -132,6 +143,8 @@ def handle(req, ip, store, now=None):
     path = f'fam/{key}.json'
 
     if op == 'put':
+        if not ver_ok(req.get('ver')):
+            return 426, {'ok': False, 'err': 'old', 'msg': 'Обновите игру'}
         doc = req.get('doc')
         if not isinstance(doc, dict) or doc.get('v') != 2:
             return 400, {'ok': False, 'err': 'doc'}

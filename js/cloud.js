@@ -48,6 +48,7 @@ const Cloud = (() => {
       /* text/plain: браузер не шлёт предварительный запрос, меньше мест для сбоя */
       const r = await fetch(CLOUD_URL, { method: 'POST', headers: { 'Content-Type': 'text/plain' }, body: JSON.stringify(body), signal: ctl.signal });
       if (r.status === 429) { const e = new Error('limit'); e.limit = true; throw e; }
+      if (r.status === 426) { const e = new Error('old'); e.old = true; throw e; }   /* облако просит обновить игру */
       if (!r.ok) throw new Error('http ' + r.status);
       return await r.json();
     } finally { clearTimeout(t); }
@@ -115,11 +116,11 @@ const Cloud = (() => {
       const changed = absorb(res.doc);
       const doc = localDoc();
       const sent = dirty; dirty = false;
-      if (!res.doc || !sameData(doc, res.doc)) { try { await call({ op: 'put', key, doc }); } catch (e) { dirty = dirty || sent; throw e; } }
+      if (!res.doc || !sameData(doc, res.doc)) { try { await call({ op: 'put', key, doc, ver: APP_VER }); } catch (e) { dirty = dirty || sent; throw e; } }
       F.lastSync = Date.now(); saveFamily();
       setStatus('ok');
       if (changed) repaint();
-    } catch (e) { setStatus(e.limit ? 'limit' : navigator.onLine === false ? 'offline' : 'fail'); }
+    } catch (e) { setStatus(e.old ? 'old' : e.limit ? 'limit' : navigator.onLine === false ? 'offline' : 'fail'); }
     finally { busy = false; running = null; done(); if (again) { again = false; soon(); } }
   }
   /* После сохранения ждём 45 с: за игру это 1–2 записи в минуту, а не каждое нажатие (бесплатный объём бакета — 10 000 записей в месяц).
@@ -180,6 +181,7 @@ const Cloud = (() => {
     if (!CLOUD_URL) return { kind: 'none', text: 'Прогресс хранится только на этом устройстве' };
     if (!F.code) return { kind: 'none', text: '☁️ Облако не подключено — нажмите, чтобы подключить' };
     if (status === 'offline' || (typeof navigator !== 'undefined' && navigator.onLine === false)) return { kind: 'wait', text: '⏳ Нет интернета — сохранится, когда появится' };
+    if (status === 'old') return { kind: 'fail', text: '⚠️ Обновите игру — эта версия сохраняет только на устройстве' };
     if (status === 'limit') return { kind: 'fail', text: '⚠️ Слишком много попыток — подождите час' };
     if (status === 'fail') return { kind: 'fail', text: '⚠️ Не сохраняется — нажмите, чтобы повторить' };
     if (!F.lastSync) return { kind: 'wait', text: '⏳ Сохраняю…' };

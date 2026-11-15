@@ -7,6 +7,9 @@ const FAMILY_KEY = 'orehpatrol_family_v2';
 const profKey = id => 'orehpatrol_p2_' + id;
 /* Порядок — как при выборе игрока: подготовка → 4 класс → 5 класс */
 const WORLDS = { kid: { title: 'Подготовка к 1 классу' }, four: { title: '4 класс' }, five: { title: '5 класс' } };
+/* Версия игры для облака: сохранения от версий старше 4.2 облако не принимает (server/index.py, MIN_VER).
+   Поднимать вместе с VERSION в sw.js — это проверяет dev/test-merge.html. */
+const APP_VER = '4.2';
 const dstr = d => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 const today = () => dstr(new Date());
 function addDays(s, n) { const d = new Date(s + 'T12:00:00'); d.setDate(d.getDate() + n); return dstr(d); }
