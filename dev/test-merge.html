@@ -10,6 +10,7 @@
 <script src="../js/state.js"></script>
 <script>const ACT = {};</script>
 <script src="../js/mult.js"></script>
+<script src="../js/k-house.js"></script>
 <script>
 'use strict';
 const log = [], results = { pass: 0, fail: 0 };
@@ -108,6 +109,20 @@ function base() {
   check('сейчас в школе — более поздняя настройка', m.school.id === 'ray' && m2.school.id === 'ray', m.school);
   const c = clone(a); delete c.school; delete c.year; delete c.vpr;
   check('старые данные без новых полей', mergeStates(c, b).school.id === 'ray' && mergeStates(b, c).year.ok === 12);
+}
+
+{ /* Лиза: игрушки из Лавки Сороки и Домик Жёлудика не теряются; потраченные на домик орешки не возвращаются */
+  const a = base(), b = clone(a);
+  A(a, x => { x.toys = ['bear']; x.house = { own: ['bed'], pos: { bed: { x: 10, y: 60, ts: 100 }, 't:bear': { x: 40, y: 80, ts: 100 } } }; x.acorns -= 30; });
+  B(b, x => { x.toys = ['kite']; x.house = { own: ['chair'], pos: { bed: { x: 70, y: 60, ts: 300 } } }; x.acorns -= 10; earn(x, 5); });
+  const m = mergeStates(a, b), m2 = mergeStates(b, a);
+  check('игрушки объединяются', m.toys.length === 2 && m.toys.includes('bear') && m2.toys.includes('kite'), m.toys);
+  check('домик: купленное объединяется', m.house.own.length === 2 && m2.house.own.includes('bed') && m2.house.own.includes('chair'), m.house.own);
+  check('домик: место — более свежее', m.house.pos.bed.x === 70 && m2.house.pos.bed.x === 70 && m.house.pos['t:bear'].x === 40, m.house.pos);
+  check('домик: орешки = заработано − покупки', m.acorns === 105 - 40 && m2.acorns === 65, [m.acorns, m2.acorns]);
+  check('домик: повторное слияние ничего не меняет', synced(mergeStates(m, m2)) === synced(m) && mergeStates(mergeStates(m, a), b).acorns === 65);
+  const c = clone(a); delete c.house; delete c.toys;
+  check('старые данные без домика', mergeStates(c, b).house.own.join() === 'chair' && mergeStates(b, c).toys.join() === 'kite' && mergeStates(c, clone(c)).house === null);
 }
 
 /* Случайная игра на трёх устройствах с синхронизацией через «облако» */

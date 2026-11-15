@@ -5,7 +5,7 @@
 <script src="../../js/core.js"></script><script src="../../js/t-fund.js"></script><script src="../../js/t-lang.js"></script><script src="../../js/t-models.js"></script>
 <script src="../../js/t-logic.js"></script><script src="../../js/t-div.js"></script><script src="../../js/topics.js"></script><script src="../../js/art.js"></script><script src="../../js/art2.js"></script>
 <script src="../../js/state.js"></script><script src="../../js/cloud.js"></script><script src="../../js/ui.js"></script><script src="../../js/voice-data.js"></script><script src="../../js/voice.js"></script>
-<script src="../../js/play.js"></script><script src="../../js/screens.js"></script><script src="../../js/kid.js"></script><script src="../../js/k-path.js"></script><script src="../../js/k-step2.js"></script><script src="../../js/k-shop.js"></script>
+<script src="../../js/play.js"></script><script src="../../js/screens.js"></script><script src="../../js/kid.js"></script><script src="../../js/k-path.js"></script><script src="../../js/k-step2.js"></script><script src="../../js/k-shop.js"></script><script src="../../js/k-house.js"></script>
 <pre id="out"></pre>
 <script>
 const RUNS = +(new URLSearchParams(location.search).get('runs') || 12000);
@@ -39,6 +39,8 @@ add('zh', 'Выбери ступеньку.', 'kid');
 for (let n = 1; n <= 20; n++) add('so', String(n), SHOP_ID);
 add('so', 'Многовато! Убери монетку.', SHOP_ID);
 add('zh', 'Ура! Игрушка теперь в домике Жёлудика!', SHOP_ID);
+/* Домик Жёлудика: числа говорятся кусочками (300 + 40 + 5) */
+for (const text of housePhrases()) add('zh', text, 'k_house_room');
 for (let n = 1; n <= 20; n++) add('zh', String(n), 'k_cnt');
 for (const [id, g] of Object.entries(KID_GAMES)) for (const [who, text] of g.phrases()) add(who, text, id);
 add('zh', 'Озвучка включена.', 'kid');

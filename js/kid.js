@@ -411,7 +411,8 @@ function showKidMap() {
       <div class="grow"><div class="hello">Привет, ${esc(S.name || 'друг')}!</div><div class="small muted">Лесная полянка</div></div>
       <span class="pill">${ART.acorn(22)}${S.acorns}</span><button class="iconbtn" data-act="parent" aria-label="Для взрослых">⚙️${cloudDot()}</button></div>
     <div class="ktiles">${tiles}</div>
-    <button class="btn gold block" style="margin-top:16px" data-act="album">📒 Наклейки · ${S.stickers.length}</button>`);
+    <div class="krowb"><button class="btn green block big" data-act="house">🏠 Домик Жёлудика</button>
+      <button class="btn gold block big" data-act="album">📒 Наклейки · ${S.stickers.length}</button></div>`);
   Praise.hello(); Voice.prefetch('kid');
 }
 const kidOpen = (tid, step = 1) => KTOPIC[tid] && KTOPIC[tid].game ? KID_GAMES[tid].start(step) : kidStart(tid, step);

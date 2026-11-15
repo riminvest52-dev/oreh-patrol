@@ -61,6 +61,13 @@
   /* Лавка: несколько монеток уже на прилавке */
   if (s === 'task' && q.get('put')) for (const i of q.get('put').split(',')) { const b = document.querySelector(`#wal .coin[data-i="${i}"]`); if (b) ACT.shCoin(b); }
   if (s === 'medal') { S.stars['k_cnt#2'] = 2; delete S.medals['k_cnt#2']; kidStart('k_cnt', 2); K.first = 6; K.acorns = 6; K.i = K.queue.length; kidNext(); }
+  /* Домик: пустой / с вещами / окно покупки */
+  if (s === 'house' || s === 'house2' || s === 'hbuy') {
+    S.house = { own: [], pos: {} }; S.toys = [];
+    if (s !== 'house') { S.house.own = ['bed', 'picture', 'lamp', 'plant', 'window']; S.toys = ['bear', 'train']; }
+    save(); showHouse();
+    if (s === 'hbuy') ACT.hPick({ dataset: { id: 'sofa' } });
+  }
   if (window.SHOT_EXTRA) SHOT_EXTRA(s, q);
 </script>
 </body>

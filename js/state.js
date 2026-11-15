@@ -14,7 +14,7 @@ function addDays(s, n) { const d = new Date(s + 'T12:00:00'); d.setDate(d.getDat
 const fresh = () => ({ v: 2, name: '', created: today(), acorns: 0, earned: 0, sound: true, stars: {}, medals: {},
   mastery: {}, skill: {}, mistakes: [], history: {}, streak: { last: null, count: 0, best: 0 }, daily: { date: null, done: false },
   stickers: [], diag: null, recent: [], hands: {}, play: {}, mul: {}, mulCols: {}, mulBest: 0, solved: 0, right: 0, _epoch: 0, _ts: 0, _tally: {}, gone: {},
-  vpr: null, year: null, school: null, toys: [] });
+  vpr: null, year: null, school: null, toys: [], house: null });
 const newId = p => p + Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
 const readJson = k => { try { const v = localStorage.getItem(k); return v ? JSON.parse(v) : null; } catch (e) { return null; } };
 const writeJson = (k, v) => { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) { } };
@@ -239,7 +239,15 @@ function mergeStates(a, b) {
     for (const k of COUNTERS) R._tally[d][k] = Math.max((A._tally[d] || {})[k] || 0, (B._tally[d] || {})[k] || 0);
   }
   for (const k of COUNTERS) R[k] = Object.values(R._tally).reduce((s, t) => s + (t[k] || 0), 0);
-  R.acorns = Math.max(0, R.earned - R.stickers.reduce((s, i) => s + (STICKERS[i] ? STICKERS[i][2] : 0), 0));
+  /* Домик Жёлудика (js/k-house.js): купленное объединяем, у каждой вещи — более свежее место */
+  const HSA = A.house || {}, HSB = B.house || {};
+  if (A.house || B.house) {
+    R.house = { own: [...new Set([...(HSA.own || []), ...(HSB.own || [])])], pos: {} };
+    const QA = HSA.pos || {}, QB = HSB.pos || {};
+    for (const k of keysOf(QA, QB)) { const x = QA[k], y = QB[k]; R.house.pos[k] = !x ? y : !y ? x : (y.ts || 0) > (x.ts || 0) ? y : x; }
+  }
+  /* Орешки = заработано − наклейки − вещи в домике */
+  R.acorns = Math.max(0, R.earned - R.stickers.reduce((s, i) => s + (STICKERS[i] ? STICKERS[i][2] : 0), 0) - (typeof houseSpent === 'function' ? houseSpent(R) : 0));
 
   const later = (x, y) => !x ? y : !y ? x : ((y.ts || 0) > (x.ts || 0) || ((y.ts || 0) === (x.ts || 0) && y.n > x.n)) ? y : x;
   for (const t of keysOf(A.mastery, B.mastery)) R.mastery[t] = later(A.mastery[t], B.mastery[t]);
