@@ -134,6 +134,8 @@ const QNAMES = ['', '1 четверть', '2 четверть', '3 четвер�
 const SCHOOL_DEFAULT = 'nod';   /* по умолчанию — первая локация 3 четверти */
 const isFive = () => TOPICS === TOPICS5 && !(typeof isKid === 'function' && isKid());
 const schoolId = () => { const id = S && S.school && S.school.id; return id && TOPICS5.some(T => T.id === id) ? id : SCHOOL_DEFAULT; };
+/* Взрослый сам отметил тему «Сейчас в школе» (а не стоит тема по умолчанию) */
+const schoolChosen = () => !!(S && S.school && S.school.id);
 const schoolIdx = () => TOPICS5.findIndex(T => T.id === schoolId());
 /* Локации, пройденные в школе (включая текущую). В 4 классе — все */
 const passedTopics = () => isFive() ? TOPICS5.slice(0, schoolIdx() + 1) : TOPICS;

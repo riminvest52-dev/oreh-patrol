@@ -101,7 +101,7 @@ function showMap() {
     if (t.act) { const c = mulCount(S); return `<div class="node" data-act="${t.act}" style="left:${p.x}px;top:${p.y}px"><div class="disc">${t.icon}${S.medals.mulgold ? '<span class="medal">🌟</span>' : ''}</div>
       <div class="nm">${t.name}</div><div class="st">🌳 ${c.know + c.gold}/64</div></div>`; }
     const st = topicStars(t.id), now = t.id === cur, ahead = five && isAhead(t.id);
-    const tip = now ? '<div class="tip now">Сейчас в школе</div>' : weak.includes(t.id) ? '<div class="tip">Сюда сначала!</div>' : '';
+    const tip = now ? '<div class="tip now">Сейчас в школе</div>' : weak.includes(t.id) && !(five && schoolChosen()) ? '<div class="tip">Сюда сначала!</div>' : '';
     return `<div class="node${now ? ' now' : ''}${ahead ? ' ahead' : ''}" data-act="topic" data-id="${t.id}" style="left:${p.x}px;top:${p.y}px">${tip}<div class="disc">${t.icon}${S.medals[t.id] ? '<span class="medal">🏅</span>' : ''}</div>
       <div class="nm">${t.name}</div><div class="st">★ ${st}/9</div>${ahead ? '<div class="ahd">В школе ещё впереди</div>' : ''}</div>`;
   }).join('');
@@ -174,7 +174,7 @@ function showDiagResult(scores, ok, n) {
   const weak = weakTopics(2).map(id => TOPIC[id].name);
   mount(`<div class="result">${ART.chip(heroFor('funduk'), 'cheer')}<h1>Проверка сил пройдена!</h1><p>Верно: <b>${ok}</b> из ${n} · <span class="pill">+5 ${ART.acorn(18)}</span></p></div>
     <div class="card" style="margin-top:12px">${rows}</div>
-    <div class="bubble" style="margin-top:14px">Начнём с локаций: <b>${weak.join('</b> и <b>')}</b> — на карте они отмечены «Сюда сначала!».</div>
+    <div class="bubble" style="margin-top:14px">Начнём с локаций: <b>${weak.join('</b> и <b>')}</b> ${isFive() && schoolChosen() ? '. Их стоит повторить.' : ' — на карте они отмечены «Сюда сначала!».'}</div>
     <button class="btn green block" style="margin-top:16px" data-act="map">На карту леса 🗺️</button>`);
 }
 

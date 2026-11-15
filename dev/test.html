@@ -7,6 +7,10 @@
 <script>const ACT = {}; const S = {};</script><script src="../js/t-vol.js"></script><script src="../js/mult.js"></script>
 <script>
 const strip = s => String(s).replace(/<[^>]+>/g, '');
+/* Слова, после которых проверяем склонение (одно / два / пять) */
+const PLW = [['пятиклассника', 'пятиклассника', 'пятиклассников'], ['ученик', 'ученика', 'учеников'], ['множитель', 'множителя', 'множителей'], ['нуль', 'нуля', 'нулей'], ['ноль', 'нуля', 'нулей'],
+  ['дерево', 'дерева', 'деревьев'], ['деление', 'деления', 'делений'], ['страницу', 'страницы', 'страниц'], ['гриб', 'гриба', 'грибов'], ['ромашка', 'ромашки', 'ромашек'], ['василёк', 'василька', 'васильков'],
+  ['букет', 'букета', 'букетов'], ['день', 'дня', 'дней'], ['орех', 'ореха', 'орехов'], ['кубик', 'кубика', 'кубиков'], ['ящик', 'ящика', 'ящиков'], ['мешок', 'мешка', 'мешков']];
 function check(t) {
   const errs = [];
   if (!t) return ['null task'];
@@ -71,10 +75,9 @@ function check(t) {
     if (t.type === 'choice' && !t.options.includes(String(x.v))) TRAPMISS[t.gen] = (TRAPMISS[t.gen] || 0) + 1;
   }
   const txt = strip([t.q].concat(t.explain || [], (t.traps || []).map(x => x.msg)).join(' '));
-  for (const m of txt.matchAll(/(\d+) (мешок|мешка|мешков|орех|ореха|орехов|гриб|гриба|грибов)(?![а-я])/g)) {
-    const n = +m[1], w = m[2];
-    const forms = w.startsWith('меш') ? ['мешок', 'мешка', 'мешков'] : w.startsWith('ор') ? ['орех', 'ореха', 'орехов'] : ['гриб', 'гриба', 'грибов'];
-    if (pl(n, ...forms) !== w) PLURAL.push(t.gen + ': «' + m[0] + '» — ' + txt.slice(Math.max(0, m.index - 30), m.index + 30));
+  for (const [w1, w2, w5] of PLW) for (const m of txt.matchAll(new RegExp('(?<![\\d.,/])(\\d+) (' + [w1, w2, w5].join('|') + ')(?![а-яё])', 'g'))) {
+    const w = m[2], need = pl(+m[1], w1, w2, w5);
+    if (need !== w) PLURAL.push(t.gen + ': «' + m[0] + '» — нужно «' + need + '»: ' + txt.slice(Math.max(0, m.index - 30), m.index + 30));
   }
   return errs;
 }
@@ -145,7 +148,7 @@ for (const top of ALLT) for (const g of top.gens) if (GEN[g]) for (let d = 1; d 
   let n = 0; for (let i = 0; i < 2000; i++) { let t; try { t = GEN[g].f(d); } catch (e) { continue; } if (!t) continue; t.gen = g; if (sameValueOpt(t)) n++; }
   if (n) RAWDUP[g + ' d' + d] = n + '/2000';
 }
-window.TEST = { repeat: REPEAT, rawdup: RAWDUP, valdup: VALDUP, valdupEx: VALDUPEX, volx: VOLX, total, fails, summary, share5050, share, near: NEAR.length, nearEx: NEAR.slice(0, 5), plural: PLURAL.slice(0, 20), pluralN: PLURAL.length, trapMiss: TRAPMISS };
+window.TEST = { repeat: REPEAT, rawdup: RAWDUP, valdup: VALDUP, valdupEx: VALDUPEX, volx: VOLX, total, fails, summary, share5050, share, near: NEAR.length, nearEx: NEAR.slice(0, 5), plural: PLURAL.slice(0, 20), pluralN: PLURAL.length, pluralN: PLURAL.length, trapMiss: TRAPMISS };
 out.innerHTML = `<p><b>${total}</b> заданий, ошибок: <b class="${fails ? 'bad' : ''}">${fails}</b>. Уровней 4 класса с повтором задачи: ${JSON.stringify(REPEAT)}. Заданий «из двух» (50/50): ${share5050}% (${Object.entries(share).map(([k, v]) => TOPIC[k].name + ' ' + v + '%').join(', ')}). Остров правды, строк одного шаблона в задании: ${NEAR.length}. Подозрительных склонений: ${PLURAL.length}</p><pre>${PLURAL.slice(0, 20).join(String.fromCharCode(10))}</pre><pre>${Object.entries(summary).map(([k, v]) => k + ': ' + v).join('\n')}</pre><h2>Примеры</h2>` +
   samples.map(s => `<div class="task"><pre>${s.replace(/</g, '&lt;')}</pre></div>`).join('');
 </script></body></html>
