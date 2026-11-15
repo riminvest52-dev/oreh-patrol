@@ -106,7 +106,7 @@ function showMap() {
       <div class="nm">${t.name}</div><div class="st">★ ${st}/9</div>${ahead ? '<div class="ahd">В школе ещё впереди</div>' : ''}</div>`;
   }).join('');
   const sn = streakNow();
-  mount(`<div class="topbar"><div class="avatar" data-act="who" role="button" aria-label="Сменить игрока">${ART.chip(curProfile() ? heroOf(curProfile()) : 'funduk', 'happy', '', true)}<span class="swap">⇄</span></div>
+  mount(`<div class="topbar"><div class="avatar" data-act="who" role="button" aria-label="Сменить игрока">${ART.chip(curProfile() ? heroOf(curProfile()) : 'funduk', 'happy', '', true)}${typeof wearHtml === 'function' ? wearHtml() : ''}<span class="swap">⇄</span></div>
       <div class="grow"><div class="hello">Привет, ${esc(S.name || 'друг')}!</div><div class="small muted">${sn ? `🔥 ${sn} ${pl(sn, 'день', 'дня', 'дней')} подряд` : 'Ореховый патруль на связи'}</div></div>
       <span class="pill">${ART.acorn(22)}${S.acorns}</span><button class="iconbtn" data-act="parent" aria-label="Для взрослых">⚙️${cloudDot()}</button></div>
     ${four ? fourQuick() : `<div class="quick">
@@ -187,7 +187,7 @@ function showAlbum() {
     <div class="album">${STICKERS.map(([e, nm, price], i) => {
       const has = S.stickers.includes(i);
       return `<div class="stk ${has ? '' : 'no'}"><div class="e">${e}</div><div class="n">${has ? nm : '???'}</div>${has ? '<div class="small muted">есть!</div>' : `<button class="btn gold" data-act="buy" data-i="${i}" ${S.acorns < price ? 'disabled' : ''}>${price} 🌰</button>`}</div>`;
-    }).join('')}</div>`);
+    }).join('')}</div>${typeof chestAlbum === 'function' ? chestAlbum() : ''}`);
 }
 ACT.album = () => showAlbum();
 ACT.buy = el => {

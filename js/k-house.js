@@ -47,8 +47,10 @@ function showHouse() {
   /* Новые вещи и игрушки встают на свои места */
   H.own.forEach(id => { if (!H.pos[id]) { const [x, y] = SPOT[id] || [50, 60]; H.pos[id] = { x, y, ts: Date.now() }; } });
   toys.forEach((id, i) => { const k = 't:' + id; if (!H.pos[k]) { const [x, y] = toySpot(i); H.pos[k] = { x, y, ts: Date.now() }; } });
+  const extra = typeof chestHouseItems === 'function' ? chestHouseItems() : [];   /* вещи из сундука-сюрприза */
+  extra.forEach(x => { if (!H.pos[x.k]) H.pos[x.k] = { x: x.spot[0], y: x.spot[1], ts: Date.now() }; });
   const item = (k, e, s) => `<div class="hitem${HITEM[k] && HITEM[k].box ? ' box' : ''}" data-k="${k}" style="left:${H.pos[k].x}%;top:${H.pos[k].y}%;--s:${s}">${e}</div>`;
-  const placed = H.own.map(id => item(id, HITEM[id].e, HITEM[id].s)).join('') + toys.map(id => item('t:' + id, SHOP_TOYS.find(t => t.id === id).e, .9)).join('');
+  const placed = H.own.map(id => item(id, HITEM[id].e, HITEM[id].s)).join('') + toys.map(id => item('t:' + id, SHOP_TOYS.find(t => t.id === id).e, .9)).join('') + extra.map(x => item(x.k, x.e, 1)).join('');
   const cards = HOUSE_ITEMS.filter(x => !H.own.includes(x.id)).map(x => `<button class="hcard${S.acorns < x.p ? ' dim' : ''}" data-act="hPick" data-id="${x.id}">
       <span class="he">${x.e}</span><span class="hp">${x.p} ${ART.acorn(18)}</span></button>`).join('');
   mountKid(`<div class="playtop"><button class="iconbtn" data-act="map" aria-label="На полянку">✕</button><div class="grow"><b>Домик Жёлудика</b></div>
@@ -56,7 +58,7 @@ function showHouse() {
     <div class="hwrap">
       <div class="hroom" id="hroom"><div class="hwall"></div><div class="hfloor"></div>
         <div class="hzhel">${ART.zhel('happy')}</div>${placed}
-        ${!H.own.length && !toys.length ? '<div class="hempty">Пока пусто. Выбери вещь внизу 👇</div>' : ''}</div>
+        ${!H.own.length && !toys.length && !extra.length ? '<div class="hempty">Пока пусто. Выбери вещь внизу 👇</div>' : ''}</div>
       <div class="hshop"><div class="small muted hcap">${cards ? 'Нажми на вещь, чтобы купить:' : 'Всё куплено! Ура!'}</div><div class="hcards">${cards}</div>
         ${toys.length ? '' : '<div class="small muted hcap">🛍️ Игрушки из Лавки Сороки тоже попадут сюда.</div>'}</div>
     </div>`);

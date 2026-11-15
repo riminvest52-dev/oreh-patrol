@@ -407,7 +407,7 @@ function showKidMap() {
     return `<button class="ktile ${next && T.id === next.id ? 'next' : ''}${s2 === null ? '' : ' two'}" data-act="kTopic" data-id="${T.id}"><span class="ki">${T.icon}</span><b>${T.name}</b>
       <span class="kst">${'★'.repeat(st)}<i>${'★'.repeat(3 - st)}</i></span>${two}</button>`;
   }).join('');
-  mountKid(`<div class="topbar"><div class="avatar" data-act="who" role="button" aria-label="Сменить игрока">${ART.zhel('happy')}<span class="swap">⇄</span></div>
+  mountKid(`<div class="topbar"><div class="avatar" data-act="who" role="button" aria-label="Сменить игрока">${ART.zhel('happy')}${typeof wearHtml === 'function' ? wearHtml() : ''}<span class="swap">⇄</span></div>
       <div class="grow"><div class="hello">Привет, ${esc(S.name || 'друг')}!</div><div class="small muted">Лесная полянка</div></div>
       <span class="pill">${ART.acorn(22)}${S.acorns}</span><button class="iconbtn" data-act="parent" aria-label="Для взрослых">⚙️${cloudDot()}</button></div>
     ${typeof forestCard === 'function' ? forestCard() : ''}${typeof missionCard === 'function' ? missionCard() : ''}
@@ -538,6 +538,7 @@ function kResolve(ok) {
   if (!ok) kSolve();
   /* Похвала голосом: со второй попытки, 3 и 5 подряд — всегда, обычный верный ответ — примерно 1 из 3 */
   K.run = first ? K.run + 1 : 0;
+  if (K.run === 5 && !K.gift && typeof chestEvent === 'function') chestEvent();   /* сундук-сюрприз (js/chest.js) */
   const p = !ok || gift ? null : Praise.say(!first ? 'second' : K.run === 5 ? 'streak5' : K.run === 3 ? 'streak3' : 'ok', 'kid');
   const praise = p ? esc(p.text) : R.pick(['Молодец!', 'Верно!', 'Умница!', 'Здорово!', 'Отлично!']);
   if (ok) Sound.ok();

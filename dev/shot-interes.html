@@ -59,6 +59,15 @@
     if (s === 'env' || s === 'party' || s === 'thx') enterWorld();
     if (s === 'giftdone') { ACT.giftOpen(); }
   }
+  /* Сундук: s=chest[&id=st:kid:3] — открытие; &surp=1 — несколько сюрпризов в коллекции и наряд на аватаре */
+  if (q.get('surp') && typeof CHEST_STK !== 'undefined') {
+    const w0 = worldOf(), hero = heroKey();
+    S.coll = ['st:' + w0 + ':0', 'st:' + w0 + ':3', 'st:' + w0 + ':7', w0 === 'kid' ? 'h:bear' : 'tr:cup', w0 === 'kid' ? 'h:kite' : 'tr:key', 'w:' + hero + ':crown', 'w:' + hero + ':scarf', 'sec:' + w0 + ':0', 'fam:bridge'];
+    S.wear = { [hero]: q.get('wear') || 'crown', ts: Date.now() }; save();
+    if (s === 'map') enterWorld();
+    if (s === 'house') showHouse();
+  }
+  if (s === 'chest' && typeof chestShow === 'function') { enterWorld(); CHEST_PEND = { id: q.get('id') || chestPrize().id }; chestShow(() => enterWorld()); }
   if (window.SHOT_EXTRA) SHOT_EXTRA(s, q, { nas, liz });
 </script>
 </body>

@@ -341,6 +341,9 @@ function answered(ok, given) {
   if (ac) { SES.acorns += ac; giveAcorns(ac); save(); }
   if (ok) Sound.ok(); else Sound.bad();
   SES.results.push({ ok: first, topic: t.topic, gen: t.gen });
+  /* Сундук-сюрприз (js/chest.js): 5 верных подряд или короткий уровень без ошибок */
+  SES.chRun = first ? (SES.chRun || 0) + 1 : 0;
+  if (typeof chestEvent === 'function' && first && (SES.chRun === 5 || (SES.i + 1 >= SES.queue.length && SES.queue.length < 5 && SES.chRun === SES.queue.length))) chestEvent();
   const last = SES.i + 1 >= SES.queue.length;
   /* Шаг «запиши как в тетради» и картинка после ответа (складывание развёртки) — js/t-vol.js */
   const steps = `<ol>${t.explain.map(s => `<li>${nb(s)}</li>`).join('')}</ol>`
