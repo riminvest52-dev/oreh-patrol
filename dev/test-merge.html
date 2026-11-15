@@ -11,6 +11,9 @@
 <script>const ACT = {};</script>
 <script src="../js/mult.js"></script>
 <script src="../js/k-house.js"></script>
+<script src="../js/interes.js"></script>
+<script src="../js/mission.js"></script>
+<script>for (const f of ['chest']) document.write(`<script src="../js/${f}.js" onerror="this.remove()"><\/script>`);</script>
 <script>
 'use strict';
 const log = [], results = { pass: 0, fail: 0 };
@@ -320,6 +323,39 @@ for (let run = 0; run < 400; run++) {
   }
   check('старое устройство без таблицы не стирает её', Object.keys(mergeStates(m, Object.assign(clone(s0), { mul: undefined })).mul).length === 2);
   check('мир «4 класс» есть среди миров', WORLDS.four && WORLDS.four.title === '4 класс' && Object.keys(WORLDS).join() === 'kid,four,five');
+}
+
+/* ---------- Задание 11: лес, коллекция, наряд, сундук, семейная миссия ---------- */
+{
+  const s0 = fresh(); s0.name = 'Тест';
+  const a = clone(s0), b = clone(s0);
+  A(a, x => { x.forest = { seen: ['sun', 'flowers'], read: [0], init: 1 }; x.coll = ['st:kid:1']; x.wear = { kid: 'crown', ts: 100 }; x.chest = { miss: 1, ts: 100 }; });
+  B(b, x => { x.forest = { seen: ['sun', 'birds'], read: [1], init: 1 }; x.coll = ['st:kid:1', 'sec:kid:0']; x.wear = { kid: 'hat', ts: 200 }; x.chest = { miss: 0, ts: 50 }; });
+  const m = mergeStates(a, b);
+  check('лес: объекты с обоих устройств', m.forest.seen.sort().join() === 'birds,flowers,sun', m.forest);
+  check('лес: прочитанные главы с обоих устройств', m.forest.read.join() === '0,1', m.forest.read);
+  check('коллекция: объединение без повторов', m.coll.length === 2 && m.coll.includes('sec:kid:0'), m.coll);
+  check('наряд — более поздний выбор', m.wear.kid === 'hat');
+  check('сундук — запись более нового устройства', m.chest.miss === 1);
+  check('лес/коллекция: обратный порядок даёт то же', synced(mergeStates(b, a).forest) === synced(m.forest) && mergeStates(b, a).coll.length === 2);
+  const old = Object.assign(clone(a), { forest: undefined, coll: undefined, wear: undefined, chest: undefined });
+  const m2 = mergeStates(m, old);
+  check('старое устройство без новых полей их не стирает', m2.forest.seen.length === 3 && m2.coll.length === 2 && m2.wear.kid === 'hat');
+
+  /* Семейная миссия: вклад по устройствам — максимум, без двойного счёта */
+  const w = weekOf(), fa = clone(s0), fb = clone(s0);
+  A(fa, x => { x.fam = { c: { [w]: { dA: 10, dB: 3 } }, sent: { '2026-11-10': { to: 'p2', ts: 5 } }, got: { 'p1:2026-11-09': 7 }, thx: {}, seen: { k1: 1 }, party: {} }; });
+  B(fb, x => { x.fam = { c: { [w]: { dA: 8, dB: 6, dC: 2 } }, sent: { '2026-11-10': { to: 'p2', ts: 9 }, '2026-11-11': { to: 'p2', ts: 1 } }, got: {}, thx: { 'p1:2026-11-09': '💛' }, seen: { k1: 2 }, party: { [w]: 1 } }; });
+  const mf = mergeStates(fa, fb).fam;
+  check('миссия: по каждому устройству — максимум', mf.c[w].dA === 10 && mf.c[w].dB === 6 && mf.c[w].dC === 2, mf.c);
+  const again = mergeStates(mergeStates(fa, fb), mergeStates(fb, fa)).fam;
+  check('миссия: повторное слияние не удваивает', JSON.stringify(again.c) === JSON.stringify(mf.c), again.c);
+  check('миссия: задачка дня — отправленная раньше', mf.sent['2026-11-10'].ts === 5 && mf.sent['2026-11-11'], mf.sent);
+  check('миссия: решённые задачки, спасибо, праздник — объединение', mf.got['p1:2026-11-09'] === 7 && mf.thx['p1:2026-11-09'] === '💛' && mf.party[w] === 1 && mf.seen.k1 === 2, mf);
+  check('миссия: старое устройство без fam её не стирает', mergeStates(Object.assign(clone(fa), { fam: undefined }), fb).fam.c[w].dB === 6);
+  check('миссия: неделя начинается с понедельника', weekOf('2026-11-15') === '2026-11-09' && weekOf('2026-11-16') === '2026-11-16' && weekOf('2026-11-09') === '2026-11-09');
+  check('миссия: 7 целей по кругу, соседние недели разные', new Set(Array.from({ length: 7 }, (_, i) => missionOf(addDays('2026-11-16', i * 7)).id)).size === 7);
+  if (typeof chestTests === 'function') chestTests(check, { A, B, clone, fresh });
 }
 
 /* ---------- Герой 4 класса — белка Шустрик (у старых игроков меняется сам) ---------- */

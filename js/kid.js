@@ -410,7 +410,7 @@ function showKidMap() {
   mountKid(`<div class="topbar"><div class="avatar" data-act="who" role="button" aria-label="Сменить игрока">${ART.zhel('happy')}<span class="swap">⇄</span></div>
       <div class="grow"><div class="hello">Привет, ${esc(S.name || 'друг')}!</div><div class="small muted">Лесная полянка</div></div>
       <span class="pill">${ART.acorn(22)}${S.acorns}</span><button class="iconbtn" data-act="parent" aria-label="Для взрослых">⚙️${cloudDot()}</button></div>
-    ${typeof forestCard === 'function' ? forestCard() : ''}
+    ${typeof forestCard === 'function' ? forestCard() : ''}${typeof missionCard === 'function' ? missionCard() : ''}
     <div class="ktiles">${tiles}</div>
     <div class="krowb"><button class="btn green block big" data-act="house">🏠 Домик Жёлудика</button>
       <button class="btn gold block big" data-act="album">📒 Наклейки · ${S.stickers.length}</button></div>`);
@@ -434,7 +434,8 @@ function kidNext() {
   if (K.step === 2) {   /* Ступенька 2: две ошибки подряд — один пример с прошлого уровня (с 1-го уровня — с 3-го уровня первой ступеньки) */
     if (K.miss >= 2) { K.miss = 0; if (d > 1) d--; else { g = KID_STEP2[K.tid].back[g]; d = 3; } }
   } else if (K.wrongRun >= 2 && d > 1) d--;   /* после двух неудач подряд — полегче */
-  const t = makeKid(g, d); t.topic = K.tid;
+  /* Задачка от сестры (js/mission.js) — готовое задание */
+  const t = K.preset ? JSON.parse(JSON.stringify(K.preset)) : makeKid(g, d); t.topic = K.tid;
   Object.assign(K, { t, tries: 0, done: false, tapped: 0, flashTok: (K.flashTok || 0) + 1 });
   renderKid();
 }
@@ -526,7 +527,7 @@ function kResolve(ok) {
   /* Лавка Сороки: заплатили ровно — игрушка в подарок в Домик Жёлудика */
   const gift = ok && t.kind === 'coins' && t.toy && typeof shopGift === 'function' && shopGift(t.toy);
   kidRecord(t, first);
-  if (first) { K.first++; K.acorns++; giveAcorns(1); K.miss = 0; }
+  if (first) { K.first++; K.acorns++; giveAcorns(1); K.miss = 0; if (typeof famAdd === 'function') famAdd(FAM_W.kid); }
   K.wrongRun = ok ? 0 : K.wrongRun + 1;
   save();
   document.querySelectorAll('.kopt').forEach((b, i) => {
@@ -562,6 +563,7 @@ function kidRecord(t, ok) {
 function kidFinish() {
   const k = K; K = null;
   markActive();
+  if (k.gift && typeof giftFinish === 'function') return giftFinish(k);
   const key = k.step === 2 ? step2Key(k.tid) : k.tid;
   const prev = S.stars[key] || 0, earn = k.first >= KID_PER_SESSION - 1 && prev < 3;
   if (earn) S.stars[key] = prev + 1;
@@ -594,7 +596,7 @@ function showKidParent() {
       <div><div style="font-size:26px;font-weight:800">${acc}%</div><div class="small muted">сразу верно</div></div>
       <div><div style="font-size:26px;font-weight:800">${stars}</div><div class="small muted">звёзд из ${KID_TOPICS.length * 3}</div></div>
       <div><div style="font-size:26px;font-weight:800">${S.streak.best}</div><div class="small muted">лучшая серия</div></div></div></div>
-    ${familyEntry()}
+    ${familyEntry()}${typeof missionParent === 'function' ? missionParent() : ''}
     ${movedCard()}
     <h3 style="margin-top:18px">Темы</h3><div class="card">${rows}
       <p class="small muted">В игре 6 заданий. Если 5 из 6 решены с первого раза, тема получает звёздочку, и задания становятся сложнее: ступень 1 — числа до 5, ступень 2 — до 10, ступень 3 — до 20. После двух ошибок подряд задания на время становятся проще.

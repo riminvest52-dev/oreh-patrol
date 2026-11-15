@@ -11,9 +11,9 @@ function mergeInteres(A, B, R, keysOf) {
   /* Лес: показанные объекты и прочитанные главы — объединение */
   if (A.forest || B.forest) {
     const x = A.forest || {}, y = B.forest || {};
-    R.forest = { seen: uniq(x.seen, y.seen), read: uniq(x.read, y.read).sort((a, b) => a - b), init: x.init || y.init ? 1 : 0 };
+    R.forest = { seen: uniq(x.seen, y.seen).sort(), read: uniq(x.read, y.read).sort((a, b) => a - b), init: x.init || y.init ? 1 : 0 };
   }
-  R.coll = uniq(A.coll, B.coll);
+  R.coll = uniq(A.coll, B.coll).sort();
   /* Наряд героя — более поздний выбор */
   R.wear = !A.wear ? B.wear : !B.wear ? A.wear : (B.wear.ts || 0) > (A.wear.ts || 0) ? B.wear : A.wear;
   /* Сундук: «сколько сессий без сундука» — с более нового устройства */

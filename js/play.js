@@ -335,6 +335,7 @@ function answered(ok, given) {
     if (SES.cheap && (++SES.cheapN) % 2) ac = 0;
   }
   if (first) SES.ok++;
+  if (first && typeof famAdd === 'function' && famAdd(FAM_W[worldOf()] || 2)) save();   /* семейная миссия (js/mission.js) */
   SES.cleanRun = credit === 1 ? SES.cleanRun + 1 : 0;
   SES.wrongStreak = first ? 0 : ok ? SES.wrongStreak : SES.wrongStreak + 1;
   if (ac) { SES.acorns += ac; giveAcorns(ac); save(); }

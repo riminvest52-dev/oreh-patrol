@@ -733,3 +733,32 @@ span.coin { cursor: default; width: calc(var(--ki) * 1.05); height: calc(var(--k
 .sdots i { width: 12px; height: 12px; border-radius: 50%; background: var(--line); } .sdots i.on { background: var(--orange); }
 @media (max-width: 600px) { .sline { flex-direction: column; } .sline .spic { width: 120px; } .sline .bubble { font-size: 19px; } .fcard .fsvg.thumb { width: 104px; } }
 @keyframes fpulse { 50% { transform: scale(1.02); } }
+
+/* ---------- Задание 11, часть 2: Семейная миссия и задачка от сестры (js/mission.js) ---------- */
+.mcard { display: flex; align-items: center; gap: 12px; width: 100%; margin: 0 0 12px; padding: 10px 14px; border: 2px solid #E9C98F; border-radius: 18px; background: #FFF6E2; color: var(--ink); text-align: left; font: inherit; cursor: pointer; box-shadow: 0 3px 0 #E9C98F; }
+.mcard .mce { font-size: 34px; }
+.mcard .fct { display: flex; flex-direction: column; gap: 2px; }
+.mgift { display: flex; align-items: center; gap: 12px; width: 100%; margin: 0 0 12px; padding: 12px 16px; border: 3px solid #E8833A; border-radius: 20px; background: #FFE9D2; color: #5B3418; font: inherit; font-size: 22px; cursor: pointer; animation: fpulse 1.6s ease-in-out infinite; }
+.mgift .menv { font-size: 46px; display: inline-block; animation: menv 1.2s ease-in-out infinite; }
+@keyframes menv { 0%, 100% { transform: rotate(-8deg); } 50% { transform: rotate(8deg) scale(1.08); } }
+.mission h2 { margin: 6px 0 10px; }
+.msvg { display: block; width: 100%; height: auto; margin: 0 auto; max-width: 720px; }
+.msvg .mp { opacity: .13; filter: grayscale(1); }
+.msvg .mp.on { opacity: 1; filter: none; animation: mpin .6s ease-out both; animation-delay: calc(var(--d) * 60ms); transform-box: fill-box; transform-origin: center; }
+@keyframes mpin { from { transform: scale(.4); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+.mtot { text-align: center; font-size: 22px; margin: 12px 0; color: #5B3418; }
+.mrow { margin: 6px 0 10px; }
+.mrow .bar { height: 14px; margin-top: 4px; }
+.mrow .bar i { background: #E8833A; }
+.mart .msvg { max-width: 320px; margin: 8px auto; }
+.mstk { font-size: 18px; }
+.gpick { display: grid; gap: 12px; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); margin-bottom: 12px; }
+.gopt { display: flex; flex-direction: column; gap: 8px; }
+.gopt .gq { font-size: 18px; }
+.gopt .gscene { transform: scale(.8); transform-origin: top left; max-height: 160px; overflow: hidden; pointer-events: none; }
+.gopt .gopts { display: flex; flex-wrap: wrap; gap: 6px; pointer-events: none; }
+.gopt .gopts span { padding: 4px 10px; border: 2px solid #E9C98F; border-radius: 10px; background: #fff; font-size: 18px; }
+.gopt .gopts span svg { width: 40px; height: 40px; }
+.thx { display: flex; justify-content: center; gap: 12px; margin: 8px 0 16px; }
+.thx .kopt { font-size: 40px; min-width: 76px; }
+.mpar { margin-top: 12px; }

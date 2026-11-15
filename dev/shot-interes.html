@@ -46,6 +46,19 @@
   if (s === 'forest') showForest();
   if (s === 'chap') ACT.chapter({ dataset: { i: q.get('i') || '0' } });
   if (s === 'album') showAlbum();
+  /* Семейная миссия: ?fam=1&cn=120&cl=90 — вклад Насти и Лизы за неделю; s=mission|gift|env|giftdone|party */
+  if (q.get('fam') && typeof famOf === 'function') {
+    const setC = (id, n) => editProfileState(id, st => { const f = famOf(st); f.c = { [weekOf()]: { devA: n } }; f.party = {}; f.got = {}; f.thx = {}; f.seen = {}; f.sent = {}; });
+    setC(nas.id, +(q.get('cn') || 0)); setC(liz.id, +(q.get('cl') || 0));
+    if (s === 'env' || s === 'giftdone' || s === 'thx') editProfileState(nas.id, st => { famOf(st).sent[today()] = { to: liz.id, t: withState(readProfile(liz.id), () => giftChoices(readProfile(liz.id))[0]), ts: Date.now() }; });
+    if (s === 'thx') { editProfileState(liz.id, st => { famOf(st).got[nas.id + ':' + today()] = Date.now(); famOf(st).thx[nas.id + ':' + today()] = '💛'; }); }
+    if (s === 'party') { editProfileState(w === 'kid' ? liz.id : nas.id, st => { famOf(st).party = {}; }); }
+    S = readProfile(F.current);
+    if (s === 'mission') showMission();
+    if (s === 'gift') ACT.giftPick();
+    if (s === 'env' || s === 'party' || s === 'thx') enterWorld();
+    if (s === 'giftdone') { ACT.giftOpen(); }
+  }
   if (window.SHOT_EXTRA) SHOT_EXTRA(s, q, { nas, liz });
 </script>
 </body>

@@ -115,7 +115,7 @@ function showMap() {
       <div class="qcard ${S.diag ? '' : 'hot first'}" data-act="${S.diag ? 'diagAsk' : 'diag'}">${S.diag ? '' : '<div class="tip">Начни отсюда!</div>'}<div class="qi">🧭</div><div><div class="qt">Проверка сил</div><div class="qs">${S.diag ? 'Пройдена ' + S.diag.date.split('-').reverse().slice(0, 2).join('.') : diagCount() + ' задач — с чего начать'}</div></div></div>
       <div class="qcard" data-act="album"><div class="qi">📒</div><div><div class="qt">Альбом наклеек</div><div class="qs">${S.stickers.length} из ${STICKERS.length}</div></div></div>
     </div>`}
-    ${typeof forestCard === 'function' ? forestCard() : ''}
+    ${typeof forestCard === 'function' ? forestCard() : ''}${typeof missionCard === 'function' ? missionCard() : ''}
     <h3 style="margin:4px 0 0">${four ? 'Лес 4 класса' : 'Тропа 5 класса'}</h3>
     <div class="forest" style="height:${H}px"><svg class="paths" viewBox="0 0 ${W} ${H}" preserveAspectRatio="none">${deco}
       <path d="${path}" stroke="#E2B47C" stroke-width="22" fill="none" stroke-linecap="round"/><path d="${path}" stroke="#F6D7A6" stroke-width="12" fill="none" stroke-linecap="round" stroke-dasharray="2 18"/></svg>${signs}${nodes}</div>`);
@@ -222,7 +222,7 @@ function showParent() {
   const recentBad = S.recent.filter(r => !r.ok).slice(0, 15).map(r => `<div class="mist"><div class="q">${TOPIC[r.topic] ? TOPIC[r.topic].icon : ''} ${esc(r.q)}</div>
     <div>Ответ: <span style="color:var(--red)">${esc(r.given)}</span> · верно: <b style="color:var(--green-d)">${esc(r.right)}</b> <span class="muted">· ${new Date(r.ts).toLocaleDateString('ru-RU')}</span></div></div>`).join('') || '<p class="muted">Ошибок пока нет.</p>';
   mount(`<div class="topbar"><button class="iconbtn" data-act="map">←</button><div class="grow"><b>Для родителей · ${esc(S.name)}</b><div class="small muted">${CLOUD_URL && F.code ? 'Прогресс сохраняется на устройстве и в облаке семьи' : 'Прогресс хранится только на этом устройстве'}</div></div></div>
-    ${familyEntry()}
+    ${familyEntry()}${typeof missionParent === 'function' ? missionParent() : ''}
     <div class="card"><div class="row" style="justify-content:space-around;text-align:center">
       <div><div style="font-size:26px;font-weight:800">${S.solved}</div><div class="small muted">задач</div></div>
       <div><div style="font-size:26px;font-weight:800">${acc}%</div><div class="small muted">верно</div></div>
